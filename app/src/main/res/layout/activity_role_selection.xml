@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/role_selection_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:id="@+id/tvChooseRole"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Выберите роль"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="32dp" />
+
+    <Button
+        android:id="@+id/btnServer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Сервер"
+        android:layout_marginBottom="16dp" />
+
+    <Button
+        android:id="@+id/btnClient"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Клиент" />
+</LinearLayout>
