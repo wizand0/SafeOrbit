@@ -9,6 +9,7 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        maven { url 'https://maven.yandex.ru/repo' }
     }
 }
 dependencyResolutionManagement {

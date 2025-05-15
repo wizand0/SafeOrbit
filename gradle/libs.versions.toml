@@ -11,6 +11,7 @@ espressoCore = "3.6.1"
 appcompat = "1.7.0"
 kotlinxCoroutinesAndroid = "1.7.3"
 lifecycleViewmodelKtx = "2.9.0"
+mapsMobile = "4.3.1-lite"
 material = "1.12.0"
 activity = "1.10.1"
 constraintlayout = "2.2.1"
@@ -21,6 +22,7 @@ firebaseStorageKtx = "21.0.1"
 firebasePerfKtx = "21.0.5"
 playServicesLocationVersion = "21.0.1"
 playServicesMaps = "19.2.0"
+firebaseInstallations = "17.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -35,6 +37,7 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
+maps-mobile = { module = "com.yandex.android:maps.mobile", version.ref = "mapsMobile" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
@@ -45,6 +48,7 @@ firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage
 firebase-perf-ktx = { group = "com.google.firebase", name = "firebase-perf-ktx", version.ref = "firebasePerfKtx" }
 play-services-location-v2101 = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocationVersion" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
+firebase-installations = { group = "com.google.firebase", name = "firebase-installations", version.ref = "firebaseInstallations" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

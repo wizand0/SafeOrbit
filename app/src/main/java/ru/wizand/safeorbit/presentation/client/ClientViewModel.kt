@@ -8,7 +8,7 @@ import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
 
 class ClientViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = FirebaseRepository()
+    private val repository = FirebaseRepository(application.applicationContext)
 
     private val _pairingResult = MutableLiveData<Boolean>()
     val pairingResult: LiveData<Boolean> = _pairingResult

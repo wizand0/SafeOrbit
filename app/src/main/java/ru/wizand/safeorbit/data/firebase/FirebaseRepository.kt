@@ -1,5 +1,6 @@
 package ru.wizand.safeorbit.data.firebase
 
+import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -7,9 +8,11 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import ru.wizand.safeorbit.data.model.AudioRequest
 import ru.wizand.safeorbit.data.model.LocationData
+import ru.wizand.safeorbit.utils.Constants
+import ru.wizand.safeorbit.utils.generateReadableId
 import java.util.UUID
 
-class FirebaseRepository {
+class FirebaseRepository(private val context: Context) {
 
     private val db = FirebaseDatabase.getInstance().reference
     private val auth = FirebaseAuth.getInstance()
@@ -21,7 +24,7 @@ class FirebaseRepository {
     }
 
     fun registerServer(onComplete: (serverId: String, code: String) -> Unit) {
-        val serverId = UUID.randomUUID().toString()
+        val serverId = generateReadableId(context) // вместо UUID.randomUUID().toString()
         val code = (100000..999999).random().toString()
         val serverData = mapOf(
             "code" to code,
@@ -77,4 +80,37 @@ class FirebaseRepository {
                 override fun onCancelled(error: DatabaseError) {}
             })
     }
+
+    fun generateUniqueServerId(
+        onReady: (uniqueId: String) -> Unit,
+        retryCount: Int = 0,
+        maxRetries: Int = 10
+    ) {
+        if (retryCount >= maxRetries) {
+            // Слишком много попыток
+            return onReady("ERROR")
+        }
+
+        val candidateId = generateReadableId(context)
+        val ref = FirebaseDatabase.getInstance(Constants.FIREBASE_DB_URL)
+            .getReference("servers")
+            .child(candidateId)
+
+        ref.get().addOnSuccessListener { snapshot ->
+            if (snapshot.exists()) {
+                // Уже занят — пробуем снова
+                generateUniqueServerId(onReady, retryCount + 1, maxRetries)
+            } else {
+                // Уникален — используем его
+                onReady(candidateId)
+            }
+        }.addOnFailureListener {
+            // В случае ошибки — пробуем снова
+            generateUniqueServerId(onReady, retryCount + 1, maxRetries)
+        }
+    }
+
+
+
+
 }
