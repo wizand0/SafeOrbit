@@ -17,3 +17,7 @@ class RoleSelectionViewModel(application: Application) : AndroidViewModel(applic
         return value?.let { UserRole.valueOf(it) }
     }
 }
+
+
+
+

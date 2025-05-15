@@ -13,6 +13,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.model.AudioRequest
 import ru.wizand.safeorbit.databinding.ActivityServerMainBinding
+import ru.wizand.safeorbit.presentation.role.RoleSelectionActivity
 
 @AndroidEntryPoint
 class ServerMainActivity : AppCompatActivity() {
@@ -43,6 +44,13 @@ class ServerMainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Запрос на запись от клиента", Toast.LENGTH_SHORT).show()
                 handleAudioRequest(request)
             }
+        }
+
+        binding.btnResetRole.setOnClickListener {
+            val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+            prefs.edit().remove("user_role").apply()
+            startActivity(Intent(this, RoleSelectionActivity::class.java))
+            finish()
         }
     }
 

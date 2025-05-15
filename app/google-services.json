@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "546445541725",
+    "project_id": "safeorbit-6ae86",
+    "storage_bucket": "safeorbit-6ae86.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:546445541725:android:5d425ebe21f2cc8ae4e8b4",
+        "android_client_info": {
+          "package_name": "ru.wizand.safeorbit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAntZRoA0GMAMCjc972hpjpDSQ5YrA4ofU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
