@@ -10,6 +10,11 @@ import ru.wizand.safeorbit.data.model.LocationData
 class ClientViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = FirebaseRepository(application.applicationContext)
 
+    private val _allServerLocations = MutableLiveData<Map<String, LocationData>>()
+    val allServerLocations: LiveData<Map<String, LocationData>> = _allServerLocations
+
+    private val serverLocationMap = mutableMapOf<String, LocationData>()
+
     private val _pairingResult = MutableLiveData<Boolean>()
     val pairingResult: LiveData<Boolean> = _pairingResult
 
@@ -28,11 +33,22 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun observeAllServerLocations(serverIds: List<String>) {
+        serverIds.forEach { serverId ->
+            repository.observeServerLocation(serverId) { location ->
+                serverLocationMap[serverId] = location
+                _allServerLocations.postValue(serverLocationMap.toMap())
+            }
+        }
+    }
+
     private fun observeLocation(serverId: String) {
         repository.observeServerLocation(serverId) {
             _serverLocation.postValue(it)
         }
     }
+
+    fun getLatestLocationMap(): Map<String, LocationData> = serverLocationMap.toMap()
 
     fun sendAudioRequest() {
         currentServerId?.let { repository.sendAudioRequest(it) }

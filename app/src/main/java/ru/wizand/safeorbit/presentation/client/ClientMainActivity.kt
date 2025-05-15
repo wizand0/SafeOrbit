@@ -1,19 +1,22 @@
 package ru.wizand.safeorbit.presentation.client
 
-import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import ru.wizand.safeorbit.R
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import ru.wizand.safeorbit.data.AppDatabase
+import ru.wizand.safeorbit.data.ServerEntity
+import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.databinding.ActivityClientMainBinding
-import ru.wizand.safeorbit.presentation.role.RoleSelectionActivity
 
 class ClientMainActivity : AppCompatActivity() {
+
     private lateinit var binding: ActivityClientMainBinding
+    private lateinit var db: AppDatabase
+
+    private var alreadyObserving = false
+
     private val viewModel: ClientViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,27 +24,66 @@ class ClientMainActivity : AppCompatActivity() {
         binding = ActivityClientMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.btnConnect.setOnClickListener {
-            val serverId = binding.editServerId.text.toString()
-            val code = binding.editCode.text.toString()
-            viewModel.pairWithServer(serverId, code)
+        db = AppDatabase.getDatabase(this)
+
+        // Открываем MapFragment по умолчанию
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .replace(binding.container.id, MapFragment())
+                .commit()
         }
 
-        binding.btnResetRole.setOnClickListener {
-            val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-            prefs.edit().remove("user_role").apply()
-            startActivity(Intent(this, RoleSelectionActivity::class.java))
-            finish()
+        binding.btnAddServer.setOnClickListener {
+            AddServerDialogFragment { serverId, code, name ->
+                lifecycleScope.launch {
+                    db.serverDao()
+                        .insert(ServerEntity(serverId = serverId, code = code, name = name))
+                    observeAllServers() // обновим карту
+                }
+            }.show(supportFragmentManager, "AddServerDialog")
         }
 
-        viewModel.pairingResult.observe(this) { success ->
-            if (success) {
-                supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, MapFragment())
-                    .commit()
-            } else {
-                Toast.makeText(this, "Ошибка подключения", Toast.LENGTH_SHORT).show()
+        binding.btnAllServers.setOnClickListener {
+            supportFragmentManager.beginTransaction()
+                .replace(binding.container.id, ServerListFragment())
+                .addToBackStack(null)
+                .commit()
+        }
+
+        binding.btnSettings.setOnClickListener {
+            supportFragmentManager.beginTransaction()
+                .replace(binding.container.id, SettingsFragment())
+                .addToBackStack(null)
+                .commit()
+        }
+
+        observeAllServers()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        observeAllServers()
+    }
+
+    private fun observeAllServers() {
+        if (alreadyObserving) return
+        alreadyObserving = true
+
+        lifecycleScope.launch {
+            val servers = db.serverDao().getAll()
+            val serverIds = servers.map { it.serverId }
+            val nameMap = servers.associateBy({ it.serverId }, { it.name })
+
+            viewModel.observeAllServerLocations(serverIds)
+
+            viewModel.allServerLocations.observe(this@ClientMainActivity) { locationMap ->
+                val fragment = supportFragmentManager.findFragmentById(binding.container.id)
+                if (fragment is MapFragment) {
+                    fragment.updateMarkers(locationMap, nameMap)
+                }
             }
         }
     }
+
+
 }
