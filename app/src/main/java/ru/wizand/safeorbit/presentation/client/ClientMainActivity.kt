@@ -1,5 +1,6 @@
 package ru.wizand.safeorbit.presentation.client
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -9,6 +10,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.databinding.ActivityClientMainBinding
+import ru.wizand.safeorbit.presentation.role.RoleSelectionActivity
 
 class ClientMainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityClientMainBinding
@@ -23,6 +25,13 @@ class ClientMainActivity : AppCompatActivity() {
             val serverId = binding.editServerId.text.toString()
             val code = binding.editCode.text.toString()
             viewModel.pairWithServer(serverId, code)
+        }
+
+        binding.btnResetRole.setOnClickListener {
+            val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+            prefs.edit().remove("user_role").apply()
+            startActivity(Intent(this, RoleSelectionActivity::class.java))
+            finish()
         }
 
         viewModel.pairingResult.observe(this) { success ->

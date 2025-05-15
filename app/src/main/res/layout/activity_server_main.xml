@@ -30,4 +30,11 @@
         android:layout_height="wrap_content"
         android:text="Ожидание подключений..."
         android:textSize="16sp" />
+
+    <Button
+        android:id="@+id/btnResetRole"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Сбросить роль"
+        android:layout_marginTop="16dp"/>
 </LinearLayout>
