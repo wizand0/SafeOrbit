@@ -2,7 +2,8 @@
   "project_info": {
     "project_number": "546445541725",
     "project_id": "safeorbit-6ae86",
-    "storage_bucket": "safeorbit-6ae86.firebasestorage.app"
+    "storage_bucket": "safeorbit-6ae86.firebasestorage.app",
+    "firebase_url": "https://safeorbit-6ae86-default-rtdb.europe-west1.firebasedatabase.app"
   },
   "client": [
     {

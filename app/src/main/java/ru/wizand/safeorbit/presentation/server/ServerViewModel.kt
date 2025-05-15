@@ -1,15 +1,17 @@
 package ru.wizand.safeorbit.presentation.server
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.google.firebase.auth.FirebaseAuth
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.AudioRequest
 import ru.wizand.safeorbit.data.model.LocationData
 
 class ServerViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = FirebaseRepository()
+    private val repository = FirebaseRepository(application.applicationContext)
 
     private val _serverId = MutableLiveData<String>()
     val serverId: LiveData<String> = _serverId
@@ -34,7 +36,16 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    //    fun sendLocation(location: LocationData) {
+//        serverId.value?.let { repository.sendLocation(it, location) }
+//    }
     fun sendLocation(location: LocationData) {
-        serverId.value?.let { repository.sendLocation(it, location) }
+        val serverIdValue = _serverId.value
+        if (serverIdValue != null) {
+            Log.d("SEND_LOCATION", "Отправляем координаты на сервер: $location")
+            repository.sendLocation(serverIdValue, location)
+        } else {
+            Log.w("SEND_LOCATION", "serverId еще не установлен — координаты не отправлены")
+        }
     }
 }

@@ -12,20 +12,21 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
-import kotlin.math.pow
 import java.util.Timer
 import java.util.TimerTask
+import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.math.abs
 
-@AndroidEntryPoint
 class LocationService : Service(), SensorEventListener {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -33,18 +34,18 @@ class LocationService : Service(), SensorEventListener {
     private var lastAcceleration = 0f
     private var moving = false
 
-    private val viewModel by lazy {
-        ServerViewModel(application)
-    }
+    private var serverId: String? = null
+    private lateinit var firebaseRepository: FirebaseRepository
 
     private var timer: Timer? = null
-    private val updateIntervalMoving = 30_000L     // 30 секунд
+    private val updateIntervalMoving = 30_000L         // 30 секунд
     private val updateIntervalStationary = 10 * 60_000L // 10 минут
 
     override fun onCreate() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+        firebaseRepository = FirebaseRepository(applicationContext)
 
         startForegroundWithNotification()
         sensorManager.registerListener(
@@ -53,7 +54,21 @@ class LocationService : Service(), SensorEventListener {
             SensorManager.SENSOR_DELAY_NORMAL
         )
 
-        scheduleLocationUpdates()
+        Log.d("LOCATION_SERVICE", "Сервис создан")
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        serverId = intent?.getStringExtra("server_id")
+
+        if (serverId.isNullOrEmpty()) {
+            Log.w("LOCATION_SERVICE", "ServerId не передан — сервис завершает работу")
+            stopSelf()
+        } else {
+            Log.d("LOCATION_SERVICE", "Сервис запущен с serverId = $serverId")
+            scheduleLocationUpdates()
+        }
+
+        return START_STICKY
     }
 
     private fun startForegroundWithNotification() {
@@ -85,31 +100,31 @@ class LocationService : Service(), SensorEventListener {
     }
 
     private fun sendLocation() {
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
         ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
+            Log.w("SEND_LOCATION", "Нет разрешений на геолокацию")
             return
         }
+
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null) {
+            if (location != null && !serverId.isNullOrEmpty()) {
                 val data = LocationData(
                     latitude = location.latitude,
                     longitude = location.longitude,
                     timestamp = System.currentTimeMillis()
                 )
-                viewModel.sendLocation(data)
+                firebaseRepository.sendLocation(serverId!!, data)
+
+                // Отправка в broadcast для отображения в UI
+                val intent = Intent("LOCATION_UPDATE").apply {
+                    putExtra("latitude", data.latitude)
+                    putExtra("longitude", data.longitude)
+                }
+                LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+//                sendBroadcast(intent)
+
+                Log.d("SEND_LOCATION", "Координаты отправлены: $data")
             }
         }
     }
@@ -136,5 +151,6 @@ class LocationService : Service(), SensorEventListener {
         super.onDestroy()
         timer?.cancel()
         sensorManager.unregisterListener(this)
+        Log.d("LOCATION_SERVICE", "Сервис уничтожен")
     }
 }

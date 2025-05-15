@@ -1,59 +1,73 @@
 package ru.wizand.safeorbit.presentation.client
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
+import com.yandex.mapkit.MapKitFactory
+import com.yandex.mapkit.geometry.Point
+import com.yandex.mapkit.mapview.MapView
+import com.yandex.mapkit.map.CameraPosition
+import com.yandex.mapkit.map.MapObject
+import com.yandex.mapkit.map.PlacemarkMapObject
+import com.yandex.runtime.image.ImageProvider
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.BuildConfig
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
+class MapFragment : Fragment() {
 
-/**
- * A simple [Fragment] subclass.
- * Use the [MapFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
-class MapFragment : Fragment(), OnMapReadyCallback {
-    private lateinit var googleMap: GoogleMap
+    private lateinit var mapView: MapView
     private val viewModel: ClientViewModel by activityViewModels()
-    private var marker: Marker? = null
+    private var marker: PlacemarkMapObject? = null
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val mapFragment = childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
-        mapFragment.getMapAsync(this)
-
-        viewModel.serverLocation.observe(viewLifecycleOwner) { location ->
-            val latLng = LatLng(location.latitude, location.longitude)
-            if (marker == null) {
-                marker = googleMap.addMarker(MarkerOptions().position(latLng).title("Сервер"))
-            } else {
-                marker?.position = latLng
-            }
-            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
-        }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        MapKitFactory.setApiKey(BuildConfig.YANDEX_MAPKIT_API_KEY)
+        MapKitFactory.initialize(requireContext())
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_map, container, false)
+    ): View {
+        val view = inflater.inflate(R.layout.fragment_map, container, false)
+        mapView = view.findViewById(R.id.map_view)
+        return view
     }
 
-    override fun onMapReady(map: GoogleMap) {
-        googleMap = map
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        viewModel.serverLocation.observe(viewLifecycleOwner) { location ->
+            val point = Point(location.latitude, location.longitude)
+
+            val map = mapView.mapWindow.map
+
+            if (marker == null) {
+                marker = map.mapObjects.addPlacemark(
+                    point,
+                    ImageProvider.fromResource(requireContext(), R.drawable.red_dot)
+                )
+            } else {
+                marker?.geometry = point
+            }
+
+            map.move(CameraPosition(point, 15.0f, 0.0f, 0.0f))
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        MapKitFactory.getInstance().onStart()
+        mapView.onStart()
+    }
+
+    override fun onStop() {
+        mapView.onStop()
+        MapKitFactory.getInstance().onStop()
+        super.onStop()
     }
 }
