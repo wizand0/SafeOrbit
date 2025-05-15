@@ -63,6 +63,7 @@ git clone https://github.com/your-username/safeorbit.git
 ### 2. Open in Android Studio
 - Open the project in Android Studio
 - Make sure your google-services.json is placed in the app/ folder
+- Enter your api key in local.properties (YANDEX_MAPKIT_API_KEY=your_key)
 
 ### 3. Set up Firebase
 - Enable:
