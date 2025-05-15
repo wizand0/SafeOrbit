@@ -25,8 +25,8 @@ android {
         applicationId "ru.wizand.safeorbit"
         minSdk 29
         targetSdk 35
-        versionCode 2
-        versionName "1.1"
+        versionCode 3
+        versionName "1.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -86,5 +86,19 @@ dependencies {
 
     // Kotlin Coroutines
     implementation libs.kotlinx.coroutines.android
+
+    def room_version = "2.7.1"
+
+    implementation "androidx.room:room-runtime:$room_version"
+
+    // If this project uses any Kotlin source, use Kotlin Symbol Processing (KSP)
+    // See KSP Quickstart to add KSP to your build
+    ksp "androidx.room:room-compiler:$room_version"
+
+    // Для Kotlin coroutines
+    implementation "androidx.room:room-ktx:$room_version"
+
+
+
 }
 apply plugin: 'com.google.gms.google-services'
