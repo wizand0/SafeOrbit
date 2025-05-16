@@ -1,0 +1,443 @@
+SafeOrbit/
+├── .idea
+│   ├── assetWizardSettings.xml
+│   ├── caches
+│   │   └── deviceStreaming.xml
+│   ├── compiler.xml
+│   ├── deploymentTargetSelector.xml
+│   ├── gradle.xml
+│   ├── kotlinc.xml
+│   ├── migrations.xml
+│   ├── misc.xml
+│   ├── runConfigurations.xml
+│   ├── vcs.xml
+│   └── workspace.xml
+└── app
+    ├── build
+    │   ├── generated
+    │   │   ├── ksp
+    │   │   │   └── debug
+    │   │   │       └── kotlin
+    │   │   │           └── ru
+    │   │   │               └── wizand
+    │   │   │                   └── safeorbit
+    │   │   │                       └── data
+    │   │   │                           ├── AppDatabase_Impl.kt
+    │   │   │                           │   ├── val _openDelegate
+    │   │   │                           │   ├── val _columnsServers
+    │   │   │                           │   ├── val _foreignKeysServers
+    │   │   │                           │   ├── val _indicesServers
+    │   │   │                           │   ├── val _infoServers
+    │   │   │                           │   ├── val _existingServers
+    │   │   │                           │   ├── val _shadowTablesMap
+    │   │   │                           │   ├── val _viewTables
+    │   │   │                           │   ├── val _typeConvertersMap
+    │   │   │                           │   ├── val _autoMigrationSpecsSet
+    │   │   │                           │   ├── createAutoMigrations()
+    │   │   │                           │   ├── val _autoMigrations
+    │   │   │                           └── ServerDao_Impl.kt
+    │   │   │                               ├── val _sql
+    │   │   │                               ├── val _stmt
+    │   │   │                               ├── val _columnIndexOfId
+    │   │   │                               ├── val _columnIndexOfServerId
+    │   │   │                               ├── val _columnIndexOfCode
+    │   │   │                               ├── val _columnIndexOfName
+    │   │   │                               ├── val _result
+    │   │   │                               ├── val _item
+    │   │   │                               ├── val _tmpId
+    │   │   │                               ├── val _tmpServerId
+    │   │   │                               ├── val _tmpCode
+    │   │   │                               ├── val _tmpName
+    │   │   └── res
+    │   │       └── processDebugGoogleServices
+    │   │           └── values
+    │   │               └── values.xml
+    │   ├── intermediates
+    │   │   ├── data_binding_layout_info_type_merge
+    │   │   │   └── debug
+    │   │   │       └── mergeDebugResources
+    │   │   │           └── out
+    │   │   │               ├── activity_client_main-layout.xml
+    │   │   │               ├── activity_role_selection-layout.xml
+    │   │   │               ├── activity_server_main-layout.xml
+    │   │   │               ├── dialog_add_server-layout.xml
+    │   │   │               ├── fragment_add_server_dialog-layout.xml
+    │   │   │               ├── fragment_map-layout.xml
+    │   │   │               ├── fragment_server_list-layout.xml
+    │   │   │               ├── fragment_settings-layout.xml
+    │   │   │               └── item_server-layout.xml
+    │   │   ├── data_binding_layout_info_type_package
+    │   │   │   └── debug
+    │   │   │       └── packageDebugResources
+    │   │   │           └── out
+    │   │   │               ├── activity_client_main-layout.xml
+    │   │   │               ├── activity_role_selection-layout.xml
+    │   │   │               ├── activity_server_main-layout.xml
+    │   │   │               ├── dialog_add_server-layout.xml
+    │   │   │               ├── fragment_add_server_dialog-layout.xml
+    │   │   │               ├── fragment_map-layout.xml
+    │   │   │               ├── fragment_server_list-layout.xml
+    │   │   │               ├── fragment_settings-layout.xml
+    │   │   │               └── item_server-layout.xml
+    │   │   ├── incremental
+    │   │   │   ├── debug
+    │   │   │   │   ├── mergeDebugResources
+    │   │   │   │   │   └── merger.xml
+    │   │   │   │   └── packageDebugResources
+    │   │   │   │       └── merger.xml
+    │   │   │   ├── debugAndroidTest
+    │   │   │   │   └── mergeDebugAndroidTestResources
+    │   │   │   │       ├── merged.dir
+    │   │   │   │       │   ├── values
+    │   │   │   │       │   │   └── values.xml
+    │   │   │   │       │   ├── values-v18
+    │   │   │   │       │   │   └── values-v18.xml
+    │   │   │   │       │   ├── values-v21
+    │   │   │   │       │   │   └── values-v21.xml
+    │   │   │   │       │   └── values-v28
+    │   │   │   │       │       └── values-v28.xml
+    │   │   │   │       └── merger.xml
+    │   │   │   ├── mergeDebugAndroidTestAssets
+    │   │   │   │   └── merger.xml
+    │   │   │   ├── mergeDebugAndroidTestJniLibFolders
+    │   │   │   │   └── merger.xml
+    │   │   │   ├── mergeDebugAndroidTestShaders
+    │   │   │   │   └── merger.xml
+    │   │   │   ├── mergeDebugAssets
+    │   │   │   │   └── merger.xml
+    │   │   │   ├── mergeDebugJniLibFolders
+    │   │   │   │   └── merger.xml
+    │   │   │   └── mergeDebugShaders
+    │   │   │       └── merger.xml
+    │   │   ├── merged_manifest
+    │   │   │   └── debug
+    │   │   │       └── processDebugMainManifest
+    │   │   │           └── AndroidManifest.xml
+    │   │   ├── merged_manifests
+    │   │   │   └── debug
+    │   │   │       └── processDebugManifest
+    │   │   │           └── AndroidManifest.xml
+    │   │   ├── packaged_manifests
+    │   │   │   ├── debug
+    │   │   │   │   └── processDebugManifestForPackage
+    │   │   │   │       └── AndroidManifest.xml
+    │   │   │   └── debugAndroidTest
+    │   │   │       └── processDebugAndroidTestManifest
+    │   │   │           └── AndroidManifest.xml
+    │   │   └── packaged_res
+    │   │       └── debug
+    │   │           └── packageDebugResources
+    │   │               ├── drawable
+    │   │               │   ├── ic_app_icon.xml
+    │   │               │   ├── ic_launcher_background.xml
+    │   │               │   ├── ic_launcher_foreground.xml
+    │   │               │   ├── ic_location.xml
+    │   │               │   └── ic_marker.xml
+    │   │               ├── layout
+    │   │               │   ├── activity_client_main.xml
+    │   │               │   ├── activity_role_selection.xml
+    │   │               │   ├── activity_server_main.xml
+    │   │               │   ├── dialog_add_server.xml
+    │   │               │   ├── fragment_add_server_dialog.xml
+    │   │               │   ├── fragment_map.xml
+    │   │               │   ├── fragment_server_list.xml
+    │   │               │   ├── fragment_settings.xml
+    │   │               │   └── item_server.xml
+    │   │               ├── mipmap-anydpi-v26
+    │   │               │   ├── ic_launcher.xml
+    │   │               │   └── ic_launcher_round.xml
+    │   │               ├── values
+    │   │               │   └── values.xml
+    │   │               ├── values-night-v8
+    │   │               │   └── values-night-v8.xml
+    │   │               └── xml
+    │   │                   ├── backup_rules.xml
+    │   │                   └── data_extraction_rules.xml
+    │   └── kspCaches
+    │       └── debug
+    │           └── backups
+    │               └── kotlin
+    │                   └── ru
+    │                       └── wizand
+    │                           └── safeorbit
+    │                               └── data
+    │                                   ├── AppDatabase_Impl.kt
+    │                                   │   ├── val _openDelegate
+    │                                   │   ├── val _columnsServers
+    │                                   │   ├── val _foreignKeysServers
+    │                                   │   ├── val _indicesServers
+    │                                   │   ├── val _infoServers
+    │                                   │   ├── val _existingServers
+    │                                   │   ├── val _shadowTablesMap
+    │                                   │   ├── val _viewTables
+    │                                   │   ├── val _typeConvertersMap
+    │                                   │   ├── val _autoMigrationSpecsSet
+    │                                   │   ├── createAutoMigrations()
+    │                                   │   ├── val _autoMigrations
+    │                                   └── ServerDao_Impl.kt
+    │                                       ├── val _sql
+    │                                       ├── val _stmt
+    │                                       ├── val _columnIndexOfId
+    │                                       ├── val _columnIndexOfServerId
+    │                                       ├── val _columnIndexOfCode
+    │                                       ├── val _columnIndexOfName
+    │                                       ├── val _result
+    │                                       ├── val _item
+    │                                       ├── val _tmpId
+    │                                       ├── val _tmpServerId
+    │                                       ├── val _tmpCode
+    │                                       ├── val _tmpName
+    └── src
+        ├── androidTest
+        │   └── java
+        │       └── ru
+        │           └── wizand
+        │               └── safeorbit
+        │                   └── ExampleInstrumentedTest.kt
+        │                       ├── class ExampleInstrumentedTest
+        │                       │   ├── useAppContext()
+        │                       │   ├── val appContext
+        ├── main
+        │   ├── AndroidManifest.xml
+        │   ├── java
+        │   │   └── ru
+        │   │       └── wizand
+        │   │           └── safeorbit
+        │   │               ├── MainApplication.kt
+        │   │               │   ├── class MainApplication
+        │   │               ├── data
+        │   │               │   ├── AppDatabase.kt
+        │   │               │   │   ├── getDatabase()
+        │   │               │   │   ├── val instance
+        │   │               │   ├── ServerDao.kt
+        │   │               │   │   ├── getAll()
+        │   │               │   │   ├── insert()
+        │   │               │   │   ├── delete()
+        │   │               │   ├── ServerEntity.kt
+        │   │               │   │   ├── class ServerEntity
+        │   │               │   │   │   ├── val serverId
+        │   │               │   │   │   ├── val code
+        │   │               │   │   │   ├── val name
+        │   │               │   ├── firebase
+        │   │               │   │   ├── AudioRemoteDataSource.kt
+        │   │               │   │   │   ├── class AudioRemoteDataSource
+        │   │               │   │   │   ├── observeAudioRequest()
+        │   │               │   │   │   ├── sendAudioRequest()
+        │   │               │   │   │   ├── val request
+        │   │               │   │   │   ├── uploadAudioFile()
+        │   │               │   │   │   ├── val path
+        │   │               │   │   │   ├── val ref
+        │   │               │   │   ├── FirebaseRepository.kt
+        │   │               │   │   │   ├── class FirebaseRepository
+        │   │               │   │   │   │   ├── registerServer()
+        │   │               │   │   │   │   ├── val serverId
+        │   │               │   │   │   │   ├── val code
+        │   │               │   │   │   │   ├── val serverData
+        │   │               │   │   │   │   ├── pairClientToServer()
+        │   │               │   │   │   │   ├── val match
+        │   │               │   │   │   │   ├── val clientId
+        │   │               │   │   │   │   ├── sendLocation()
+        │   │               │   │   │   │   ├── observeServerLocation()
+        │   │               │   │   │   │   ├── sendAudioRequest()
+        │   │               │   │   │   │   ├── val clientId
+        │   │               │   │   │   │   ├── val request
+        │   │               │   │   │   │   ├── observeAudioRequest()
+        │   │               │   │   │   │   ├── generateUniqueServerId()
+        │   │               │   │   │   │   ├── val candidateId
+        │   │               │   │   │   │   ├── val ref
+        │   │               │   │   └── LocationRemoteDataSource.kt
+        │   │               │   │       ├── class LocationRemoteDataSource
+        │   │               │   │       │   ├── sendLocation()
+        │   │               │   │       │   ├── observeLocation()
+        │   │               │   └── model
+        │   │               │       ├── AudioRequest.kt
+        │   │               │       │   ├── class AudioRequest
+        │   │               │       │   │   ├── val fromClient
+        │   │               │       │   │   ├── val timestamp
+        │   │               │       ├── LocationData.kt
+        │   │               │       │   ├── class LocationData
+        │   │               │       │   │   ├── val latitude
+        │   │               │       │   │   ├── val longitude
+        │   │               │       │   │   ├── val timestamp
+        │   │               │       ├── ServerInfo.kt
+        │   │               │       │   ├── class ServerInfo
+        │   │               │       │   │   ├── val serverId
+        │   │               │       │   │   ├── val code
+        │   │               │       └── UserRole.kt
+        │   │               ├── domain
+        │   │               │   ├── ServerPermissionsManager.kt
+        │   │               │   │   ├── class ServerPermissionsManager
+        │   │               │   │   │   ├── hasLocationPermissions()
+        │   │               │   │   │   ├── requestLocationPermissions()
+        │   │               │   │   │   ├── hasBackgroundLocationPermission()
+        │   │               │   │   │   ├── requestBackgroundLocationPermission()
+        │   │               │   │   │   ├── shouldShowRationale()
+        │   │               │   │   │   ├── openAppSettings()
+        │   │               │   │   │   ├── val intent
+        │   │               │   └── usecase
+        │   │               │       ├── PairClientUseCase.kt
+        │   │               │       │   ├── class PairClientUseCase
+        │   │               │       │   │   ├── execute()
+        │   │               │       ├── RegisterServerUseCase.kt
+        │   │               │       │   ├── class RegisterServerUseCase
+        │   │               │       │   │   ├── execute()
+        │   │               │       ├── RequestAudioUseCase.kt
+        │   │               │       │   ├── class RequestAudioUseCase
+        │   │               │       │   │   ├── execute()
+        │   │               │       └── SendLocationUseCase.kt
+        │   │               │           ├── class SendLocationUseCase
+        │   │               │           │   ├── execute()
+        │   │               ├── presentation
+        │   │               │   ├── client
+        │   │               │   │   ├── AddServerDialogFragment.kt
+        │   │               │   │   │   ├── class AddServerDialogFragment
+        │   │               │   │   │   ├── val view
+        │   │               │   │   │   ├── val nameField
+        │   │               │   │   │   ├── val serverIdField
+        │   │               │   │   │   ├── val codeField
+        │   │               │   │   │   ├── val serverId
+        │   │               │   │   │   ├── val code
+        │   │               │   │   │   ├── val name
+        │   │               │   │   ├── ClientMainActivity.kt
+        │   │               │   │   │   ├── class ClientMainActivity
+        │   │               │   │   │   │   ├── val servers
+        │   │               │   │   │   │   ├── val serverIds
+        │   │               │   │   │   │   ├── val nameMap
+        │   │               │   │   │   │   ├── val fragment
+        │   │               │   │   ├── ClientViewModel.kt
+        │   │               │   │   │   ├── class ClientViewModel
+        │   │               │   │   │   │   ├── val allServerLocations
+        │   │               │   │   │   │   ├── val pairingResult
+        │   │               │   │   │   │   ├── val serverLocation
+        │   │               │   │   │   │   ├── pairWithServer()
+        │   │               │   │   │   │   ├── observeAllServerLocations()
+        │   │               │   │   │   │   ├── getLatestLocationMap()
+        │   │               │   │   │   │   ├── sendAudioRequest()
+        │   │               │   │   ├── MapFragment.kt
+        │   │               │   │   │   ├── class MapFragment
+        │   │               │   │   │   │   ├── val view
+        │   │               │   │   │   │   ├── val servers
+        │   │               │   │   │   │   ├── val nameMap
+        │   │               │   │   │   │   ├── val locationMap
+        │   │               │   │   │   │   ├── updateMarkers()
+        │   │               │   │   │   │   ├── val map
+        │   │               │   │   │   │   ├── val point
+        │   │               │   │   │   │   ├── val name
+        │   │               │   │   │   │   ├── val placemark
+        │   │               │   │   │   │   ├── val center
+        │   │               │   │   ├── ServerAdapter.kt
+        │   │               │   │   │   ├── class ServerAdapter
+        │   │               │   │   │   ├── val name
+        │   │               │   │   │   ├── val serverId
+        │   │               │   │   │   ├── val view
+        │   │               │   │   │   ├── val item
+        │   │               │   │   ├── ServerListFragment.kt
+        │   │               │   │   │   ├── class ServerListFragment
+        │   │               │   │   │   │   ├── val view
+        │   │               │   │   │   │   ├── val servers
+        │   │               │   │   │   │   ├── val editText
+        │   │               │   │   │   │   ├── val newName
+        │   │               │   │   └── SettingsFragment.kt
+        │   │               │   │       ├── class SettingsFragment
+        │   │               │   │       │   ├── val view
+        │   │               │   │       │   ├── val prefs
+        │   │               │   ├── role
+        │   │               │   │   ├── RoleSelectionActivity.kt
+        │   │               │   │   │   ├── class RoleSelectionActivity
+        │   │               │   │   │   │   ├── val auth
+        │   │               │   │   │   │   ├── val uid
+        │   │               │   │   │   │   ├── val db
+        │   │               │   │   │   │   ├── val db
+        │   │               │   │   │   │   ├── val connectedRef
+        │   │               │   │   │   │   ├── val connected
+        │   │               │   │   └── RoleSelectionViewModel.kt
+        │   │               │   │       ├── class RoleSelectionViewModel
+        │   │               │   │       │   ├── saveUserRole()
+        │   │               │   │       │   ├── getUserRole()
+        │   │               │   │       │   ├── val value
+        │   │               │   └── server
+        │   │               │       ├── AudioRequestHandler.kt
+        │   │               │       │   ├── class AudioRequestHandler
+        │   │               │       │   │   ├── handle()
+        │   │               │       ├── LocationPermissionManager.kt
+        │   │               │       │   ├── class LocationPermissionManager
+        │   │               │       │   ├── checkOrRequestLocationPermissions()
+        │   │               │       │   ├── handlePermissionsResult()
+        │   │               │       │   ├── val intent
+        │   │               │       ├── LocationService.kt
+        │   │               │       │   ├── class LocationService
+        │   │               │       │   │   ├── val channelId
+        │   │               │       │   │   ├── val channel
+        │   │               │       │   │   ├── val notification
+        │   │               │       │   │   ├── val interval
+        │   │               │       │   │   ├── val data
+        │   │               │       │   │   ├── val intent
+        │   │               │       │   │   ├── val acceleration
+        │   │               │       │   │   ├── val delta
+        │   │               │       │   │   ├── val isNowMoving
+        │   │               │       ├── ServerMainActivity.kt
+        │   │               │       │   ├── class ServerMainActivity
+        │   │               │       │   │   ├── val lat
+        │   │               │       │   │   ├── val lon
+        │   │               │       │   │   ├── val filter
+        │   │               │       │   │   ├── val serverId
+        │   │               │       │   │   ├── val intent
+        │   │               │       └── ServerViewModel.kt
+        │   │               │           ├── class ServerViewModel
+        │   │               │           │   ├── val serverId
+        │   │               │           │   ├── val code
+        │   │               │           │   ├── val audioRequest
+        │   │               │           │   ├── registerServer()
+        │   │               │           │   ├── sendLocation()
+        │   │               │           │   ├── val serverIdValue
+        │   │               └── utils
+        │   │                   ├── Constants.kt
+        │   │                   │   ├── class Constants
+        │   │                   └── Extensions.kt
+        │   │                       ├── Context()
+        │   │                       ├── Location()
+        │   │                       ├── generateReadableId()
+        │   │                       ├── val date
+        │   │                       ├── val androidId
+        │   │                       ├── val random
+        │   │                       ├── val base
+        │   │                       ├── val hash
+        │   │                       ├── val digest
+        │   │                       ├── val hashBytes
+        │   └── res
+        │       ├── drawable
+        │       │   ├── ic_app_icon.xml
+        │       │   ├── ic_launcher_background.xml
+        │       │   ├── ic_launcher_foreground.xml
+        │       │   ├── ic_location.xml
+        │       │   └── ic_marker.xml
+        │       ├── layout
+        │       │   ├── activity_client_main.xml
+        │       │   ├── activity_role_selection.xml
+        │       │   ├── activity_server_main.xml
+        │       │   ├── dialog_add_server.xml
+        │       │   ├── fragment_add_server_dialog.xml
+        │       │   ├── fragment_map.xml
+        │       │   ├── fragment_server_list.xml
+        │       │   ├── fragment_settings.xml
+        │       │   └── item_server.xml
+        │       ├── mipmap-anydpi-v26
+        │       │   ├── ic_launcher.xml
+        │       │   └── ic_launcher_round.xml
+        │       ├── values
+        │       │   ├── colors.xml
+        │       │   ├── strings.xml
+        │       │   └── themes.xml
+        │       ├── values-night
+        │       │   └── themes.xml
+        │       └── xml
+        │           ├── backup_rules.xml
+        │           └── data_extraction_rules.xml
+        └── test
+            └── java
+                └── ru
+                    └── wizand
+                        └── safeorbit
+                            └── ExampleUnitTest.kt
+                                ├── class ExampleUnitTest
+                                │   ├── addition_isCorrect()

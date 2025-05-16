@@ -4,11 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
@@ -39,13 +37,12 @@ class ServerMainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         viewModel = ViewModelProvider(this)[ServerViewModel::class.java]
-//        permissionManager = LocationPermissionManager(this)
         permissionManager = LocationPermissionManager(this) {
             startLocationService()
         }
         audioRequestHandler = AudioRequestHandler(this)
 
-        viewModel.registerServer()
+
 
         viewModel.serverId.observe(this) { serverId ->
             binding.tvServerId.text = "ID сервера: $serverId"
@@ -66,6 +63,7 @@ class ServerMainActivity : AppCompatActivity() {
         }
 
         binding.btnResetRole.setOnClickListener {
+            viewModel.reset() // очищаем сохранённый ID
             getSharedPreferences("app_prefs", MODE_PRIVATE)
                 .edit().remove("user_role").apply()
             startActivity(Intent(this, RoleSelectionActivity::class.java))
@@ -93,7 +91,6 @@ class ServerMainActivity : AppCompatActivity() {
         Log.d("ACTIVITY", "onResume — регистрируем locationReceiver")
         val filter = IntentFilter("LOCATION_UPDATE")
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-//            registerReceiver(locationReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
             LocalBroadcastManager.getInstance(this).registerReceiver(locationReceiver, filter)
         } else {
             registerReceiver(locationReceiver, filter)

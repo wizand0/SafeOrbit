@@ -68,6 +68,8 @@ dependencies {
 
     implementation libs.maps.mobile
 
+    implementation libs.androidx.recyclerview
+
     implementation libs.firebase.storage.ktx
     implementation libs.firebase.perf.ktx
     implementation libs.firebase.bom
