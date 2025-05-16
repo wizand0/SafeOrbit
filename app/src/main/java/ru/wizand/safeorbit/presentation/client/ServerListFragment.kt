@@ -1,24 +1,22 @@
 package ru.wizand.safeorbit.presentation.client
 
+import ServerAdapter
 import android.app.AlertDialog
 import android.os.Bundle
-import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.EditText
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.launch
 import ru.wizand.safeorbit.R
-import ru.wizand.safeorbit.data.AppDatabase
 import ru.wizand.safeorbit.data.ServerEntity
 
 class ServerListFragment : Fragment() {
 
     private lateinit var recyclerView: RecyclerView
-    private lateinit var db: AppDatabase
+    private val viewModel: ClientViewModel by activityViewModels()
+    private lateinit var adapter: ServerAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -28,20 +26,51 @@ class ServerListFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_server_list, container, false)
         recyclerView = view.findViewById(R.id.serverRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        db = AppDatabase.getDatabase(requireContext())
-        loadServers()
+        adapter = ServerAdapter(
+            items = emptyList(),
+            onEdit = { showEditDialog(it) },
+            onDelete = { deleteServer(it) }
+        )
+        recyclerView.adapter = adapter
+
+        observeData()
+
         return view
     }
 
-    private fun loadServers() {
-        lifecycleScope.launch {
-            val servers = db.serverDao().getAll()
-            recyclerView.adapter = ServerAdapter(
-                servers,
-                onEdit = { showEditDialog(it) },
-                onDelete = { deleteServer(it) }
-            )
+    private fun observeData() {
+        viewModel.serverNameMap.observe(viewLifecycleOwner) { nameMap ->
+            val iconMap = viewModel.iconUriMap.value.orEmpty()
+            val servers = nameMap.map { (id, name) ->
+                ServerEntity(
+                    id = 0, // неважно для отображения
+                    serverId = id,
+                    name = name,
+                    code = "", // код тоже не нужен для UI
+                    serverIconUri = iconMap[id]
+                )
+            }
+            adapter.updateData(servers)
         }
+
+        viewModel.iconUriMap.observe(viewLifecycleOwner) {
+            // Просто вызов повторной сборки списка
+            viewModel.serverNameMap.value?.let { nameMap ->
+                val servers = nameMap.map { (id, name) ->
+                    ServerEntity(
+                        id = 0,
+                        serverId = id,
+                        name = name,
+                        code = "",
+                        serverIconUri = it[id]
+                    )
+                }
+                adapter.updateData(servers)
+            }
+        }
+
+        // Инициируем загрузку при старте
+        viewModel.loadAndObserveServers()
     }
 
     private fun showEditDialog(server: ServerEntity) {
@@ -53,10 +82,9 @@ class ServerListFragment : Fragment() {
             .setView(editText)
             .setPositiveButton("Сохранить") { _, _ ->
                 val newName = editText.text.toString()
-                lifecycleScope.launch {
-                    db.serverDao().insert(server.copy(name = newName))
-                    loadServers()
-                }
+                val newEntity = server.copy(name = newName)
+                viewModel.addServer(newEntity.serverId, newEntity.code, newEntity.name)
+                viewModel.loadAndObserveServers()
             }
             .setNegativeButton("Отмена", null)
             .show()
@@ -67,10 +95,7 @@ class ServerListFragment : Fragment() {
             .setTitle("Удалить сервер?")
             .setMessage("Удалить ${server.name}?")
             .setPositiveButton("Удалить") { _, _ ->
-                lifecycleScope.launch {
-                    db.serverDao().delete(server)
-                    loadServers()
-                }
+                viewModel.deleteServer(server.serverId)
             }
             .setNegativeButton("Отмена", null)
             .show()

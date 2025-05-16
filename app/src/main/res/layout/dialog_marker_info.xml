@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <ImageView
+        android:id="@+id/imageIcon"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_marker"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/textServerName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Имя сервера"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/textCoords"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Координаты:"
+        android:textSize="14sp"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:id="@+id/textTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Время:"
+        android:textSize="14sp"
+        android:layout_marginBottom="16dp" />
+
+    <Button
+        android:id="@+id/buttonDetails"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Подробнее" />
+
+    <Button
+        android:id="@+id/buttonListen"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Послушать"
+        android:layout_marginTop="8dp" />
+
+    <Button
+        android:id="@+id/buttonDelete"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Удалить"
+        android:textColor="#F44336"
+        android:layout_marginTop="8dp" />
+</LinearLayout>

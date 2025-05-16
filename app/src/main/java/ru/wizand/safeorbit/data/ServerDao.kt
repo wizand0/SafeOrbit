@@ -16,4 +16,10 @@ interface ServerDao {
 
     @Delete
     suspend fun delete(server: ServerEntity)
+
+    @Query("DELETE FROM servers WHERE serverId = :serverId")
+    suspend fun deleteByServerId(serverId: String)
+
+    @Query("SELECT * FROM servers WHERE serverId = :serverId LIMIT 1")
+    suspend fun getByServerId(serverId: String): ServerEntity?
 }

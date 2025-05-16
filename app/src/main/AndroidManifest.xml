@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
@@ -18,11 +21,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SafeOrbit"
         tools:targetApi="31">
-        <service
-
-            android:name=".presentation.server.LocationService"
-            android:foregroundServiceType="location"
+        <activity
+            android:name=".presentation.client.ChangeIconActivity"
             android:exported="false" />
+        <activity
+            android:name=".presentation.client.ServerDetailsActivity"
+            android:exported="false" />
+
+        <service
+            android:name=".presentation.server.LocationService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
         <activity
             android:name=".presentation.server.ServerMainActivity"
             android:exported="false" />
@@ -34,12 +44,23 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <meta-data
             android:name="YANDEX_MAPKIT_API_KEY"
             android:value="${YANDEX_MAPKIT_API_KEY}" />
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>
