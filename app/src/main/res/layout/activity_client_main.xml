@@ -1,37 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/client_layout"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="24dp"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:background="#FFFFFF">
+    android:layout_height="match_parent">
 
-    <Button
-        android:id="@+id/btnAddServer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Добавить сервер" />
-
-    <Button
-        android:id="@+id/btnAllServers"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Все серверы"
-        android:layout_marginTop="8dp" />
-
-    <Button
-        android:id="@+id/btnSettings"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Настройки"
-        android:layout_marginTop="8dp" />
-
+    <!-- Основной контейнер для фрагментов -->
     <FrameLayout
-        android:id="@+id/container"
+        android:id="@+id/fragmentContainer"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="16dp" />
-</LinearLayout>
+        android:layout_height="match_parent"
+        android:layout_marginBottom="56dp" />
+
+    <!-- Плавающая кнопка -->
+<!--    <com.google.android.material.floatingactionbutton.FloatingActionButton-->
+<!--        android:id="@+id/fabAddServer"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_gravity="bottom|end"-->
+<!--        android:layout_margin="16dp"-->
+<!--        android:contentDescription="Добавить сервер"-->
+<!--        android:src="@android:drawable/ic_input_add"-->
+<!--        app:backgroundTint="@color/purple_500" />-->
+
+    <!-- Нижняя навигация -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom"
+        android:layout_alignParentBottom="true"
+        app:menu="@menu/bottom_nav_menu" />
+
+</FrameLayout>

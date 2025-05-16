@@ -1,3 +1,5 @@
+package ru.wizand.safeorbit.presentation.client
+
 import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
@@ -11,21 +13,28 @@ import ru.wizand.safeorbit.data.ServerEntity
 
 class ServerAdapter(
     private var items: List<ServerEntity>,
-    private val onEdit: (ServerEntity) -> Unit,
+    private val onShowInfo: (ServerEntity) -> Unit,
+    private val onEditName: (ServerEntity) -> Unit,
     private val onDelete: (ServerEntity) -> Unit
 ) : RecyclerView.Adapter<ServerAdapter.ServerViewHolder>() {
 
     inner class ServerViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val name: TextView = view.findViewById(R.id.textServerName)
-        val serverId: TextView = view.findViewById(R.id.textServerId)
-        val icon: ImageView = view.findViewById(R.id.imageServerIcon)
+        private val name: TextView = view.findViewById(R.id.textServerName)
+        private val serverId: TextView = view.findViewById(R.id.textServerId)
+        private val icon: ImageView = view.findViewById(R.id.imageServerIcon)
 
-        init {
-            view.setOnClickListener {
-                onEdit(items[bindingAdapterPosition])
+        fun bind(item: ServerEntity) {
+            name.text = item.name
+            serverId.text = "ID: ${item.serverId}"
+            if (!item.serverIconUri.isNullOrEmpty()) {
+                icon.setImageURI(Uri.parse(item.serverIconUri))
+            } else {
+                icon.setImageResource(R.drawable.ic_marker)
             }
-            view.setOnLongClickListener {
-                onDelete(items[bindingAdapterPosition])
+
+            itemView.setOnClickListener { onShowInfo(item) }
+            itemView.setOnLongClickListener {
+                onEditName(item)
                 true
             }
         }
@@ -38,15 +47,7 @@ class ServerAdapter(
     }
 
     override fun onBindViewHolder(holder: ServerViewHolder, position: Int) {
-        val item = items[position]
-        holder.name.text = item.name
-        holder.serverId.text = "ID: ${item.serverId}"
-
-        if (!item.serverIconUri.isNullOrEmpty()) {
-            holder.icon.setImageURI(Uri.parse(item.serverIconUri))
-        } else {
-            holder.icon.setImageResource(R.drawable.ic_marker)
-        }
+        holder.bind(items[position])
     }
 
     override fun getItemCount(): Int = items.size
@@ -55,14 +56,11 @@ class ServerAdapter(
         val diff = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
             override fun getOldListSize() = items.size
             override fun getNewListSize() = newList.size
+            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int) =
+                items[oldItemPosition].serverId == newList[newItemPosition].serverId
 
-            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-                return items[oldItemPosition].serverId == newList[newItemPosition].serverId
-            }
-
-            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-                return items[oldItemPosition] == newList[newItemPosition]
-            }
+            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int) =
+                items[oldItemPosition] == newList[newItemPosition]
         })
 
         items = newList

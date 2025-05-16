@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_map"
+        android:title="Карта"
+        android:icon="@android:drawable/ic_menu_mapmode" />
+
+    <item
+        android:id="@+id/nav_servers"
+        android:title="Все сервера"
+        android:icon="@android:drawable/ic_menu_agenda" />
+
+    <item
+        android:id="@+id/nav_placeholder"
+        android:title="Заглушка"
+        android:icon="@android:drawable/ic_menu_help" />
+
+    <item
+        android:id="@+id/nav_settings"
+        android:title="Настройки"
+        android:icon="@android:drawable/ic_menu_preferences" />
+
+</menu>

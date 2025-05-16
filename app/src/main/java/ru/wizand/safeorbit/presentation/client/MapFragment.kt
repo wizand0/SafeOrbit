@@ -12,7 +12,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.yandex.mapkit.MapKitFactory
@@ -57,19 +56,7 @@ class MapFragment : Fragment() {
         MapKitFactory.getInstance().onStart()
         mapView.onStart()
 
-        // Повторная отрисовка даже если данные уже загружены
-        val nameMap = viewModel.serverNameMap.value.orEmpty()
-        val states = viewModel.mapStates.value.orEmpty()
-        drawAll(states, nameMap)
-
-        viewModel.serverNameMap.observe(viewLifecycleOwner) { nameMap ->
-            viewModel.mapStates.value?.let { drawAll(it, nameMap) }
-        }
-
-        viewModel.mapStates.observe(viewLifecycleOwner) { states ->
-            val nameMap = viewModel.serverNameMap.value.orEmpty()
-            drawAll(states, nameMap)
-        }
+        observeViewModel()
 
         viewModel.lastKnownCenter?.let {
             mapView.mapWindow.map.move(CameraPosition(it, 13.0f, 0.0f, 0.0f))
@@ -90,60 +77,62 @@ class MapFragment : Fragment() {
     ) {
         val map = mapView.mapWindow.map
 
-        // Удаляем все старые объекты
-        placemarks.values.forEach { map.mapObjects.remove(it) }
-        polylines.values.forEach { map.mapObjects.remove(it) }
+        val currentIds = states.keys
+        val existingIds = placemarks.keys
 
-        // Очищаем внутренние списки
-        placemarks.clear()
-        polylines.clear()
+        (existingIds - currentIds).forEach { id ->
+            placemarks[id]?.let { map.mapObjects.remove(it) }
+            polylines[id]?.let { map.mapObjects.remove(it) }
+            placemarks.remove(id)
+            polylines.remove(id)
+        }
 
-        states.forEach { (serverId, state) ->
+        for ((serverId, state) in states) {
             val name = nameMap[serverId] ?: "Без имени"
             val point = state.latestPoint
-
-            // --- Создание кастомной иконки ---
             val iconUri = viewModel.getIconUriForServer(serverId)
-            val bitmap = createMarkerBitmap(serverId, name, iconUri)
-            val imageProvider = ImageProvider.fromBitmap(bitmap)
 
-            // --- Добавляем маркер ---
-            val placemark = map.mapObjects.addPlacemark(point, imageProvider)
+            val existingPlacemark = placemarks[serverId]
 
-            // Обработка клика по маркеру
-            placemark.addTapListener { _, _ ->
-                activeMarkerId = serverId
-                drawAll(viewModel.mapStates.value.orEmpty(), viewModel.serverNameMap.value.orEmpty())
+            if (existingPlacemark != null) {
+                val newBitmap = createMarkerBitmap(serverId, name, iconUri)
+                existingPlacemark.setIcon(ImageProvider.fromBitmap(newBitmap))
 
-                MarkerInfoBottomSheet(
-                    serverId = serverId,
-                    serverName = name,
-                    point = point,
-                    timestamp = state.timestamp,
-                    iconUri = iconUri,
-                    onDelete = { viewModel.deleteServer(it) }
-                ).show(parentFragmentManager, "info")
-
-                true
+                if (existingPlacemark.geometry != point) {
+                    animateMarkerMove(existingPlacemark, existingPlacemark.geometry, point)
+                }
+            } else {
+                val bitmap = createMarkerBitmap(serverId, name, iconUri)
+                val placemark = map.mapObjects.addPlacemark(point, ImageProvider.fromBitmap(bitmap))
+                placemarks[serverId] = placemark
             }
 
-            placemarks[serverId] = placemark
-
-            // --- Добавляем полилинию маршрута, если есть история ---
             if (state.history.size >= 2) {
-                val polyline = map.mapObjects.addPolyline(Polyline(state.history))
-                polyline.setStrokeColor(state.color)
-                polyline.setStrokeWidth(3f)
-                polylines[serverId] = polyline
+                val polyline = polylines[serverId]
+                if (polyline != null) {
+                    polyline.geometry = Polyline(state.history)
+                } else {
+                    val newPolyline = map.mapObjects.addPolyline(Polyline(state.history))
+                    newPolyline.setStrokeColor(state.color)
+                    newPolyline.setStrokeWidth(3f)
+                    polylines[serverId] = newPolyline
+                }
             }
 
-            // --- Центрируем карту (только один раз для сервера) ---
             if (state.shouldCenter) {
                 map.move(CameraPosition(point, 13.0f, 0.0f, 0.0f))
             }
         }
     }
 
+    private fun updateMarkerHighlighting() {
+        for ((serverId, placemark) in placemarks) {
+            val name = viewModel.serverNameMap.value?.get(serverId) ?: "Без имени"
+            val iconUri = viewModel.getIconUriForServer(serverId)
+            val bitmap = createMarkerBitmap(serverId, name, iconUri)
+            placemark.setIcon(ImageProvider.fromBitmap(bitmap))
+        }
+    }
 
     private fun createMarkerBitmap(serverId: String, name: String, iconUri: String?): Bitmap {
         val view = layoutInflater.inflate(R.layout.view_marker, null)
@@ -164,9 +153,8 @@ class MapFragment : Fragment() {
             imageView.setImageResource(R.drawable.red_dot)
         }
 
-        // Подсветка активного
         if (serverId == activeMarkerId) {
-            view.setBackgroundResource(R.drawable.marker_background) // с рамкой
+            view.setBackgroundResource(R.drawable.marker_background)
             view.scaleX = 1.2f
             view.scaleY = 1.2f
         } else {
@@ -193,6 +181,17 @@ class MapFragment : Fragment() {
                 val lon = from.longitude + (to.longitude - from.longitude) * i / steps
                 marker.geometry = Point(lat, lon)
             }, i * delay)
+        }
+    }
+
+    private fun observeViewModel() {
+        viewModel.serverNameMap.observe(viewLifecycleOwner) { nameMap ->
+            viewModel.mapStates.value?.let { drawAll(it, nameMap) }
+        }
+
+        viewModel.mapStates.observe(viewLifecycleOwner) { states ->
+            val nameMap = viewModel.serverNameMap.value.orEmpty()
+            drawAll(states, nameMap)
         }
     }
 

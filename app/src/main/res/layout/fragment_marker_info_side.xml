@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/imageIcon"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_gravity="center_horizontal"
+        android:contentDescription="Иконка" />
+
+    <TextView
+        android:id="@+id/textServerName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Имя сервера"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginTop="12dp" />
+
+    <TextView
+        android:id="@+id/textCoords"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Координаты" />
+
+    <TextView
+        android:id="@+id/textTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Время" />
+
+    <Button
+        android:id="@+id/buttonDetails"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Подробнее" />
+</LinearLayout>
