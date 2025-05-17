@@ -54,7 +54,12 @@ class ServerSettingsActivity : AppCompatActivity() {
         }
 
         btnResetRole.setOnClickListener {
-            prefs.edit().remove("user_role").apply()
+            getSharedPreferences("app_prefs", MODE_PRIVATE)
+                .edit()
+                .remove("user_role")
+                .remove("pin_verified")
+                .apply()
+
             startActivity(Intent(this, RoleSelectionActivity::class.java))
             finishAffinity()
         }

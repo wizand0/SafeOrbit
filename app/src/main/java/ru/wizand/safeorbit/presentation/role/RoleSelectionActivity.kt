@@ -34,8 +34,9 @@ class RoleSelectionActivity : AppCompatActivity() {
                 UserRole.SERVER -> {
                     val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
                     val pin = prefs.getString("server_pin", null)
+                    val verified = prefs.getBoolean("pin_verified", false)
 
-                    val intent = if (pin != null) {
+                    val intent = if (pin != null && !verified) {
                         Intent(this, ru.wizand.safeorbit.presentation.security.PinGateActivity::class.java)
                     } else {
                         Intent(this, ServerMainActivity::class.java)
@@ -61,8 +62,9 @@ class RoleSelectionActivity : AppCompatActivity() {
 
             val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
             val pin = prefs.getString("server_pin", null)
+            val verified = prefs.getBoolean("pin_verified", false)
 
-            val intent = if (pin != null) {
+            val intent = if (pin != null && !verified) {
                 Intent(this, ru.wizand.safeorbit.presentation.security.PinGateActivity::class.java)
             } else {
                 Intent(this, ServerMainActivity::class.java)

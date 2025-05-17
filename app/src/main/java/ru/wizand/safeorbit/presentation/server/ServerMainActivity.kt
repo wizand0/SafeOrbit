@@ -4,9 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.databinding.ActivityServerMainBinding
 
+@AndroidEntryPoint
 class ServerMainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityServerMainBinding

@@ -1,50 +1,41 @@
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center">
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/tvServerId"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ID сервера: ..."
+        android:textSize="18sp"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/tvPairCode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Код: ..."
+        android:textSize="18sp"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/tvCurrentCoords"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp"
-        android:gravity="center">
+        android:text="Координаты: ..."
+        android:textSize="16sp"
+        android:padding="16dp" />
 
-        <TextView
-            android:id="@+id/tvServerId"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ID сервера: ..."
-            android:textSize="18sp"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:id="@+id/tvPairCode"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Код: ..."
-            android:textSize="18sp"
-            android:layout_marginBottom="24dp" />
-
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Ожидание подключений..."
-            android:textSize="16sp" />
-
-        <Button
-            android:id="@+id/btnResetRole"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Сбросить роль"
-            android:layout_marginTop="16dp" />
-
-        <TextView
-            android:id="@+id/tvCurrentCoords"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Координаты: ..."
-            android:textSize="16sp"
-            android:padding="16dp" />
-    </LinearLayout>
-</ScrollView>
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Время обновления: ..."
+        android:textSize="14sp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="16dp" />
+</LinearLayout>

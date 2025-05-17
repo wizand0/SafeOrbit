@@ -35,10 +35,16 @@ class PinGateActivity : AppCompatActivity() {
             }
 
             if (savedPin == null) {
-                prefs.edit().putString("server_pin", input).apply()
+                prefs.edit()
+                    .putString("server_pin", input)
+                    .putBoolean("pin_verified", true) // ✅ запоминаем успешную проверку
+                    .apply()
                 startActivity(Intent(this, ServerMainActivity::class.java))
                 finish()
             } else if (input == savedPin) {
+                prefs.edit()
+                    .putBoolean("pin_verified", true) // ✅ запоминаем успешную проверку
+                    .apply()
                 startActivity(Intent(this, ServerMainActivity::class.java))
                 finish()
             } else {

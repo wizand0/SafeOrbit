@@ -70,6 +70,14 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+        <receiver
+            android:name=".presentation.server.ActivityReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.android.location.ACTIVITY_TRANSITION_EVENT" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

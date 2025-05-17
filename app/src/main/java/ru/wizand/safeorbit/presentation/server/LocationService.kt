@@ -6,7 +6,6 @@ import android.content.*
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.*
-import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -15,6 +14,7 @@ import com.google.android.gms.location.*
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.data.worker.SendLocationWorker
+import ru.wizand.safeorbit.utils.LocationLogger
 import java.util.concurrent.TimeUnit
 
 class LocationService : Service() {
@@ -28,57 +28,90 @@ class LocationService : Service() {
     private var lastSentLocation: Location? = null
     private var isMoving = false
 
-    private val updateIntervalMoving = 30_000L // 30 секунд
-    private val minDistanceToSend = 50 // метров
+    private val updateIntervalMoving = 30_000L // интервал GPS обновлений при движении
+    private val minDistanceToSend = 50 // минимальное расстояние (в метрах) для отправки новой точки
 
     override fun onCreate() {
         super.onCreate()
 
-        // Инициализация клиентов
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         activityRecognitionClient = ActivityRecognition.getClient(this)
 
-        // Уведомление foreground-сервиса
         startForegroundWithNotification()
 
-        // Callback при получении локации
+        // Обработка полученных координат
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
-                result.lastLocation?.let { handleNewLocation(it) }
+                val location = result.lastLocation
+                LocationLogger.debug("Получена локация: $location")
+                location?.let { handleNewLocation(it) }
             }
         }
 
-        // Подготовка интента и PendingIntent для мониторинга активности
-        val intent = Intent("ACTIVITY_RECOGNIZED")
+        // PendingIntent, который будет вызываться системой при смене активности
+        val intent = Intent(this, ActivityReceiver::class.java)
         activityPendingIntent = PendingIntent.getBroadcast(
             this, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Регистрируем broadcast receiver для активности
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(
-                activityReceiver,
-                IntentFilter("ACTIVITY_RECOGNIZED"),
-                RECEIVER_NOT_EXPORTED
-            )
-        } else {
-            registerReceiver(activityReceiver, IntentFilter("ACTIVITY_RECOGNIZED"))
-        }
-
-        // Запускаем мониторинг активности
+        // Запрашиваем отслеживание активности (ходьба, покой)
         requestActivityUpdates()
 
-        Log.d("LOCATION_SERVICE", "Сервис создан")
+        LocationLogger.info("Сервис создан")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        serverId = intent?.getStringExtra("server_id")
+        // Если пришёл интент от ActivityReceiver — обрабатываем его
+        val activityType = intent?.getIntExtra("activity_type", -1)
+        val transitionType = intent?.getIntExtra("transition_type", -1)
+
+        if (activityType != null && transitionType != null && activityType != -1) {
+            LocationLogger.debug("ActivityReceiver: type=$activityType, transition=$transitionType")
+
+            when (activityType) {
+                DetectedActivity.WALKING -> {
+                    if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER && !isMoving) {
+                        isMoving = true
+                        startLocationUpdates()
+                        LocationLogger.debug("Ходьба началась — включаем GPS")
+                    } else if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_EXIT) {
+                        isMoving = false
+                        stopLocationUpdates()
+                        LocationLogger.debug("Ходьба завершилась — отключаем GPS")
+                    }
+                }
+
+                DetectedActivity.STILL -> {
+                    if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
+                        isMoving = false
+                        stopLocationUpdates()
+                        LocationLogger.debug("Покой — отключаем GPS")
+                    }
+                }
+            }
+        }
+
+        // Получаем serverId (передан в интенте или уже был сохранён)
+        serverId = intent?.getStringExtra("server_id") ?: serverId
 
         if (serverId.isNullOrEmpty()) {
+            LocationLogger.warn("Server ID отсутствует — сервис остановлен")
             stopSelf()
         } else {
-            Log.d("LOCATION_SERVICE", "Сервис запущен с serverId = $serverId")
+            LocationLogger.debug("Сервис запущен с serverId = $serverId")
+        }
+
+        // ❗ Немедленная попытка получить последнюю известную локацию
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null && serverId != null) {
+                    LocationLogger.info("Первичная локация получена: $location")
+                    handleNewLocation(location)
+                } else {
+                    LocationLogger.warn("Не удалось получить первичную локацию")
+                }
+            }
         }
 
         return START_STICKY
@@ -88,12 +121,9 @@ class LocationService : Service() {
         val channelId = "location_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                channelId,
-                "Location Tracking",
-                NotificationManager.IMPORTANCE_LOW
+                channelId, "Location Tracking", NotificationManager.IMPORTANCE_LOW
             )
-            getSystemService(NotificationManager::class.java)
-                .createNotificationChannel(channel)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
 
         val notification = NotificationCompat.Builder(this, channelId)
@@ -127,50 +157,43 @@ class LocationService : Service() {
 
         val request = ActivityTransitionRequest(transitions)
 
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACTIVITY_RECOGNITION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+            LocationLogger.warn("Нет разрешения ACTIVITY_RECOGNITION")
             return
         }
+
         activityRecognitionClient
             .requestActivityTransitionUpdates(request, activityPendingIntent)
             .addOnSuccessListener {
-                Log.d("ACTIVITY_RECOGNITION", "Мониторинг активности запущен")
+                LocationLogger.info("Мониторинг активности запущен")
             }
             .addOnFailureListener {
-                Log.e("ACTIVITY_RECOGNITION", "Ошибка запуска мониторинга: ${it.message}")
+                LocationLogger.error("Ошибка запуска мониторинга активности", it)
             }
     }
 
     private fun startLocationUpdates() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
             ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
-        ) return
+        ) {
+            LocationLogger.warn("Нет разрешения на геолокацию")
+            return
+        }
 
         val request = LocationRequest.Builder(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY,
             updateIntervalMoving
-        ).setMinUpdateDistanceMeters(10f)
-            .build()
+        ).setMinUpdateDistanceMeters(10f).build()
 
         fusedLocationClient.requestLocationUpdates(
-            request,
-            locationCallback,
-            Looper.getMainLooper()
+            request, locationCallback, Looper.getMainLooper()
         )
+        LocationLogger.debug("Старт GPS обновлений")
     }
 
     private fun stopLocationUpdates() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
+        LocationLogger.debug("Остановка GPS обновлений")
     }
 
     private fun handleNewLocation(location: Location) {
@@ -194,10 +217,11 @@ class LocationService : Service() {
             val intent = Intent("LOCATION_UPDATE").apply {
                 putExtra("latitude", data.latitude)
                 putExtra("longitude", data.longitude)
+                putExtra("timestamp", data.timestamp)
             }
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
 
-            Log.d("SEND_LOCATION", "Отправлено: $data")
+            LocationLogger.info("Локация отправлена: $data")
         }
     }
 
@@ -211,67 +235,22 @@ class LocationService : Service() {
                     .putLong("timestamp", data.timestamp)
                     .build()
             )
-            .setBackoffCriteria(
-                BackoffPolicy.EXPONENTIAL,
-                30, TimeUnit.SECONDS
-            )
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
 
         WorkManager.getInstance(applicationContext).enqueue(workRequest)
-    }
-
-    private val activityReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val transitionResult = ActivityTransitionResult.extractResult(intent!!) ?: return
-
-            for (event in transitionResult.transitionEvents) {
-                when (event.activityType) {
-                    DetectedActivity.WALKING -> {
-                        if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
-                            if (!isMoving) {
-                                isMoving = true
-                                startLocationUpdates()
-                                Log.d("ACTIVITY", "Движение началось — включаем GPS")
-                            }
-                        } else {
-                            isMoving = false
-                            stopLocationUpdates()
-                            Log.d("ACTIVITY", "Движение завершено — отключаем GPS")
-                        }
-                    }
-
-                    DetectedActivity.STILL -> {
-                        if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
-                            isMoving = false
-                            stopLocationUpdates()
-                            Log.d("ACTIVITY", "Покой — отключаем GPS")
-                        }
-                    }
-                }
-            }
-        }
+        LocationLogger.debug("Создан WorkManager task для отправки локации")
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        unregisterReceiver(activityReceiver)
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACTIVITY_RECOGNITION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return
-        }
-        activityRecognitionClient.removeActivityTransitionUpdates(activityPendingIntent)
         stopLocationUpdates()
-        Log.d("LOCATION_SERVICE", "Сервис уничтожен")
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
+            activityRecognitionClient.removeActivityTransitionUpdates(activityPendingIntent)
+        }
+
+        LocationLogger.warn("Сервис уничтожен")
+        super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
