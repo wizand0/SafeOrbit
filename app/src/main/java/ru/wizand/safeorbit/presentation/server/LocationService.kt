@@ -1,71 +1,117 @@
 package ru.wizand.safeorbit.presentation.server
 
 import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.Service
-import android.content.Intent
+import android.app.*
+import android.content.*
 import android.content.pm.PackageManager
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import android.os.Build
-import android.os.IBinder
-import android.util.Log
+import android.location.Location
+import android.os.*
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
+import androidx.work.*
+import com.google.android.gms.location.*
 import ru.wizand.safeorbit.R
-import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
-import java.util.Timer
-import java.util.TimerTask
-import kotlin.math.pow
-import kotlin.math.sqrt
-import kotlin.math.abs
+import ru.wizand.safeorbit.data.worker.SendLocationWorker
+import ru.wizand.safeorbit.utils.LocationLogger
+import java.util.concurrent.TimeUnit
 
-class LocationService : Service(), SensorEventListener {
+class LocationService : Service() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var sensorManager: SensorManager
-    private var lastAcceleration = 0f
-    private var moving = false
+    private lateinit var activityRecognitionClient: ActivityRecognitionClient
+    private lateinit var locationCallback: LocationCallback
+    private lateinit var activityPendingIntent: PendingIntent
 
     private var serverId: String? = null
-    private lateinit var firebaseRepository: FirebaseRepository
+    private var lastSentLocation: Location? = null
+    private var isMoving = false
 
-    private var timer: Timer? = null
-    private val updateIntervalMoving = 30_000L         // 30 секунд
-    private val updateIntervalStationary = 10 * 60_000L // 10 минут
+    private val updateIntervalMoving = 30_000L // интервал GPS обновлений при движении
+    private val minDistanceToSend = 50 // минимальное расстояние (в метрах) для отправки новой точки
 
     override fun onCreate() {
         super.onCreate()
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        firebaseRepository = FirebaseRepository(applicationContext)
+        activityRecognitionClient = ActivityRecognition.getClient(this)
 
         startForegroundWithNotification()
-        sensorManager.registerListener(
-            this,
-            sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
-            SensorManager.SENSOR_DELAY_NORMAL
+
+        // Обработка полученных координат
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val location = result.lastLocation
+                LocationLogger.debug("Получена локация: $location")
+                location?.let { handleNewLocation(it) }
+            }
+        }
+
+        // PendingIntent, который будет вызываться системой при смене активности
+        val intent = Intent(this, ActivityReceiver::class.java)
+        activityPendingIntent = PendingIntent.getBroadcast(
+            this, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        Log.d("LOCATION_SERVICE", "Сервис создан")
+        // Запрашиваем отслеживание активности (ходьба, покой)
+        requestActivityUpdates()
+
+        LocationLogger.info("Сервис создан")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        serverId = intent?.getStringExtra("server_id")
+        // Если пришёл интент от ActivityReceiver — обрабатываем его
+        val activityType = intent?.getIntExtra("activity_type", -1)
+        val transitionType = intent?.getIntExtra("transition_type", -1)
+
+        if (activityType != null && transitionType != null && activityType != -1) {
+            LocationLogger.debug("ActivityReceiver: type=$activityType, transition=$transitionType")
+
+            when (activityType) {
+                DetectedActivity.WALKING -> {
+                    if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER && !isMoving) {
+                        isMoving = true
+                        startLocationUpdates()
+                        LocationLogger.debug("Ходьба началась — включаем GPS")
+                    } else if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_EXIT) {
+                        isMoving = false
+                        stopLocationUpdates()
+                        LocationLogger.debug("Ходьба завершилась — отключаем GPS")
+                    }
+                }
+
+                DetectedActivity.STILL -> {
+                    if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
+                        isMoving = false
+                        stopLocationUpdates()
+                        LocationLogger.debug("Покой — отключаем GPS")
+                    }
+                }
+            }
+        }
+
+        // Получаем serverId (передан в интенте или уже был сохранён)
+        serverId = intent?.getStringExtra("server_id") ?: serverId
 
         if (serverId.isNullOrEmpty()) {
-            Log.w("LOCATION_SERVICE", "ServerId не передан — сервис завершает работу")
+            LocationLogger.warn("Server ID отсутствует — сервис остановлен")
             stopSelf()
         } else {
-            Log.d("LOCATION_SERVICE", "Сервис запущен с serverId = $serverId")
-            scheduleLocationUpdates()
+            LocationLogger.debug("Сервис запущен с serverId = $serverId")
+        }
+
+        // ❗ Немедленная попытка получить последнюю известную локацию
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null && serverId != null) {
+                    LocationLogger.info("Первичная локация получена: $location")
+                    handleNewLocation(location)
+                } else {
+                    LocationLogger.warn("Не удалось получить первичную локацию")
+                }
+            }
         }
 
         return START_STICKY
@@ -74,7 +120,9 @@ class LocationService : Service(), SensorEventListener {
     private fun startForegroundWithNotification() {
         val channelId = "location_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "Location Tracking", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(
+                channelId, "Location Tracking", NotificationManager.IMPORTANCE_LOW
+            )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
 
@@ -87,70 +135,123 @@ class LocationService : Service(), SensorEventListener {
         startForeground(1, notification)
     }
 
-    private fun scheduleLocationUpdates() {
-        timer?.cancel()
-        timer = Timer()
-        val interval = if (moving) updateIntervalMoving else updateIntervalStationary
+    private fun requestActivityUpdates() {
+        val transitions = listOf(
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.WALKING)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                .build(),
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.WALKING)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
+                .build(),
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.STILL)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                .build(),
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.STILL)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
+                .build()
+        )
 
-        timer?.schedule(object : TimerTask() {
-            override fun run() {
-                sendLocation()
-            }
-        }, 0, interval)
-    }
+        val request = ActivityTransitionRequest(transitions)
 
-    private fun sendLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
-        ) {
-            Log.w("SEND_LOCATION", "Нет разрешений на геолокацию")
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+            LocationLogger.warn("Нет разрешения ACTIVITY_RECOGNITION")
             return
         }
 
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null && !serverId.isNullOrEmpty()) {
-                val data = LocationData(
-                    latitude = location.latitude,
-                    longitude = location.longitude,
-                    timestamp = System.currentTimeMillis()
-                )
-                firebaseRepository.sendLocation(serverId!!, data)
-
-                // Отправка в broadcast для отображения в UI
-                val intent = Intent("LOCATION_UPDATE").apply {
-                    putExtra("latitude", data.latitude)
-                    putExtra("longitude", data.longitude)
-                }
-                LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-//                sendBroadcast(intent)
-
-                Log.d("SEND_LOCATION", "Координаты отправлены: $data")
+        activityRecognitionClient
+            .requestActivityTransitionUpdates(request, activityPendingIntent)
+            .addOnSuccessListener {
+                LocationLogger.info("Мониторинг активности запущен")
             }
+            .addOnFailureListener {
+                LocationLogger.error("Ошибка запуска мониторинга активности", it)
+            }
+    }
+
+    private fun startLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+        ) {
+            LocationLogger.warn("Нет разрешения на геолокацию")
+            return
+        }
+
+        val request = LocationRequest.Builder(
+            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            updateIntervalMoving
+        ).setMinUpdateDistanceMeters(10f).build()
+
+        fusedLocationClient.requestLocationUpdates(
+            request, locationCallback, Looper.getMainLooper()
+        )
+        LocationLogger.debug("Старт GPS обновлений")
+    }
+
+    private fun stopLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+        LocationLogger.debug("Остановка GPS обновлений")
+    }
+
+    private fun handleNewLocation(location: Location) {
+        if (serverId.isNullOrEmpty()) return
+
+        val shouldSend = lastSentLocation?.let {
+            location.distanceTo(it) > minDistanceToSend
+        } ?: true
+
+        if (shouldSend) {
+            lastSentLocation = location
+
+            val data = LocationData(
+                latitude = location.latitude,
+                longitude = location.longitude,
+                timestamp = System.currentTimeMillis()
+            )
+
+            enqueueSendLocationWorker(serverId!!, data)
+
+            val intent = Intent("LOCATION_UPDATE").apply {
+                putExtra("latitude", data.latitude)
+                putExtra("longitude", data.longitude)
+                putExtra("timestamp", data.timestamp)
+            }
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+
+            LocationLogger.info("Локация отправлена: $data")
         }
     }
 
-    override fun onSensorChanged(event: SensorEvent?) {
-        event?.let {
-            val acceleration = sqrt(it.values[0].pow(2) + it.values[1].pow(2) + it.values[2].pow(2))
-            val delta = abs(acceleration - lastAcceleration)
-            lastAcceleration = acceleration
+    private fun enqueueSendLocationWorker(serverId: String, data: LocationData) {
+        val workRequest = OneTimeWorkRequestBuilder<SendLocationWorker>()
+            .setInputData(
+                Data.Builder()
+                    .putString("server_id", serverId)
+                    .putDouble("latitude", data.latitude)
+                    .putDouble("longitude", data.longitude)
+                    .putLong("timestamp", data.timestamp)
+                    .build()
+            )
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
 
-            val isNowMoving = delta > 0.5f
-            if (isNowMoving != moving) {
-                moving = isNowMoving
-                scheduleLocationUpdates()
-            }
-        }
+        WorkManager.getInstance(applicationContext).enqueue(workRequest)
+        LocationLogger.debug("Создан WorkManager task для отправки локации")
     }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-
-    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        stopLocationUpdates()
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
+            activityRecognitionClient.removeActivityTransitionUpdates(activityPendingIntent)
+        }
+
+        LocationLogger.warn("Сервис уничтожен")
         super.onDestroy()
-        timer?.cancel()
-        sensorManager.unregisterListener(this)
-        Log.d("LOCATION_SERVICE", "Сервис уничтожен")
     }
+
+    override fun onBind(intent: Intent?): IBinder? = null
 }

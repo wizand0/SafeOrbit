@@ -9,7 +9,6 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
-
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
@@ -21,6 +20,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SafeOrbit"
         tools:targetApi="31">
+        <activity
+            android:name=".presentation.security.PinGateActivity"
+            android:exported="false" />
+        <activity
+            android:name=".presentation.security.PinVerificationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".presentation.server.ServerSettingsActivity"
+            android:exported="false" />
         <activity
             android:name=".presentation.client.ChangeIconActivity"
             android:exported="false" />
@@ -52,6 +60,7 @@
         <meta-data
             android:name="YANDEX_MAPKIT_API_KEY"
             android:value="${YANDEX_MAPKIT_API_KEY}" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
@@ -61,6 +70,14 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+        <receiver
+            android:name=".presentation.server.ActivityReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.android.location.ACTIVITY_TRANSITION_EVENT" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

@@ -15,6 +15,7 @@ import ru.wizand.safeorbit.R
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 class ServerDetailsActivity : AppCompatActivity() {
 
     private val viewModel: ClientViewModel by viewModels()

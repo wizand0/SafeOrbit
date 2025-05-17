@@ -32,10 +32,21 @@ class RoleSelectionActivity : AppCompatActivity() {
         viewModel.getUserRole()?.let { role ->
             when (role) {
                 UserRole.SERVER -> {
-                    startActivity(Intent(this, ServerMainActivity::class.java))
-                    finish() // закрываем экран выбора
+                    val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+                    val pin = prefs.getString("server_pin", null)
+                    val verified = prefs.getBoolean("pin_verified", false)
+
+                    val intent = if (pin != null && !verified) {
+                        Intent(this, ru.wizand.safeorbit.presentation.security.PinGateActivity::class.java)
+                    } else {
+                        Intent(this, ServerMainActivity::class.java)
+                    }
+
+                    startActivity(intent)
+                    finish()
                     return
                 }
+
                 UserRole.CLIENT -> {
                     startActivity(Intent(this, ClientMainActivity::class.java))
                     finish()
@@ -48,7 +59,18 @@ class RoleSelectionActivity : AppCompatActivity() {
         binding.btnServer.setOnClickListener {
             viewModel.saveUserRole(UserRole.SERVER)
             saveUserRoleToDatabase("server")
-            startActivity(Intent(this, ServerMainActivity::class.java))
+
+            val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+            val pin = prefs.getString("server_pin", null)
+            val verified = prefs.getBoolean("pin_verified", false)
+
+            val intent = if (pin != null && !verified) {
+                Intent(this, ru.wizand.safeorbit.presentation.security.PinGateActivity::class.java)
+            } else {
+                Intent(this, ServerMainActivity::class.java)
+            }
+
+            startActivity(intent)
         }
 
         binding.btnClient.setOnClickListener {
