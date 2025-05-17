@@ -1,0 +1,50 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/tvServerId"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ID сервера: ..."
+            android:textSize="18sp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/tvPairCode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Код: ..."
+            android:textSize="18sp"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ожидание подключений..."
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/btnResetRole"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Сбросить роль"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            android:id="@+id/tvCurrentCoords"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Координаты: ..."
+            android:textSize="16sp"
+            android:padding="16dp" />
+    </LinearLayout>
+</ScrollView>

@@ -45,16 +45,6 @@ class ClientMainActivity : AppCompatActivity() {
         }
     }
 
-//    private fun setupFab() {
-//        val fab = findViewById<FloatingActionButton>(R.id.fabAddServer)
-//        fab.setOnClickListener {
-//            AddServerDialogFragment { serverId, code, name ->
-//                viewModel.addServer(serverId, code, name)
-//                viewModel.loadAndObserveServers()
-//            }.show(supportFragmentManager, "AddServerDialog")
-//        }
-//    }
-
     private fun showFragmentById(itemId: Int) {
         val fragment = when (itemId) {
             R.id.nav_map -> MapFragment()

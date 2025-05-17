@@ -1,58 +1,73 @@
 package ru.wizand.safeorbit.presentation.server
 
 import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.Service
-import android.content.Intent
+import android.app.*
+import android.content.*
 import android.content.pm.PackageManager
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import android.os.Build
-import android.os.IBinder
+import android.location.Location
+import android.os.*
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
+import androidx.work.*
+import com.google.android.gms.location.*
 import ru.wizand.safeorbit.R
-import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
-import java.util.Timer
-import java.util.TimerTask
-import kotlin.math.pow
-import kotlin.math.sqrt
-import kotlin.math.abs
+import ru.wizand.safeorbit.data.worker.SendLocationWorker
+import java.util.concurrent.TimeUnit
 
-class LocationService : Service(), SensorEventListener {
+class LocationService : Service() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var sensorManager: SensorManager
-    private var lastAcceleration = 0f
-    private var moving = false
+    private lateinit var activityRecognitionClient: ActivityRecognitionClient
+    private lateinit var locationCallback: LocationCallback
+    private lateinit var activityPendingIntent: PendingIntent
 
     private var serverId: String? = null
-    private lateinit var firebaseRepository: FirebaseRepository
+    private var lastSentLocation: Location? = null
+    private var isMoving = false
 
-    private var timer: Timer? = null
-    private val updateIntervalMoving = 30_000L         // 30 секунд
-    private val updateIntervalStationary = 10 * 60_000L // 10 минут
+    private val updateIntervalMoving = 30_000L // 30 секунд
+    private val minDistanceToSend = 50 // метров
 
     override fun onCreate() {
         super.onCreate()
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        firebaseRepository = FirebaseRepository(applicationContext)
 
+        // Инициализация клиентов
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        activityRecognitionClient = ActivityRecognition.getClient(this)
+
+        // Уведомление foreground-сервиса
         startForegroundWithNotification()
-        sensorManager.registerListener(
-            this,
-            sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
-            SensorManager.SENSOR_DELAY_NORMAL
+
+        // Callback при получении локации
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                result.lastLocation?.let { handleNewLocation(it) }
+            }
+        }
+
+        // Подготовка интента и PendingIntent для мониторинга активности
+        val intent = Intent("ACTIVITY_RECOGNIZED")
+        activityPendingIntent = PendingIntent.getBroadcast(
+            this, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+
+        // Регистрируем broadcast receiver для активности
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(
+                activityReceiver,
+                IntentFilter("ACTIVITY_RECOGNIZED"),
+                RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            registerReceiver(activityReceiver, IntentFilter("ACTIVITY_RECOGNIZED"))
+        }
+
+        // Запускаем мониторинг активности
+        requestActivityUpdates()
 
         Log.d("LOCATION_SERVICE", "Сервис создан")
     }
@@ -61,11 +76,9 @@ class LocationService : Service(), SensorEventListener {
         serverId = intent?.getStringExtra("server_id")
 
         if (serverId.isNullOrEmpty()) {
-            Log.w("LOCATION_SERVICE", "ServerId не передан — сервис завершает работу")
             stopSelf()
         } else {
             Log.d("LOCATION_SERVICE", "Сервис запущен с serverId = $serverId")
-            scheduleLocationUpdates()
         }
 
         return START_STICKY
@@ -74,8 +87,13 @@ class LocationService : Service(), SensorEventListener {
     private fun startForegroundWithNotification() {
         val channelId = "location_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "Location Tracking", NotificationManager.IMPORTANCE_LOW)
-            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            val channel = NotificationChannel(
+                channelId,
+                "Location Tracking",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            getSystemService(NotificationManager::class.java)
+                .createNotificationChannel(channel)
         }
 
         val notification = NotificationCompat.Builder(this, channelId)
@@ -87,70 +105,174 @@ class LocationService : Service(), SensorEventListener {
         startForeground(1, notification)
     }
 
-    private fun scheduleLocationUpdates() {
-        timer?.cancel()
-        timer = Timer()
-        val interval = if (moving) updateIntervalMoving else updateIntervalStationary
+    private fun requestActivityUpdates() {
+        val transitions = listOf(
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.WALKING)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                .build(),
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.WALKING)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
+                .build(),
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.STILL)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                .build(),
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.STILL)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
+                .build()
+        )
 
-        timer?.schedule(object : TimerTask() {
-            override fun run() {
-                sendLocation()
-            }
-        }, 0, interval)
-    }
+        val request = ActivityTransitionRequest(transitions)
 
-    private fun sendLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACTIVITY_RECOGNITION
+            ) != PackageManager.PERMISSION_GRANTED
         ) {
-            Log.w("SEND_LOCATION", "Нет разрешений на геолокацию")
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
             return
         }
+        activityRecognitionClient
+            .requestActivityTransitionUpdates(request, activityPendingIntent)
+            .addOnSuccessListener {
+                Log.d("ACTIVITY_RECOGNITION", "Мониторинг активности запущен")
+            }
+            .addOnFailureListener {
+                Log.e("ACTIVITY_RECOGNITION", "Ошибка запуска мониторинга: ${it.message}")
+            }
+    }
 
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null && !serverId.isNullOrEmpty()) {
-                val data = LocationData(
-                    latitude = location.latitude,
-                    longitude = location.longitude,
-                    timestamp = System.currentTimeMillis()
-                )
-                firebaseRepository.sendLocation(serverId!!, data)
+    private fun startLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+        ) return
 
-                // Отправка в broadcast для отображения в UI
-                val intent = Intent("LOCATION_UPDATE").apply {
-                    putExtra("latitude", data.latitude)
-                    putExtra("longitude", data.longitude)
+        val request = LocationRequest.Builder(
+            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            updateIntervalMoving
+        ).setMinUpdateDistanceMeters(10f)
+            .build()
+
+        fusedLocationClient.requestLocationUpdates(
+            request,
+            locationCallback,
+            Looper.getMainLooper()
+        )
+    }
+
+    private fun stopLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+    private fun handleNewLocation(location: Location) {
+        if (serverId.isNullOrEmpty()) return
+
+        val shouldSend = lastSentLocation?.let {
+            location.distanceTo(it) > minDistanceToSend
+        } ?: true
+
+        if (shouldSend) {
+            lastSentLocation = location
+
+            val data = LocationData(
+                latitude = location.latitude,
+                longitude = location.longitude,
+                timestamp = System.currentTimeMillis()
+            )
+
+            enqueueSendLocationWorker(serverId!!, data)
+
+            val intent = Intent("LOCATION_UPDATE").apply {
+                putExtra("latitude", data.latitude)
+                putExtra("longitude", data.longitude)
+            }
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+
+            Log.d("SEND_LOCATION", "Отправлено: $data")
+        }
+    }
+
+    private fun enqueueSendLocationWorker(serverId: String, data: LocationData) {
+        val workRequest = OneTimeWorkRequestBuilder<SendLocationWorker>()
+            .setInputData(
+                Data.Builder()
+                    .putString("server_id", serverId)
+                    .putDouble("latitude", data.latitude)
+                    .putDouble("longitude", data.longitude)
+                    .putLong("timestamp", data.timestamp)
+                    .build()
+            )
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                30, TimeUnit.SECONDS
+            )
+            .build()
+
+        WorkManager.getInstance(applicationContext).enqueue(workRequest)
+    }
+
+    private val activityReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val transitionResult = ActivityTransitionResult.extractResult(intent!!) ?: return
+
+            for (event in transitionResult.transitionEvents) {
+                when (event.activityType) {
+                    DetectedActivity.WALKING -> {
+                        if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
+                            if (!isMoving) {
+                                isMoving = true
+                                startLocationUpdates()
+                                Log.d("ACTIVITY", "Движение началось — включаем GPS")
+                            }
+                        } else {
+                            isMoving = false
+                            stopLocationUpdates()
+                            Log.d("ACTIVITY", "Движение завершено — отключаем GPS")
+                        }
+                    }
+
+                    DetectedActivity.STILL -> {
+                        if (event.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
+                            isMoving = false
+                            stopLocationUpdates()
+                            Log.d("ACTIVITY", "Покой — отключаем GPS")
+                        }
+                    }
                 }
-                LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-//                sendBroadcast(intent)
-
-                Log.d("SEND_LOCATION", "Координаты отправлены: $data")
             }
         }
     }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        event?.let {
-            val acceleration = sqrt(it.values[0].pow(2) + it.values[1].pow(2) + it.values[2].pow(2))
-            val delta = abs(acceleration - lastAcceleration)
-            lastAcceleration = acceleration
-
-            val isNowMoving = delta > 0.5f
-            if (isNowMoving != moving) {
-                moving = isNowMoving
-                scheduleLocationUpdates()
-            }
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-
-    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         super.onDestroy()
-        timer?.cancel()
-        sensorManager.unregisterListener(this)
+        unregisterReceiver(activityReceiver)
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACTIVITY_RECOGNITION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
+        activityRecognitionClient.removeActivityTransitionUpdates(activityPendingIntent)
+        stopLocationUpdates()
         Log.d("LOCATION_SERVICE", "Сервис уничтожен")
     }
+
+    override fun onBind(intent: Intent?): IBinder? = null
 }

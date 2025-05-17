@@ -1,48 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/server_layout"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/serverRootLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp"
-    android:gravity="center"
-    android:background="#FFFFFF">
+    android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/tvServerId"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="ID сервера: ..."
-        android:textSize="18sp"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:id="@+id/tvPairCode"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Код: ..."
-        android:textSize="18sp"
-        android:layout_marginBottom="24dp" />
-
-    <TextView
-        android:id="@+id/tvStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Ожидание подключений..."
-        android:textSize="16sp" />
-
-    <Button
-        android:id="@+id/btnResetRole"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Сбросить роль"
-        android:layout_marginTop="16dp"/>
-
-    <TextView
-        android:id="@+id/tvCurrentCoords"
+    <!-- Контейнер для фрагментов -->
+    <FrameLayout
+        android:id="@+id/serverFragmentContainer"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Координаты: ..."
-        android:textSize="16sp"
-        android:padding="16dp" />
-</LinearLayout>
+        android:layout_height="match_parent"
+        android:layout_marginBottom="56dp" />
+
+    <!-- Нижняя навигация -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/serverBottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom"
+        app:menu="@menu/server_bottom_nav_menu" />
+</FrameLayout>

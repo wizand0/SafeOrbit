@@ -3,21 +3,20 @@
     <item
         android:id="@+id/nav_map"
         android:title="Карта"
-        android:icon="@android:drawable/ic_menu_mapmode" />
+        android:icon="@drawable/ic_map" />
 
     <item
         android:id="@+id/nav_servers"
         android:title="Все сервера"
-        android:icon="@android:drawable/ic_menu_agenda" />
+        android:icon="@drawable/ic_servers" />
 
     <item
         android:id="@+id/nav_placeholder"
         android:title="Заглушка"
-        android:icon="@android:drawable/ic_menu_help" />
+        android:icon="@drawable/ic_placeholder" />
 
     <item
         android:id="@+id/nav_settings"
         android:title="Настройки"
-        android:icon="@android:drawable/ic_menu_preferences" />
-
+        android:icon="@drawable/ic_settings" />
 </menu>
