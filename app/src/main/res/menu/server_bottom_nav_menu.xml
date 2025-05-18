@@ -6,10 +6,9 @@
         android:title="Главная" />
 
     <item
-        android:id="@+id/nav_disabled"
-        android:icon="@drawable/ic_placeholder"
-        android:title=""
-        android:enabled="false" />
+        android:id="@+id/navigation_history"
+        android:icon="@drawable/ic_history"
+        android:title="История"/>
 
     <item
         android:id="@+id/nav_placeholder"

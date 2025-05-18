@@ -20,7 +20,15 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.room.Room
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.data.ActivityLogEntity
+import ru.wizand.safeorbit.data.AppDatabase
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class LocationService : Service(), LocationListener, SensorEventListener {
 
@@ -275,6 +283,33 @@ class LocationService : Service(), LocationListener, SensorEventListener {
             sensorManager.unregisterListener(this)
         } catch (e: Exception) {
             Log.w("LocationService", "Ошибка при остановке: ${e.message}")
+        }
+    }
+
+    private suspend fun saveActivityLog(
+        context: Context,
+        startHour: Int,
+        endHour: Int,
+        steps: Int,
+        distance: Float,
+        isActive: Boolean
+    ) {
+        val mode = if (isActive) "Активность" else "ЭКОНОМ"
+        val log = ActivityLogEntity(
+            date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+            startHour = startHour,
+            endHour = endHour,
+            mode = mode,
+            steps = if (isActive) steps else null,
+            distanceMeters = if (isActive) distance else null
+        )
+
+        withContext(Dispatchers.IO) {
+            val db = Room.databaseBuilder(
+                context,
+                AppDatabase::class.java, "safeorbit-db"
+            ).build()
+            db.activityLogDao().insert(log)
         }
     }
 
