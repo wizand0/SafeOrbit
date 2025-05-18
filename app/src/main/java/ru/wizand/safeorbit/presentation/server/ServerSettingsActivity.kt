@@ -1,13 +1,12 @@
-// Изменённый файл ServerSettingsActivity.kt
-// Добавлено: настройка периода бездействия
-
 package ru.wizand.safeorbit.presentation.server
 
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.snackbar.Snackbar
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.presentation.role.RoleSelectionActivity
 
@@ -55,7 +54,7 @@ class ServerSettingsActivity : AppCompatActivity() {
 
         btnChangePin.setOnClickListener { showChangePinDialog() }
         btnResetRole.setOnClickListener {
-            getSharedPreferences("app_prefs", MODE_PRIVATE).edit()
+            prefs.edit()
                 .remove("user_role")
                 .remove("pin_verified")
                 .apply()
@@ -63,17 +62,36 @@ class ServerSettingsActivity : AppCompatActivity() {
             finishAffinity()
         }
 
-        val timeoutOptions = listOf("3 мин", "5 мин", "10 мин", "30 мин")
-        val timeoutValues = listOf(3L, 5L, 10L, 30L).map { it * 60 * 1000 }
-        val savedTimeout = prefs.getLong("inactivity_timeout", 5 * 60 * 1000L)
+        setupInactivitySpinner(prefs)
+    }
 
-        spinnerInactivity.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, timeoutOptions)
-        spinnerInactivity.setSelection(timeoutValues.indexOf(savedTimeout))
+    private fun setupInactivitySpinner(prefs: android.content.SharedPreferences) {
+        val timeoutOptions = InactivityTimeout.values()
+        val savedMillis = prefs.getLong("inactivity_timeout", InactivityTimeout.MINUTES_5.millis)
+        val selectedOption = InactivityTimeout.fromMillis(savedMillis)
 
+        spinnerInactivity.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            timeoutOptions
+        ).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+
+        spinnerInactivity.setSelection(timeoutOptions.indexOf(selectedOption))
+
+        var initialized = false
         spinnerInactivity.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: android.view.View?, position: Int, id: Long) {
-                prefs.edit().putLong("inactivity_timeout", timeoutValues[position]).apply()
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (initialized) {
+                    val newTimeout = timeoutOptions[position].millis
+                    prefs.edit().putLong("inactivity_timeout", newTimeout).apply()
+                    Snackbar.make(spinnerInactivity, "Интервал обновлён", Snackbar.LENGTH_SHORT).show()
+                } else {
+                    initialized = true
+                }
             }
+
             override fun onNothingSelected(parent: AdapterView<*>) {}
         }
     }

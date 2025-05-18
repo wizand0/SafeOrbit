@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.hardware.Sensor
@@ -25,6 +26,7 @@ class LocationService : Service(), LocationListener, SensorEventListener {
 
     private lateinit var locationManager: LocationManager
     private lateinit var sensorManager: SensorManager
+    private lateinit var prefs: SharedPreferences
 
     private var serverId: String = ""
     private var lastSentTime: Long = 0L
@@ -37,17 +39,28 @@ class LocationService : Service(), LocationListener, SensorEventListener {
     private var lastStepEventTime: Long = 0L
 
     private val ACTIVE_INTERVAL = 30_000L // 30 сек
-    private val IDLE_INTERVAL = 10 * 60 * 1000L // 10 мин
-
     private var inactivityTimeout: Long = 5 * 60 * 1000L // default 5 минут
 
+    private val preferenceChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "inactivity_timeout") {
+            val newTimeout = prefs.getLong("inactivity_timeout", inactivityTimeout)
+            Log.d("LocationService", "🔄 inactivity_timeout обновлён: $inactivityTimeout → $newTimeout")
+            inactivityTimeout = newTimeout
+            if (!isInActiveMode) {
+                switchToIdleMode()
+            }
+        }
+    }
+
     private fun loadSettings() {
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
         inactivityTimeout = prefs.getLong("inactivity_timeout", 5 * 60 * 1000L)
     }
 
     override fun onCreate() {
         super.onCreate()
+        prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        prefs.registerOnSharedPreferenceChangeListener(preferenceChangeListener)
+        loadSettings()
         startForegroundWithNotification()
         setupStepSensor()
     }
@@ -61,8 +74,7 @@ class LocationService : Service(), LocationListener, SensorEventListener {
         }
 
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
-        switchToIdleMode() // запускаем в экономном режиме
-
+        switchToIdleMode()
         return START_STICKY
     }
 
@@ -71,13 +83,13 @@ class LocationService : Service(), LocationListener, SensorEventListener {
         val isFirst = lastSentLocation == null
         val timeSinceLast = now - lastSentTime
         val distanceMoved = lastSentLocation?.distanceTo(location) ?: Float.MAX_VALUE
-        val stepRecently = now - lastStepTime < 2 * 60 * 1000L // шаг в последние 2 мин
+        val stepRecently = now - lastStepTime < 2 * 60 * 1000L
 
         val isActive = distanceMoved > 50f || stepRecently
-        val isDueByTime = timeSinceLast > IDLE_INTERVAL
+        val isDueByTime = timeSinceLast > inactivityTimeout
         val shouldSend = isFirst || isActive || isDueByTime
 
-        Log.d("LocationService", "📍 Location: ${location.latitude}, ${location.longitude}, Δ=${distanceMoved}m, steps recent=$stepRecently")
+        Log.d("LocationService", "📍 Location: ${location.latitude}, ${location.longitude}, Δ=$distanceMoved m, steps recent=$stepRecently")
 
         if (shouldSend) {
             lastSentLocation = location
@@ -85,10 +97,9 @@ class LocationService : Service(), LocationListener, SensorEventListener {
             broadcastLocation(location)
         }
 
-        // переключение режимов
         if (isActive && !isInActiveMode) {
             switchToActiveMode()
-        } else if (!stepRecently && isInActiveMode && timeSinceLast > 5 * 60 * 1000L) {
+        } else if (!stepRecently && isInActiveMode && timeSinceLast > inactivityTimeout) {
             switchToIdleMode()
         }
     }
@@ -98,6 +109,7 @@ class LocationService : Service(), LocationListener, SensorEventListener {
         isInActiveMode = true
         try {
             locationManager.removeUpdates(this)
+            if (!hasLocationPermission()) return
             if (ActivityCompat.checkSelfPermission(
                     this,
                     Manifest.permission.ACCESS_FINE_LOCATION
@@ -122,16 +134,18 @@ class LocationService : Service(), LocationListener, SensorEventListener {
                 this
             )
         } catch (e: Exception) {
-            Log.e("LocationService", "Ошибка переключения на активный режим: ${e.message}")
+            Log.e("LocationService", "Ошибка переключения в активный режим: ${e.message}")
         }
         broadcastMode()
     }
 
     private fun switchToIdleMode() {
-        Log.d("LocationService", "🔁 Переход в ЭКОНОМ режим")
+        loadSettings()
+        Log.d("LocationService", "🔁 Переход в ЭКОНОМ режим (таймаут: $inactivityTimeout мс)")
         isInActiveMode = false
         try {
             locationManager.removeUpdates(this)
+            if (!hasLocationPermission()) return
             if (ActivityCompat.checkSelfPermission(
                     this,
                     Manifest.permission.ACCESS_FINE_LOCATION
@@ -151,12 +165,12 @@ class LocationService : Service(), LocationListener, SensorEventListener {
             }
             locationManager.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
-                IDLE_INTERVAL,
+                inactivityTimeout,
                 0f,
                 this
             )
         } catch (e: Exception) {
-            Log.e("LocationService", "Ошибка переключения на idle режим: ${e.message}")
+            Log.e("LocationService", "Ошибка переключения в idle режим: ${e.message}")
         }
         broadcastMode()
     }
@@ -167,15 +181,13 @@ class LocationService : Service(), LocationListener, SensorEventListener {
         if (stepSensor != null) {
             sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_NORMAL)
         } else {
-            Log.w("LocationService", "Step counter sensor not available")
+            Log.w("LocationService", "Датчик шагов недоступен")
         }
     }
 
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type == Sensor.TYPE_STEP_COUNTER) {
             val totalSteps = event.values.firstOrNull() ?: return
-
-            // Запоминаем начальное значение при первом запуске
             if (initialStepCount == null) {
                 initialStepCount = totalSteps
                 lastStepCount = totalSteps
@@ -183,22 +195,16 @@ class LocationService : Service(), LocationListener, SensorEventListener {
                 return
             }
 
-            // Разница между текущим и последним сохранённым значением
             val delta = totalSteps - lastStepCount
-
-            // Если добавилось хотя бы 2 шага — считаем это настоящим движением
             if (delta >= 2f) {
                 lastStepCount = totalSteps
                 lastStepTime = System.currentTimeMillis()
-                Log.d("LocationService", "👟 Реальные шаги засчитаны: +$delta, всего: $totalSteps")
-            } else {
-                Log.d("LocationService", "👟 Игнорируем незначительное изменение: +$delta")
+                Log.d("LocationService", "👟 Реальные шаги: +$delta, всего: $totalSteps")
             }
 
-            // Можно также ограничить по времени — если события слишком частые
             val timeSinceLast = System.currentTimeMillis() - lastStepEventTime
             if (timeSinceLast < 2000L) {
-                Log.d("LocationService", "👟 Пропущено из-за частоты: $timeSinceLast мс")
+                Log.d("LocationService", "👟 Игнор. шаг — слишком часто ($timeSinceLast мс)")
                 return
             }
             lastStepEventTime = System.currentTimeMillis()
@@ -216,6 +222,14 @@ class LocationService : Service(), LocationListener, SensorEventListener {
         }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
         Log.d("LocationService", "📡 Отправка координат")
+    }
+
+    private fun broadcastMode() {
+        val intent = Intent("LOCATION_UPDATE").apply {
+            putExtra("mode", if (isInActiveMode) "АКТИВНЫЙ" else "ЭКОНОМ")
+        }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        Log.d("LocationService", "📡 Обновление режима: ${if (isInActiveMode) "АКТИВНЫЙ" else "ЭКОНОМ"}")
     }
 
     private fun startForegroundWithNotification() {
@@ -255,20 +269,13 @@ class LocationService : Service(), LocationListener, SensorEventListener {
 
     override fun onDestroy() {
         super.onDestroy()
+        prefs.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener)
         try {
             locationManager.removeUpdates(this)
             sensorManager.unregisterListener(this)
         } catch (e: Exception) {
             Log.w("LocationService", "Ошибка при остановке: ${e.message}")
         }
-    }
-
-    private fun broadcastMode() {
-        val intent = Intent("LOCATION_UPDATE").apply {
-            putExtra("mode", if (isInActiveMode) "АКТИВНЫЙ" else "ЭКОНОМ")
-        }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-        Log.d("LocationService", "📡 Обновление режима: ${if (isInActiveMode) "АКТИВНЫЙ" else "ЭКОНОМ"}")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
