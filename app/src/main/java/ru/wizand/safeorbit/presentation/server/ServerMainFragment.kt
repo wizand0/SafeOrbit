@@ -7,16 +7,17 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.*
-import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
+import android.widget.TextView
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
-import ru.wizand.safeorbit.presentation.role.RoleSelectionActivity
 
 @AndroidEntryPoint
 class ServerMainFragment : Fragment() {
@@ -27,17 +28,33 @@ class ServerMainFragment : Fragment() {
     private lateinit var tvPairCode: TextView
     private lateinit var tvStatus: TextView
     private lateinit var tvCurrentCoords: TextView
+    private lateinit var tvMode: TextView
 
     private var serviceStarted = false
-    private val REQUEST_ACTIVITY_RECOGNITION = 2001
+
+    private val LOCATION_PERMISSION_REQUEST = 2002
+
+    private val _modeLiveData = MutableLiveData<String>()
+    private val modeLiveData: LiveData<String> = _modeLiveData
 
     private val locationReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val lat = intent?.getDoubleExtra("latitude", 0.0) ?: 0.0
-            val lon = intent?.getDoubleExtra("longitude", 0.0) ?: 0.0
-            val timestamp = intent?.getLongExtra("timestamp", 0L) ?: 0L
-            tvCurrentCoords.text = "Координаты: $lat, $lon"
-            tvStatus.text = "Время обновления: ${formatTimestamp(timestamp)}"
+            Log.d("SERVER_FRAGMENT", "Получен broadcast LOCATION_UPDATE")
+
+            val hasLatLon = intent?.hasExtra("latitude") == true && intent.hasExtra("longitude")
+            val hasTimestamp = intent?.hasExtra("timestamp") == true
+            val mode = intent?.getStringExtra("mode") ?: "..."
+
+            if (hasLatLon && hasTimestamp) {
+                val lat = intent?.getDoubleExtra("latitude", 0.0)
+                val lon = intent?.getDoubleExtra("longitude", 0.0)
+                val timestamp = intent?.getLongExtra("timestamp", 0L)
+
+                tvCurrentCoords.text = "Координаты: $lat, $lon"
+                tvStatus.text = "Время обновления: ${timestamp?.let { formatTimestamp(it) }}"
+            }
+
+            _modeLiveData.postValue(mode)
         }
     }
 
@@ -53,30 +70,16 @@ class ServerMainFragment : Fragment() {
         tvPairCode = view.findViewById(R.id.tvPairCode)
         tvStatus = view.findViewById(R.id.tvStatus)
         tvCurrentCoords = view.findViewById(R.id.tvCurrentCoords)
+        tvMode = view.findViewById(R.id.tvMode)
 
-        val context = requireContext()
+        Log.d("SERVER_FRAGMENT", "TextViews инициализированы")
 
         viewModel.serverId.observe(viewLifecycleOwner) { serverId ->
             tvServerId.text = "ID сервера: $serverId"
 
             if (!serviceStarted) {
                 serviceStarted = true
-                val activity = requireActivity() as AppCompatActivity
-
-                // ✅ Сначала проверяем разрешение на активность
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACTIVITY_RECOGNITION
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    requestPermissions(
-                        arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
-                        REQUEST_ACTIVITY_RECOGNITION
-                    )
-                } else {
-                    startLocationService(serverId)
-                }
+                checkAndStartLocationService(serverId)
             }
         }
 
@@ -86,12 +89,45 @@ class ServerMainFragment : Fragment() {
 
         viewModel.audioRequest.observe(viewLifecycleOwner) { request ->
             request?.let {
-                Toast.makeText(context, "Запрос на запись от клиента", Toast.LENGTH_SHORT).show()
-                AudioRequestHandler(context).handle(it)
+                Toast.makeText(requireContext(), "Запрос на запись от клиента", Toast.LENGTH_SHORT).show()
+                AudioRequestHandler(requireContext()).handle(it)
             }
         }
 
+        modeLiveData.observe(viewLifecycleOwner) { mode ->
+            tvMode.text = "Режим работы: $mode"
+        }
+    }
 
+    private fun checkAndStartLocationService(serverId: String) {
+        val context = requireContext()
+        val permissionsToRequest = mutableListOf<String>()
+
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.ACTIVITY_RECOGNITION)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            requestPermissions(permissionsToRequest.toTypedArray(), LOCATION_PERMISSION_REQUEST)
+        } else {
+            startLocationService(serverId)
+        }
     }
 
     private fun startLocationService(serverId: String) {
@@ -102,16 +138,20 @@ class ServerMainFragment : Fragment() {
     }
 
     override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_ACTIVITY_RECOGNITION) {
-            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+
+        if (requestCode == LOCATION_PERMISSION_REQUEST) {
+            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            if (allGranted) {
                 viewModel.serverId.value?.let { startLocationService(it) }
             } else {
                 Toast.makeText(
                     requireContext(),
-                    "Разрешение на распознавание активности не выдано. GPS не будет работать корректно.",
+                    "Не все разрешения выданы. Геолокация не будет работать.",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -121,23 +161,15 @@ class ServerMainFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         val filter = IntentFilter("LOCATION_UPDATE")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requireContext().registerReceiver(locationReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            LocalBroadcastManager.getInstance(requireContext()).registerReceiver(locationReceiver, filter)
-        }
+        LocalBroadcastManager.getInstance(requireContext()).registerReceiver(locationReceiver, filter)
     }
 
     override fun onPause() {
         super.onPause()
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                requireContext().unregisterReceiver(locationReceiver)
-            } else {
-                LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(locationReceiver)
-            }
+            LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(locationReceiver)
         } catch (e: Exception) {
-            Log.w("SERVER_FRAGMENT", "Receiver wasn't registered")
+            Log.w("SERVER_FRAGMENT", "Receiver wasn't registered: ${e.message}")
         }
     }
 

@@ -1,3 +1,6 @@
+// Изменённый файл ServerSettingsActivity.kt
+// Добавлено: настройка периода бездействия
+
 package ru.wizand.safeorbit.presentation.server
 
 import android.app.AlertDialog
@@ -15,6 +18,7 @@ class ServerSettingsActivity : AppCompatActivity() {
     private lateinit var settingsContent: LinearLayout
     private lateinit var btnResetRole: Button
     private lateinit var btnChangePin: Button
+    private lateinit var spinnerInactivity: Spinner
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +29,7 @@ class ServerSettingsActivity : AppCompatActivity() {
         settingsContent = findViewById(R.id.settingsContent)
         btnResetRole = findViewById(R.id.btnResetRole)
         btnChangePin = findViewById(R.id.btnChangePin)
+        spinnerInactivity = findViewById(R.id.spinnerInactivity)
 
         val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
         var savedPin = prefs.getString("server_pin", null)
@@ -37,7 +42,6 @@ class ServerSettingsActivity : AppCompatActivity() {
             }
 
             if (savedPin == null) {
-                // Первый запуск — сохранить PIN
                 prefs.edit().putString("server_pin", enteredPin).apply()
                 savedPin = enteredPin
                 Toast.makeText(this, "PIN установлен", Toast.LENGTH_SHORT).show()
@@ -49,19 +53,28 @@ class ServerSettingsActivity : AppCompatActivity() {
             }
         }
 
-        btnChangePin.setOnClickListener {
-            showChangePinDialog()
-        }
-
+        btnChangePin.setOnClickListener { showChangePinDialog() }
         btnResetRole.setOnClickListener {
-            getSharedPreferences("app_prefs", MODE_PRIVATE)
-                .edit()
+            getSharedPreferences("app_prefs", MODE_PRIVATE).edit()
                 .remove("user_role")
                 .remove("pin_verified")
                 .apply()
-
             startActivity(Intent(this, RoleSelectionActivity::class.java))
             finishAffinity()
+        }
+
+        val timeoutOptions = listOf("3 мин", "5 мин", "10 мин", "30 мин")
+        val timeoutValues = listOf(3L, 5L, 10L, 30L).map { it * 60 * 1000 }
+        val savedTimeout = prefs.getLong("inactivity_timeout", 5 * 60 * 1000L)
+
+        spinnerInactivity.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, timeoutOptions)
+        spinnerInactivity.setSelection(timeoutValues.indexOf(savedTimeout))
+
+        spinnerInactivity.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: android.view.View?, position: Int, id: Long) {
+                prefs.edit().putLong("inactivity_timeout", timeoutValues[position]).apply()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
         }
     }
 
@@ -96,5 +109,4 @@ class ServerSettingsActivity : AppCompatActivity() {
             .setNegativeButton("Отмена", null)
             .show()
     }
-
 }

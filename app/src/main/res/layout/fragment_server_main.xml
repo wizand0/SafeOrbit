@@ -38,4 +38,14 @@
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:paddingBottom="16dp" />
+
+    <TextView
+        android:id="@+id/tvMode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Режим работы: ..."
+        android:textSize="14sp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="16dp" />
 </LinearLayout>
