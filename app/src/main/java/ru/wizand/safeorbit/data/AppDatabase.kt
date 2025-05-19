@@ -5,9 +5,15 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [ServerEntity::class], version = 1)
+@Database(
+    entities = [ServerEntity::class, ActivityLogEntity::class],
+    version = 1,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun serverDao(): ServerDao
+
+    abstract fun activityLogDao(): ActivityLogDao
 
     companion object {
         @Volatile

@@ -77,6 +77,17 @@
                 <action android:name="com.google.android.location.ACTIVITY_TRANSITION_EVENT" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".device.MyDeviceAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_receiver" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

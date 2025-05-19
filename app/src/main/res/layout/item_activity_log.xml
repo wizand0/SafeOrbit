@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/itemRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="12dp"
+    android:orientation="vertical"
+    android:background="?attr/selectableItemBackground">
+
+    <TextView
+        android:id="@+id/tvDate"
+        style="@style/TextSubheading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Дата" />
+
+    <TextView
+        android:id="@+id/tvTime"
+        style="@style/TextCaption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Время" />
+
+    <TextView
+        android:id="@+id/tvMode"
+        style="@style/TextCaption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Режим" />
+
+    <TextView
+        android:id="@+id/tvSteps"
+        style="@style/TextCaption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Шагов" />
+
+    <TextView
+        android:id="@+id/tvDistance"
+        style="@style/TextCaption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Расстояние" />
+</LinearLayout>

@@ -87,6 +87,7 @@ class RoleSelectionActivity : AppCompatActivity() {
                 .addOnSuccessListener {
                     binding.progressAuth.visibility = View.GONE
                     Log.d("AUTH", "Анонимный вход выполнен")
+                    checkFirebaseConnection() // ⬅️ Перемещено сюда
                 }
                 .addOnFailureListener {
                     binding.progressAuth.visibility = View.GONE
@@ -94,6 +95,7 @@ class RoleSelectionActivity : AppCompatActivity() {
                 }
         } else {
             binding.progressAuth.visibility = View.GONE
+            checkFirebaseConnection() // ⬅️ И сюда
         }
     }
 
@@ -110,7 +112,7 @@ class RoleSelectionActivity : AppCompatActivity() {
             override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
                 val connected = snapshot.getValue(Boolean::class.java) ?: false
                 if (!connected) {
-                    Toast.makeText(this@RoleSelectionActivity, "Нет подключения к Firebase", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@RoleSelectionActivity, "Идет подключение к серверу", Toast.LENGTH_LONG).show()
                 }
             }
 

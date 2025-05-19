@@ -34,6 +34,11 @@ class ClientMainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.loadAndObserveServers()
+    }
+
     private fun setupBottomNavigation() {
         val nav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
         nav.setOnItemSelectedListener { item ->

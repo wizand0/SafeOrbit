@@ -44,8 +44,9 @@ class ServerMainActivity : AppCompatActivity() {
 
     private fun showFragmentById(itemId: Int) {
         val fragment = when (itemId) {
-            R.id.nav_home -> ServerMainFragment() // главный экран
-            R.id.nav_placeholder -> ServerPlaceholderFragment() // второй экран
+            R.id.nav_home -> ServerMainFragment()
+            R.id.navigation_history -> ServerHistoryFragment()
+            R.id.nav_placeholder -> ServerPlaceholderFragment()
             R.id.nav_settings -> {
                 startActivity(Intent(this, ServerSettingsActivity::class.java))
                 return
@@ -55,7 +56,7 @@ class ServerMainActivity : AppCompatActivity() {
 
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
-            .replace(R.id.serverFragmentContainer, fragment)
+            .replace(R.id.serverFragmentContainer, fragment) // Убедись что этот ID в layout!
             .commit()
     }
 

@@ -4,7 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="24dp"
+    android:background="@drawable/role_screen_background">
 
     <ImageView
         android:id="@+id/imageIcon"
@@ -16,47 +17,41 @@
 
     <TextView
         android:id="@+id/textServerName"
+        style="@style/TextSubheading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Имя сервера"
-        android:textSize="18sp"
-        android:textStyle="bold"
         android:layout_marginBottom="16dp" />
 
     <TextView
         android:id="@+id/textCoords"
+        style="@style/TextCaption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Координаты:"
-        android:textSize="14sp"
         android:layout_marginBottom="4dp" />
 
     <TextView
         android:id="@+id/textTime"
+        style="@style/TextCaption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Время:"
-        android:textSize="14sp"
         android:layout_marginBottom="16dp" />
 
     <Button
         android:id="@+id/buttonDetails"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/ButtonPrimary"
         android:text="Подробнее" />
 
     <Button
         android:id="@+id/buttonListen"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Послушать"
-        android:layout_marginTop="8dp" />
+        style="@style/ButtonPrimary"
+        android:text="Послушать" />
 
     <Button
         android:id="@+id/buttonDelete"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/ButtonPrimary"
         android:text="Удалить"
-        android:textColor="#F44336"
-        android:layout_marginTop="8dp" />
+        android:textColor="#F44336" />
 </LinearLayout>

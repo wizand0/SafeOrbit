@@ -3,7 +3,8 @@
     android:orientation="vertical"
     android:padding="16dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/role_screen_background">
 
     <ImageView
         android:id="@+id/imageIcon"
@@ -14,27 +15,29 @@
 
     <TextView
         android:id="@+id/textServerName"
+        style="@style/TextSubheading"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Имя сервера"
-        android:textSize="18sp"
-        android:textStyle="bold"
         android:layout_marginTop="12dp" />
 
     <TextView
         android:id="@+id/textCoords"
+        style="@style/TextBody"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Координаты" />
 
     <TextView
         android:id="@+id/textTime"
+        style="@style/TextBody"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Время" />
 
     <Button
         android:id="@+id/buttonDetails"
+        style="@style/ButtonPrimary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Подробнее" />

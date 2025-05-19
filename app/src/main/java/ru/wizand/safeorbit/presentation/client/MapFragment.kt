@@ -12,6 +12,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.yandex.mapkit.MapKitFactory
@@ -36,6 +37,17 @@ class MapFragment : Fragment() {
 
     private var activeMarkerId: String? = null
 
+    private var hasCenteredOnAnyServer = false
+
+    private var serversLoaded = false
+
+    // ✳️ Добавлены кеши
+    private var cachedStates: Map<String, ServerMapState>? = null
+    private var cachedNames: Map<String, String>? = null
+
+    private var isConnected = false
+    private var hasShownConnectionToast = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (!mapKitInitialized) {
@@ -48,6 +60,7 @@ class MapFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val view = inflater.inflate(R.layout.fragment_map, container, false)
         mapView = view.findViewById(R.id.map_view)
+        view.findViewById<View>(R.id.loadingLayout)?.visibility = View.VISIBLE // ✳️ сразу показываем
         return view
     }
 
@@ -58,8 +71,15 @@ class MapFragment : Fragment() {
 
         observeViewModel()
 
-        viewModel.lastKnownCenter?.let {
-            mapView.mapWindow.map.move(CameraPosition(it, 13.0f, 0.0f, 0.0f))
+        view?.findViewById<View>(R.id.loadingLayout)?.visibility = View.VISIBLE
+
+//        viewModel.lastKnownCenter?.let {
+//            mapView.mapWindow.map.move(CameraPosition(it, 13.0f, 0.0f, 0.0f))
+//        }
+
+        if (!serversLoaded) {
+            viewModel.loadAndObserveServers()
+            serversLoaded = true
         }
     }
 
@@ -69,6 +89,60 @@ class MapFragment : Fragment() {
         MapKitFactory.getInstance().onStop()
         placemarks.clear()
         polylines.clear()
+    }
+
+    private fun observeViewModel() {
+        // 🔁 Следим за соединением с Firebase
+        viewModel.isConnected.observe(viewLifecycleOwner) { connected ->
+            isConnected = connected
+
+            if (!connected && !hasShownConnectionToast) {
+                handler.postDelayed({
+                    if (!isConnected) {
+                        Toast.makeText(requireContext(), "Нет подключения к Firebase", Toast.LENGTH_LONG).show()
+                        hasShownConnectionToast = true
+                    }
+                }, 2000)
+            } else if (connected) {
+                maybeDraw() // подключились — пробуем рисовать
+            }
+        }
+
+        viewModel.serverNameMap.observe(viewLifecycleOwner) { nameMap ->
+            cachedNames = nameMap
+            maybeDraw()
+        }
+
+        viewModel.mapStates.observe(viewLifecycleOwner) { states ->
+            cachedStates = states
+            maybeDraw()
+        }
+    }
+
+    // ✳️ Метод, вызывающий drawAll только когда обе LiveData загружены
+    private fun maybeDraw() {
+        val view = view ?: return
+
+        if (!isConnected) return
+
+        val states = cachedStates
+        val names = cachedNames
+
+        if (states != null && names != null && states.isNotEmpty()) {
+            drawAll(states, names)
+            view.findViewById<View>(R.id.loadingLayout)?.visibility = View.GONE
+        } else {
+            // 💡 Скрываем индикатор если ничего не отрисовано спустя 5 секунд
+            handler.postDelayed({
+                if (view.findViewById<View>(R.id.loadingLayout)?.visibility == View.VISIBLE) {
+                    view.findViewById<View>(R.id.loadingLayout)?.visibility = View.GONE
+                    if ((states?.isEmpty() != false || names?.isEmpty() != false) && !hasShownConnectionToast) {
+                        Toast.makeText(requireContext(), "Нет активных серверов или подключения", Toast.LENGTH_LONG).show()
+                        hasShownConnectionToast = true
+                    }
+                }
+            }, 5000)
+        }
     }
 
     private fun drawAll(
@@ -123,6 +197,19 @@ class MapFragment : Fragment() {
                 map.move(CameraPosition(point, 13.0f, 0.0f, 0.0f))
             }
         }
+
+        if (!hasCenteredOnAnyServer && states.isNotEmpty()) {
+            val first = states.values.first()
+            map.move(CameraPosition(first.latestPoint, 13.0f, 0.0f, 0.0f))
+            hasCenteredOnAnyServer = true
+        }
+
+
+//        if (states.isNotEmpty() && viewModel.lastKnownCenter == null) {
+//            val first = states.values.first()
+//            map.move(CameraPosition(first.latestPoint, 13.0f, 0.0f, 0.0f))
+//            viewModel.lastKnownCenter = first.latestPoint // на всякий случай
+//        }
     }
 
     private fun updateMarkerHighlighting() {
@@ -181,17 +268,6 @@ class MapFragment : Fragment() {
                 val lon = from.longitude + (to.longitude - from.longitude) * i / steps
                 marker.geometry = Point(lat, lon)
             }, i * delay)
-        }
-    }
-
-    private fun observeViewModel() {
-        viewModel.serverNameMap.observe(viewLifecycleOwner) { nameMap ->
-            viewModel.mapStates.value?.let { drawAll(it, nameMap) }
-        }
-
-        viewModel.mapStates.observe(viewLifecycleOwner) { states ->
-            val nameMap = viewModel.serverNameMap.value.orEmpty()
-            drawAll(states, nameMap)
         }
     }
 

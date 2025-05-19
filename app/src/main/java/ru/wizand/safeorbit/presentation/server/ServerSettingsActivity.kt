@@ -1,11 +1,18 @@
 package ru.wizand.safeorbit.presentation.server
 
+import android.app.Activity
 import android.app.AlertDialog
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.snackbar.Snackbar
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.device.MyDeviceAdminReceiver
 import ru.wizand.safeorbit.presentation.role.RoleSelectionActivity
 
 class ServerSettingsActivity : AppCompatActivity() {
@@ -15,6 +22,12 @@ class ServerSettingsActivity : AppCompatActivity() {
     private lateinit var settingsContent: LinearLayout
     private lateinit var btnResetRole: Button
     private lateinit var btnChangePin: Button
+    private lateinit var spinnerInactivity: Spinner
+    private lateinit var btnEnableAdmin: Button
+
+    private lateinit var devicePolicyManager: DevicePolicyManager
+    private lateinit var adminComponent: ComponentName
+    private val REQUEST_CODE_ENABLE_ADMIN = 1001
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +38,24 @@ class ServerSettingsActivity : AppCompatActivity() {
         settingsContent = findViewById(R.id.settingsContent)
         btnResetRole = findViewById(R.id.btnResetRole)
         btnChangePin = findViewById(R.id.btnChangePin)
+        spinnerInactivity = findViewById(R.id.spinnerInactivity)
+        btnEnableAdmin = findViewById(R.id.btnEnableAdmin)
+
+        // Init Device Policy
+        devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        adminComponent = ComponentName(this, MyDeviceAdminReceiver::class.java)
+
+        btnEnableAdmin.setOnClickListener {
+            if (!devicePolicyManager.isAdminActive(adminComponent)) {
+                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                    putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
+                    putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Требуется для защиты от удаления и управления устройством.")
+                }
+                startActivityForResult(intent, REQUEST_CODE_ENABLE_ADMIN)
+            } else {
+                Toast.makeText(this, "Уже администратор устройства", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
         var savedPin = prefs.getString("server_pin", null)
@@ -37,7 +68,6 @@ class ServerSettingsActivity : AppCompatActivity() {
             }
 
             if (savedPin == null) {
-                // Первый запуск — сохранить PIN
                 prefs.edit().putString("server_pin", enteredPin).apply()
                 savedPin = enteredPin
                 Toast.makeText(this, "PIN установлен", Toast.LENGTH_SHORT).show()
@@ -49,19 +79,59 @@ class ServerSettingsActivity : AppCompatActivity() {
             }
         }
 
-        btnChangePin.setOnClickListener {
-            showChangePinDialog()
-        }
-
+        btnChangePin.setOnClickListener { showChangePinDialog() }
         btnResetRole.setOnClickListener {
-            getSharedPreferences("app_prefs", MODE_PRIVATE)
+            getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
                 .edit()
                 .remove("user_role")
                 .remove("pin_verified")
                 .apply()
-
             startActivity(Intent(this, RoleSelectionActivity::class.java))
-            finishAffinity()
+            finish()
+        }
+
+        setupInactivitySpinner(prefs)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_ENABLE_ADMIN) {
+            if (resultCode == Activity.RESULT_OK) {
+                Toast.makeText(this, "Права администратора предоставлены", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Права администратора не предоставлены", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun setupInactivitySpinner(prefs: android.content.SharedPreferences) {
+        val timeoutOptions = InactivityTimeout.values()
+        val savedMillis = prefs.getLong("inactivity_timeout", InactivityTimeout.MINUTES_5.millis)
+        val selectedOption = InactivityTimeout.fromMillis(savedMillis)
+
+        spinnerInactivity.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            timeoutOptions
+        ).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+
+        spinnerInactivity.setSelection(timeoutOptions.indexOf(selectedOption))
+
+        var initialized = false
+        spinnerInactivity.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (initialized) {
+                    val newTimeout = timeoutOptions[position].millis
+                    prefs.edit().putLong("inactivity_timeout", newTimeout).apply()
+                    Snackbar.make(spinnerInactivity, "Интервал обновлён", Snackbar.LENGTH_SHORT).show()
+                } else {
+                    initialized = true
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {}
         }
     }
 
@@ -96,5 +166,4 @@ class ServerSettingsActivity : AppCompatActivity() {
             .setNegativeButton("Отмена", null)
             .show()
     }
-
 }

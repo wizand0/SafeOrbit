@@ -3,21 +3,20 @@
     android:orientation="vertical"
     android:padding="24dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/role_screen_background"
+    android:gravity="center_horizontal">
 
     <EditText
         android:id="@+id/etPin"
+        style="@style/EditTextStandard"
         android:hint="Введите PIN"
-        android:inputType="numberPassword"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:inputType="numberPassword" />
 
     <Button
         android:id="@+id/btnCheckPin"
-        android:text="Продолжить"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"/>
+        style="@style/ButtonPrimary"
+        android:text="Продолжить" />
 
     <LinearLayout
         android:id="@+id/settingsContent"
@@ -29,15 +28,28 @@
 
         <Button
             android:id="@+id/btnResetRole"
-            android:text="Сбросить роль"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            style="@style/ButtonPrimary"
+            android:text="Сбросить роль" />
 
         <Button
             android:id="@+id/btnChangePin"
-            android:text="Изменить PIN"
+            style="@style/ButtonPrimary"
+            android:text="Изменить PIN" />
+
+        <Button
+            android:id="@+id/btnEnableAdmin"
+            style="@style/ButtonPrimary"
+            android:text="Сделать приложением администратора" />
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"/>
+            android:text="Период бездействия"
+            style="@style/TextBody"
+            android:layout_marginTop="24dp" />
+
+        <Spinner
+            android:id="@+id/spinnerInactivity"
+            style="@style/SpinnerStandard" />
     </LinearLayout>
 </LinearLayout>

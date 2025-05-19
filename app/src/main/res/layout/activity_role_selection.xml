@@ -3,10 +3,10 @@
     android:id="@+id/role_selection_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
     android:orientation="vertical"
+    android:gravity="center"
     android:padding="24dp"
-    android:background="#FFFFFF">
+    android:background="@drawable/role_screen_background">
 
     <ProgressBar
         android:id="@+id/progressAuth"
@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:visibility="gone"
         android:layout_gravity="center"
-        android:layout_marginBottom="32dp"/>
+        android:layout_marginBottom="32dp" />
 
     <TextView
         android:id="@+id/tvChooseRole"
@@ -25,16 +25,67 @@
         android:textStyle="bold"
         android:layout_marginBottom="32dp" />
 
-    <Button
-        android:id="@+id/btnServer"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Сервер"
-        android:layout_marginBottom="16dp" />
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:weightSum="2">
 
-    <Button
-        android:id="@+id/btnClient"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Клиент" />
+        <!-- Кнопка "Сервер" -->
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="200dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp">
+
+            <ImageButton
+                android:id="@+id/btnServer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:background="@null"
+                android:contentDescription="Режим сервера"
+                android:src="@drawable/server_role_image" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Сервер"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_gravity="bottom"
+                android:layout_marginBottom="6dp"
+                android:background="#80FFFFFF" />
+        </FrameLayout>
+
+        <!-- Кнопка "Клиент" -->
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="200dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp">
+
+            <ImageButton
+                android:id="@+id/btnClient"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:background="@null"
+                android:contentDescription="Режим клиента"
+                android:src="@drawable/client_role_image" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Клиент"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_gravity="bottom"
+                android:layout_marginBottom="6dp"
+                android:background="#80FFFFFF" />
+        </FrameLayout>
+    </LinearLayout>
 </LinearLayout>
