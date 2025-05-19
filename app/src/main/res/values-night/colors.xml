@@ -7,6 +7,6 @@
     <color name="white">#FFFFFF</color>
     <color name="dark_gray">#121212</color>
     <color name="light_gray">#F5F5F5</color>
-    <color name="light_text">#000000</color>
-    <color name="light_text_secondary">#8E8D8D</color>
+    <color name="light_text">#DADADA</color>
+    <color name="light_text_secondary">#A8A8A8</color>
 </resources>

@@ -5,7 +5,6 @@
 [![Platform](https://img.shields.io/badge/platform-Android-green.svg)](https://developer.android.com/)
 [![Kotlin](https://img.shields.io/badge/language-Kotlin-orange.svg)](https://kotlinlang.org/)
 
-
 **SafeOrbit** is a Kotlin-based Android application that allows two smartphones to securely connect and interact in real time using Firebase as the backend. The app is designed for private tracking and remote monitoring between trusted users — one device acts as a **Server** and the other as a **Client**.
 
 ---
@@ -15,9 +14,13 @@
 - 🔐 Role selection on first launch: **Server** or **Client**
 - 📍 Real-time location tracking of the Server device on a map
 - 🎙️ Remote microphone access: Clients can request audio from the Server
-- 🔋 Smart power-saving location updates (based on device movement)
-- 🔗 Firebase-based pairing with custom **ID** and **Code**
+- 🔋 Smart power-saving location updates (based on device movement, step counting, and user-configurable inactivity period)
 - 📁 Firebase Realtime Database and Storage integration
+- 🔗 Firebase-based pairing using custom **ID** and **Code**
+- 🖼️ Custom server icons (upload from camera/gallery)
+- 🧭 Navigation to the server's last known location (via Google Maps or Yandex.Maps)
+- 🧠 Historical activity log (with step count, movement mode, and distance)
+- 🌗 Dark/light theme support
 - 👥 One Client can link to multiple Servers
 
 ---
@@ -25,29 +28,43 @@
 ## 📲 Use Cases
 
 - Monitoring a child's or loved one's device location
-- Personal security applications
-- Safe remote supervision of a trusted person
-- Private remote audio access in limited contexts (with consent)
+- Personal safety and awareness
+- Lightweight alternative to commercial GPS trackers
+- Private and consent-based audio monitoring
 
 ---
 
 ## 📸 Screenshots
 
-| ![](images/screenshot1.png) | ![](images/screenshot2.png) |
-|-----------------------------|-----------------------------|
-| ![](images/screenshot3.png) | ![](images/screenshot4.png) |
+| 🎮 Role Selection              | 📡 Client Mode (Map & Audio)     |
+|-------------------------------|----------------------------------|
+| ![](images/screenshot1.png)   | ![](images/screenshot2.png)      |
+
+| 🧾 Server Details in Client     | 🗺️ Server Location on Map        |
+|--------------------------------|----------------------------------|
+| ![](images/screenshot3.png)    | ![](images/screenshot7.png)      |
+
+| 🔐 Server Settings (PIN Lock)  | 🛠️ Server Configuration Options  |
+|--------------------------------|----------------------------------|
+| ![](images/screenshot6.png)    | ![](images/screenshot4.png)      |
+
+| 🌙 Night Mode (Dark Theme)     |                                  |
+|--------------------------------|----------------------------------|
+| ![](images/screenshot5.png)    |                                  |
 
 ---
 
 ## 🛠️ Technologies Used
 
 - **Kotlin + MVVM architecture**
-- **Firebase Authentication** (anonymous)
-- **Firebase Realtime Database** (data exchange)
+- **Firebase Authentication** (anonymous sign-in)
+- **Firebase Realtime Database** (real-time sync)
 - **Firebase Storage** (audio uploads)
-- **Google Maps SDK**
-- **Fused Location Provider**
-- **Foreground Services & WorkManager**
+- **Google Maps SDK** (or Yandex MapKit)
+- **Fused Location Provider** (for GPS)
+- **SensorManager** (step counter integration)
+- **WorkManager & Foreground Services**
+- **Room Database** (for local activity history)
 - **Hilt (Dependency Injection)**
 
 ---
@@ -57,7 +74,7 @@
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/safeorbit.git
+git clone https://github.com/wizand0/safeorbit.git
 ```
 
 ### 2. Open in Android Studio

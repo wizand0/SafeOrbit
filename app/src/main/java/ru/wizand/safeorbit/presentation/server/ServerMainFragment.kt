@@ -1,6 +1,7 @@
 package ru.wizand.safeorbit.presentation.server
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.*
 import android.content.pm.PackageManager
 import android.os.Build
@@ -110,6 +111,37 @@ class ServerMainFragment : Fragment() {
         }
     }
 
+//    private fun checkAndStartLocationService(serverId: String) {
+//        val context = requireContext()
+//        val permissionsToRequest = mutableListOf<String>()
+//
+//        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+//            != PackageManager.PERMISSION_GRANTED
+//        ) {
+//            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+//        }
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+//            ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION)
+//            != PackageManager.PERMISSION_GRANTED
+//        ) {
+//            permissionsToRequest.add(Manifest.permission.ACTIVITY_RECOGNITION)
+//        }
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+//            ContextCompat.checkSelfPermission(context, Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+//            != PackageManager.PERMISSION_GRANTED
+//        ) {
+//            permissionsToRequest.add(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+//        }
+//
+//        if (permissionsToRequest.isNotEmpty()) {
+//            requestPermissions(permissionsToRequest.toTypedArray(), LOCATION_PERMISSION_REQUEST)
+//        } else {
+//            startLocationService(serverId)
+//        }
+//    }
+
     private fun checkAndStartLocationService(serverId: String) {
         val context = requireContext()
         val permissionsToRequest = mutableListOf<String>()
@@ -134,11 +166,34 @@ class ServerMainFragment : Fragment() {
             permissionsToRequest.add(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
         }
 
+        // основной запрос
         if (permissionsToRequest.isNotEmpty()) {
             requestPermissions(permissionsToRequest.toTypedArray(), LOCATION_PERMISSION_REQUEST)
         } else {
-            startLocationService(serverId)
+            // все базовые разрешения выданы → проверим на фон
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                showBackgroundPermissionDialog()
+            } else {
+                startLocationService(serverId)
+            }
         }
+    }
+
+    private fun showBackgroundPermissionDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Фоновый доступ к геолокации")
+            .setMessage("Приложению необходимо разрешение на доступ к местоположению в фоновом режиме, чтобы отслеживать координаты, даже когда вы не используете приложение.")
+            .setPositiveButton("Разрешить") { _, _ ->
+                requestPermissions(
+                    arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                    LOCATION_PERMISSION_REQUEST
+                )
+            }
+            .setNegativeButton("Нет", null)
+            .show()
     }
 
     private fun startLocationService(serverId: String) {
@@ -147,6 +202,27 @@ class ServerMainFragment : Fragment() {
         }
         ContextCompat.startForegroundService(requireContext(), intent)
     }
+
+//    override fun onRequestPermissionsResult(
+//        requestCode: Int,
+//        permissions: Array<out String>,
+//        grantResults: IntArray
+//    ) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+//
+//        if (requestCode == LOCATION_PERMISSION_REQUEST) {
+//            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+//            if (allGranted) {
+//                viewModel.serverId.value?.let { startLocationService(it) }
+//            } else {
+//                Toast.makeText(
+//                    requireContext(),
+//                    "Не все разрешения выданы. Геолокация не будет работать.",
+//                    Toast.LENGTH_LONG
+//                ).show()
+//            }
+//        }
+//    }
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -158,7 +234,8 @@ class ServerMainFragment : Fragment() {
         if (requestCode == LOCATION_PERMISSION_REQUEST) {
             val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
             if (allGranted) {
-                viewModel.serverId.value?.let { startLocationService(it) }
+                // повторно проверим ACCESS_BACKGROUND_LOCATION
+                checkAndStartLocationService(viewModel.serverId.value ?: return)
             } else {
                 Toast.makeText(
                     requireContext(),

@@ -40,9 +40,30 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     private val lineColors = mutableMapOf<String, Int>()
     private var nextColorHue = 0f
 
+    private val _isConnected = MutableLiveData<Boolean>()
+    val isConnected: LiveData<Boolean> = _isConnected
+
     private val serverLocationMap = mutableMapOf<String, LocationData>()
 
     var lastKnownCenter: Point? = null
+
+    init {
+        observeConnection()
+    }
+
+    private fun observeConnection() {
+        val ref = com.google.firebase.database.FirebaseDatabase.getInstance().reference
+        ref.child(".info/connected").addValueEventListener(object : com.google.firebase.database.ValueEventListener {
+            override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                val connected = snapshot.getValue(Boolean::class.java) ?: false
+                _isConnected.postValue(connected)
+            }
+
+            override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
+                _isConnected.postValue(false)
+            }
+        })
+    }
 
     fun loadAndObserveServers() {
         viewModelScope.launch {
