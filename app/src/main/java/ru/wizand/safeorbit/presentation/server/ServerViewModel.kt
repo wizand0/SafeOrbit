@@ -14,14 +14,24 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
     private val repository = FirebaseRepository(application.applicationContext)
     private val prefs = application.getSharedPreferences("server_prefs", Context.MODE_PRIVATE)
 
-    private val _serverId = MutableLiveData<String>()
-    val serverId: LiveData<String> = _serverId
+    private val _serverId = MutableLiveData<String?>()
+    val serverId: LiveData<String?> = _serverId
 
-    private val _code = MutableLiveData<String>()
-    val code: LiveData<String> = _code
+    private val _code = MutableLiveData<String?>()
+    val code: LiveData<String?> = _code
 
     private val _audioRequest = MutableLiveData<AudioRequest>()
     val audioRequest: LiveData<AudioRequest> = _audioRequest
+
+    // ➕ Добавлены поля для последних координат, времени обновления и режима
+    private val _lastKnownLatLon = MutableLiveData<Pair<Double, Double>>()
+    val lastKnownLatLon: LiveData<Pair<Double, Double>> = _lastKnownLatLon
+
+    private val _lastUpdateTimestamp = MutableLiveData<Long>()
+    val lastUpdateTimestamp: LiveData<Long> = _lastUpdateTimestamp
+
+    private val _mode = MutableLiveData<String>()
+    val mode: LiveData<String> = _mode
 
     init {
         val savedId = prefs.getString("server_id", null)
@@ -44,7 +54,6 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
             _serverId.postValue(id)
             _code.postValue(generatedCode)
 
-            // Сохраняем в SharedPreferences
             prefs.edit()
                 .putString("server_id", id)
                 .putString("server_code", generatedCode)
@@ -68,6 +77,15 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
         } else {
             Log.w("SEND_LOCATION", "serverId еще не установлен — координаты не отправлены")
         }
+    }
+
+    fun updateLastLocation(lat: Double, lon: Double, timestamp: Long) {
+        _lastKnownLatLon.postValue(lat to lon)
+        _lastUpdateTimestamp.postValue(timestamp)
+    }
+
+    fun updateMode(mode: String) {
+        _mode.postValue(mode)
     }
 
     fun reset() {

@@ -9,12 +9,10 @@ import android.util.Log
 import android.view.*
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
@@ -34,9 +32,6 @@ class ServerMainFragment : Fragment() {
 
     private val LOCATION_PERMISSION_REQUEST = 2002
 
-    private val _modeLiveData = MutableLiveData<String>()
-    private val modeLiveData: LiveData<String> = _modeLiveData
-
     private val locationReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             Log.d("SERVER_FRAGMENT", "Получен broadcast LOCATION_UPDATE")
@@ -50,11 +45,16 @@ class ServerMainFragment : Fragment() {
                 val lon = intent?.getDoubleExtra("longitude", 0.0)
                 val timestamp = intent?.getLongExtra("timestamp", 0L)
 
-                tvCurrentCoords.text = "Координаты: $lat, $lon"
-                tvStatus.text = "Время обновления: ${timestamp?.let { formatTimestamp(it) }}"
+                if (lon != null) {
+                    if (timestamp != null) {
+                        if (lat != null) {
+                            viewModel.updateLastLocation(lat, lon, timestamp)
+                        }
+                    }
+                }
             }
 
-            _modeLiveData.postValue(mode)
+            viewModel.updateMode(mode)
         }
     }
 
@@ -74,12 +74,15 @@ class ServerMainFragment : Fragment() {
 
         Log.d("SERVER_FRAGMENT", "TextViews инициализированы")
 
+        // Наблюдение за LiveData из ViewModel
         viewModel.serverId.observe(viewLifecycleOwner) { serverId ->
             tvServerId.text = "ID сервера: $serverId"
 
             if (!serviceStarted) {
                 serviceStarted = true
-                checkAndStartLocationService(serverId)
+                if (serverId != null) {
+                    checkAndStartLocationService(serverId)
+                }
             }
         }
 
@@ -94,7 +97,15 @@ class ServerMainFragment : Fragment() {
             }
         }
 
-        modeLiveData.observe(viewLifecycleOwner) { mode ->
+        viewModel.lastKnownLatLon.observe(viewLifecycleOwner) { (lat, lon) ->
+            tvCurrentCoords.text = "Координаты: $lat, $lon"
+        }
+
+        viewModel.lastUpdateTimestamp.observe(viewLifecycleOwner) { timestamp ->
+            tvStatus.text = "Время обновления: ${formatTimestamp(timestamp)}"
+        }
+
+        viewModel.mode.observe(viewLifecycleOwner) { mode ->
             tvMode.text = "Режим работы: $mode"
         }
     }
