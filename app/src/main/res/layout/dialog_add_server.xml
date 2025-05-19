@@ -3,24 +3,22 @@
     android:padding="16dp"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:background="@drawable/role_screen_background">
 
     <EditText
         android:id="@+id/editName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/EditTextStandard"
         android:hint="Имя сервера" />
 
     <EditText
         android:id="@+id/editServerId"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/EditTextStandard"
         android:hint="ID сервера" />
 
     <EditText
         android:id="@+id/editCode"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/EditTextStandard"
         android:hint="Код"
         android:inputType="number" />
 </LinearLayout>

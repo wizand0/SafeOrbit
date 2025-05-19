@@ -1,6 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:padding="24dp"
     android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:background="@drawable/role_screen_background"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -13,15 +16,11 @@
 
     <Button
         android:id="@+id/buttonPickImage"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Выбрать из галереи"
-        android:layout_marginTop="16dp"/>
+        style="@style/ButtonPrimary"
+        android:text="Выбрать из галереи" />
 
     <Button
         android:id="@+id/buttonSaveIcon"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Сохранить"
-        android:layout_marginTop="8dp"/>
+        style="@style/ButtonPrimary"
+        android:text="Сохранить" />
 </LinearLayout>

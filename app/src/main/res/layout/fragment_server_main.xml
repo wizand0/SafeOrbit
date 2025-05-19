@@ -1,9 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/role_screen_background"
     android:orientation="vertical"
     android:padding="24dp"
-    android:gravity="center">
+    android:gravity="center_horizontal">
 
     <TextView
         android:id="@+id/tvServerId"
@@ -27,7 +29,9 @@
         android:layout_height="wrap_content"
         android:text="Координаты: ..."
         android:textSize="16sp"
-        android:padding="16dp" />
+        android:padding="16dp"
+        android:background="#80FFFFFF"
+        android:layout_marginBottom="8dp" />
 
     <TextView
         android:id="@+id/tvStatus"
@@ -35,9 +39,9 @@
         android:layout_height="wrap_content"
         android:text="Время обновления: ..."
         android:textSize="14sp"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="16dp" />
+        android:padding="16dp"
+        android:background="#80FFFFFF"
+        android:layout_marginBottom="8dp" />
 
     <TextView
         android:id="@+id/tvMode"
@@ -45,7 +49,6 @@
         android:layout_height="wrap_content"
         android:text="Режим работы: ..."
         android:textSize="14sp"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="16dp" />
+        android:padding="16dp"
+        android:background="#80FFFFFF" />
 </LinearLayout>

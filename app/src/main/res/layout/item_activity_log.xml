@@ -9,37 +9,36 @@
 
     <TextView
         android:id="@+id/tvDate"
+        style="@style/TextSubheading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Дата"
-        android:textStyle="bold"
-        android:textSize="16sp" />
+        android:text="Дата" />
 
     <TextView
         android:id="@+id/tvTime"
+        style="@style/TextCaption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Время"
-        android:textSize="14sp" />
+        android:text="Время" />
 
     <TextView
         android:id="@+id/tvMode"
+        style="@style/TextCaption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Режим"
-        android:textSize="14sp" />
+        android:text="Режим" />
 
     <TextView
         android:id="@+id/tvSteps"
+        style="@style/TextCaption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Шагов"
-        android:textSize="14sp" />
+        android:text="Шагов" />
 
     <TextView
         android:id="@+id/tvDistance"
+        style="@style/TextCaption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Расстояние"
-        android:textSize="14sp" />
+        android:text="Расстояние" />
 </LinearLayout>
