@@ -3,7 +3,7 @@
 
     <!-- Светлая тема -->
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:windowBackground">@drawable/role_screen_background</item>
+        <item name="android:windowBackground">@drawable/role_screen_background1</item>
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>
         <item name="colorSecondary">@color/teal_200</item>

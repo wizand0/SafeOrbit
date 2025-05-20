@@ -13,10 +13,10 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Observer
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.presentation.server.ActiveInterval
 
 @AndroidEntryPoint
 class ServerMainFragment : Fragment() {
@@ -28,9 +28,10 @@ class ServerMainFragment : Fragment() {
     private lateinit var tvStatus: TextView
     private lateinit var tvCurrentCoords: TextView
     private lateinit var tvMode: TextView
+    private lateinit var tvInterval: TextView
+    private lateinit var tvActiveInterval: TextView
 
     private var serviceStarted = false
-
     private val LOCATION_PERMISSION_REQUEST = 2002
 
     private val locationReceiver = object : BroadcastReceiver() {
@@ -46,12 +47,8 @@ class ServerMainFragment : Fragment() {
                 val lon = intent?.getDoubleExtra("longitude", 0.0)
                 val timestamp = intent?.getLongExtra("timestamp", 0L)
 
-                if (lon != null) {
-                    if (timestamp != null) {
-                        if (lat != null) {
-                            viewModel.updateLastLocation(lat, lon, timestamp)
-                        }
-                    }
+                if (lat != null && lon != null && timestamp != null) {
+                    viewModel.updateLastLocation(lat, lon, timestamp)
                 }
             }
 
@@ -72,10 +69,11 @@ class ServerMainFragment : Fragment() {
         tvStatus = view.findViewById(R.id.tvStatus)
         tvCurrentCoords = view.findViewById(R.id.tvCurrentCoords)
         tvMode = view.findViewById(R.id.tvMode)
+        tvInterval = view.findViewById(R.id.tvInterval)
+        tvActiveInterval = view.findViewById(R.id.tvActiveInterval)
 
         Log.d("SERVER_FRAGMENT", "TextViews инициализированы")
 
-        // Наблюдение за LiveData из ViewModel
         viewModel.serverId.observe(viewLifecycleOwner) { serverId ->
             tvServerId.text = "ID сервера: $serverId"
 
@@ -111,37 +109,6 @@ class ServerMainFragment : Fragment() {
         }
     }
 
-//    private fun checkAndStartLocationService(serverId: String) {
-//        val context = requireContext()
-//        val permissionsToRequest = mutableListOf<String>()
-//
-//        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
-//            != PackageManager.PERMISSION_GRANTED
-//        ) {
-//            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
-//        }
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-//            ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION)
-//            != PackageManager.PERMISSION_GRANTED
-//        ) {
-//            permissionsToRequest.add(Manifest.permission.ACTIVITY_RECOGNITION)
-//        }
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-//            ContextCompat.checkSelfPermission(context, Manifest.permission.FOREGROUND_SERVICE_LOCATION)
-//            != PackageManager.PERMISSION_GRANTED
-//        ) {
-//            permissionsToRequest.add(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
-//        }
-//
-//        if (permissionsToRequest.isNotEmpty()) {
-//            requestPermissions(permissionsToRequest.toTypedArray(), LOCATION_PERMISSION_REQUEST)
-//        } else {
-//            startLocationService(serverId)
-//        }
-//    }
-
     private fun checkAndStartLocationService(serverId: String) {
         val context = requireContext()
         val permissionsToRequest = mutableListOf<String>()
@@ -166,11 +133,9 @@ class ServerMainFragment : Fragment() {
             permissionsToRequest.add(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
         }
 
-        // основной запрос
         if (permissionsToRequest.isNotEmpty()) {
             requestPermissions(permissionsToRequest.toTypedArray(), LOCATION_PERMISSION_REQUEST)
         } else {
-            // все базовые разрешения выданы → проверим на фон
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                 != PackageManager.PERMISSION_GRANTED
@@ -203,27 +168,6 @@ class ServerMainFragment : Fragment() {
         ContextCompat.startForegroundService(requireContext(), intent)
     }
 
-//    override fun onRequestPermissionsResult(
-//        requestCode: Int,
-//        permissions: Array<out String>,
-//        grantResults: IntArray
-//    ) {
-//        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-//
-//        if (requestCode == LOCATION_PERMISSION_REQUEST) {
-//            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-//            if (allGranted) {
-//                viewModel.serverId.value?.let { startLocationService(it) }
-//            } else {
-//                Toast.makeText(
-//                    requireContext(),
-//                    "Не все разрешения выданы. Геолокация не будет работать.",
-//                    Toast.LENGTH_LONG
-//                ).show()
-//            }
-//        }
-//    }
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -234,7 +178,6 @@ class ServerMainFragment : Fragment() {
         if (requestCode == LOCATION_PERMISSION_REQUEST) {
             val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
             if (allGranted) {
-                // повторно проверим ACCESS_BACKGROUND_LOCATION
                 checkAndStartLocationService(viewModel.serverId.value ?: return)
             } else {
                 Toast.makeText(
@@ -250,6 +193,18 @@ class ServerMainFragment : Fragment() {
         super.onResume()
         val filter = IntentFilter("LOCATION_UPDATE")
         LocalBroadcastManager.getInstance(requireContext()).registerReceiver(locationReceiver, filter)
+
+        val prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+
+        // Интервал ЭКОНОМ
+        val idleMillis = prefs.getLong("inactivity_timeout", 5 * 60 * 1000L)
+        val idleLabel = InactivityTimeout.fromMillis(idleMillis).label
+        tvInterval.text = "Интервал ЭКОНОМ: $idleLabel"
+
+        // Интевал АКТИВНЫЙ
+        val activeMillis = prefs.getLong("active_interval", 30_000L)
+        val activeLabel = ActiveInterval.fromMillis(activeMillis).label
+        tvActiveInterval.text = "Интервал АКТИВНЫЙ: $activeLabel"
     }
 
     override fun onPause() {

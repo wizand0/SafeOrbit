@@ -4,7 +4,7 @@
     android:padding="24dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/role_screen_background"
+    android:background="@drawable/role_screen_background1"
     android:gravity="center_horizontal">
 
     <EditText
@@ -50,6 +50,17 @@
 
         <Spinner
             android:id="@+id/spinnerInactivity"
+            style="@style/SpinnerStandard" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Интервал активности"
+            style="@style/TextBody"
+            android:layout_marginTop="24dp" />
+
+        <Spinner
+            android:id="@+id/spinnerActive"
             style="@style/SpinnerStandard" />
     </LinearLayout>
 </LinearLayout>

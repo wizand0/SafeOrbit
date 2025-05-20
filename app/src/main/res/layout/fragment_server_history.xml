@@ -1,20 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/role_screen_background">
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerViewHistory"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="8dp" />
+    android:orientation="vertical"
+    android:background="@drawable/role_screen_background1"
+    android:padding="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp">
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/btnSelectDate"
@@ -31,4 +26,10 @@
             android:layout_marginStart="16dp"
             android:text="(все)" />
     </LinearLayout>
-</FrameLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewHistory"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+</LinearLayout>

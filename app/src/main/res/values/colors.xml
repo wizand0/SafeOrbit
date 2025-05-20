@@ -9,4 +9,9 @@
     <color name="light_gray">#F5F5F5</color>
     <color name="light_text">#000000</color>
     <color name="light_text_secondary">#8E8D8D</color>
+    <!-- res/values/colors.xml -->
+    <color name="text_primary">#000000</color>
+    <color name="surfaceVariantLight">#FFF8DC</color> <!-- светло-бежевый (или #FFF9C4 как в M3) -->
+
+
 </resources>
