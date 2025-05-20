@@ -6,6 +6,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -23,6 +24,7 @@ class ServerSettingsActivity : AppCompatActivity() {
     private lateinit var btnResetRole: Button
     private lateinit var btnChangePin: Button
     private lateinit var spinnerInactivity: Spinner
+    private lateinit var spinnerActive: Spinner
     private lateinit var btnEnableAdmin: Button
 
     private lateinit var devicePolicyManager: DevicePolicyManager
@@ -33,6 +35,8 @@ class ServerSettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_server_settings)
 
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+
         etPin = findViewById(R.id.etPin)
         btnCheckPin = findViewById(R.id.btnCheckPin)
         settingsContent = findViewById(R.id.settingsContent)
@@ -40,6 +44,9 @@ class ServerSettingsActivity : AppCompatActivity() {
         btnChangePin = findViewById(R.id.btnChangePin)
         spinnerInactivity = findViewById(R.id.spinnerInactivity)
         btnEnableAdmin = findViewById(R.id.btnEnableAdmin)
+
+        spinnerActive = findViewById(R.id.spinnerActive)
+        setupActiveSpinner(prefs)
 
         // Init Device Policy
         devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
@@ -57,7 +64,7 @@ class ServerSettingsActivity : AppCompatActivity() {
             }
         }
 
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+
         var savedPin = prefs.getString("server_pin", null)
 
         btnCheckPin.setOnClickListener {
@@ -81,13 +88,25 @@ class ServerSettingsActivity : AppCompatActivity() {
 
         btnChangePin.setOnClickListener { showChangePinDialog() }
         btnResetRole.setOnClickListener {
+            // Остановим LocationService
+            val stopIntent = Intent(this, LocationService::class.java)
+            stopService(stopIntent)
+
+            // Очистим данные
             getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
                 .edit()
                 .remove("user_role")
                 .remove("pin_verified")
+                .remove("server_pin")
                 .apply()
-            startActivity(Intent(this, RoleSelectionActivity::class.java))
-            finish()
+
+            // Переход на RoleSelectionActivity без автоперехода
+            val intent = Intent(this, RoleSelectionActivity::class.java)
+            intent.putExtra("fromReset", true)
+            startActivity(intent)
+
+            // Закрываем все активити
+            finishAffinity()
         }
 
         setupInactivitySpinner(prefs)
@@ -140,6 +159,38 @@ class ServerSettingsActivity : AppCompatActivity() {
         btnCheckPin.visibility = Button.GONE
         settingsContent.visibility = LinearLayout.VISIBLE
     }
+
+    private fun setupActiveSpinner(prefs: SharedPreferences) {
+        val activeOptions = ActiveInterval.values()
+        val savedMillis = prefs.getLong("active_interval", ActiveInterval.SECONDS_30.millis)
+        val selectedOption = ActiveInterval.fromMillis(savedMillis)
+
+        spinnerActive.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            activeOptions
+        ).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+
+        spinnerActive.setSelection(activeOptions.indexOf(selectedOption))
+
+        var initialized = false
+        spinnerActive.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (initialized) {
+                    val newInterval = activeOptions[position].millis
+                    prefs.edit().putLong("active_interval", newInterval).apply()
+                    Snackbar.make(spinnerActive, "Интервал активности обновлён", Snackbar.LENGTH_SHORT).show()
+                } else {
+                    initialized = true
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+    }
+
 
     private fun showChangePinDialog() {
         val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)

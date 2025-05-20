@@ -49,6 +49,21 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
 
     init {
         observeConnection()
+        // 🔧 Временный фейковый сервер для отладки MapFragment
+        val testPoint1 = Point(55.751244, 37.618423) // Москва
+        val testPoint2 = Point(55.752, 37.619)
+        val testState = ServerMapState(
+            latestPoint = testPoint1,
+            history = listOf(testPoint1, testPoint2),
+            shouldCenter = true,
+            color = Color.RED,
+            timestamp = System.currentTimeMillis()
+        )
+
+        _mapStates.postValue(mapOf("testServer" to testState))
+        _serverNameMap.postValue(mapOf("testServer" to "Тестовый сервер"))
+        _iconUriMap.postValue(mapOf("testServer" to null))
+        _isConnected.postValue(true)
     }
 
     private fun observeConnection() {
@@ -112,7 +127,7 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
 
         if (last == null || distanceBetween(last, point) > 5) {
             history.add(point)
-            if (history.size > 50) history.removeFirst()
+            if (history.size > 50) history.removeAt(0) // ✅ совместимо с API 21+
         }
 
         val color = lineColors.getOrPut(serverId) {

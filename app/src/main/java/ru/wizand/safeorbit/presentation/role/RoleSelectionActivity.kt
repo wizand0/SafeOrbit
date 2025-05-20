@@ -24,38 +24,41 @@ class RoleSelectionActivity : AppCompatActivity() {
         binding = ActivityRoleSelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.progressAuth.visibility = View.VISIBLE
-        signInAnonymouslyIfNeeded()
-        checkFirebaseConnection()
+        val fromReset = intent.getBooleanExtra("fromReset", false)
 
-        // ⬇️ Автопереход, если уже выбрана роль
-        viewModel.getUserRole()?.let { role ->
-            when (role) {
-                UserRole.SERVER -> {
-                    val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-                    val pin = prefs.getString("server_pin", null)
-                    val verified = prefs.getBoolean("pin_verified", false)
+        if (!fromReset) {
+            viewModel.getUserRole()?.let { role ->
+                when (role) {
+                    UserRole.SERVER -> {
+                        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+                        val pin = prefs.getString("server_pin", null)
+                        val verified = prefs.getBoolean("pin_verified", false)
 
-                    val intent = if (pin != null && !verified) {
-                        Intent(this, ru.wizand.safeorbit.presentation.security.PinGateActivity::class.java)
-                    } else {
-                        Intent(this, ServerMainActivity::class.java)
+                        val intent = if (pin != null && !verified) {
+                            Intent(this, ru.wizand.safeorbit.presentation.security.PinGateActivity::class.java)
+                        } else {
+                            Intent(this, ServerMainActivity::class.java)
+                        }
+
+                        startActivity(intent)
+                        finish()
+                        return
                     }
 
-                    startActivity(intent)
-                    finish()
-                    return
-                }
-
-                UserRole.CLIENT -> {
-                    startActivity(Intent(this, ClientMainActivity::class.java))
-                    finish()
-                    return
+                    UserRole.CLIENT -> {
+                        startActivity(Intent(this, ClientMainActivity::class.java))
+                        finish()
+                        return
+                    }
                 }
             }
         }
 
-        // если роль не выбрана — показываем выбор
+        // Показываем выбор
+        binding.progressAuth.visibility = View.VISIBLE
+        signInAnonymouslyIfNeeded()
+        checkFirebaseConnection()
+
         binding.btnServer.setOnClickListener {
             viewModel.saveUserRole(UserRole.SERVER)
             saveUserRoleToDatabase("server")
@@ -70,14 +73,36 @@ class RoleSelectionActivity : AppCompatActivity() {
                 Intent(this, ServerMainActivity::class.java)
             }
 
+
             startActivity(intent)
+            finish()
         }
 
         binding.btnClient.setOnClickListener {
-            viewModel.saveUserRole(UserRole.CLIENT)
-            saveUserRoleToDatabase("client")
-            startActivity(Intent(this, ClientMainActivity::class.java))
+            binding.progressAuth.visibility = View.VISIBLE
+            FirebaseAuth.getInstance().signInAnonymously()
+                .addOnSuccessListener {
+                    viewModel.saveUserRole(UserRole.CLIENT)
+                    saveUserRoleToDatabase("client")
+                    binding.progressAuth.visibility = View.GONE
+                    Toast.makeText(this, "Запуск клиента", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this, ClientMainActivity::class.java))
+                    finish()
+                }
+                .addOnFailureListener {
+                    binding.progressAuth.visibility = View.GONE
+                    Toast.makeText(this, "Ошибка входа: ${it.message}", Toast.LENGTH_LONG).show()
+                }
         }
+
+//        binding.btnClient.setOnClickListener {
+//            viewModel.saveUserRole(UserRole.CLIENT)
+//            saveUserRoleToDatabase("client")
+//            Toast.makeText(this, "Запуск клиента", Toast.LENGTH_SHORT).show()
+////            Log.d("DEBUG", "Запуск клиента")
+//            startActivity(Intent(this, ClientMainActivity::class.java))
+//            finish()
+//        }
     }
 
     private fun signInAnonymouslyIfNeeded() {
@@ -87,7 +112,7 @@ class RoleSelectionActivity : AppCompatActivity() {
                 .addOnSuccessListener {
                     binding.progressAuth.visibility = View.GONE
                     Log.d("AUTH", "Анонимный вход выполнен")
-                    checkFirebaseConnection() // ⬅️ Перемещено сюда
+                    checkFirebaseConnection()
                 }
                 .addOnFailureListener {
                     binding.progressAuth.visibility = View.GONE
@@ -95,7 +120,7 @@ class RoleSelectionActivity : AppCompatActivity() {
                 }
         } else {
             binding.progressAuth.visibility = View.GONE
-            checkFirebaseConnection() // ⬅️ И сюда
+            checkFirebaseConnection()
         }
     }
 
@@ -121,9 +146,4 @@ class RoleSelectionActivity : AppCompatActivity() {
             }
         })
     }
-
-
-
-
-
 }

@@ -1,29 +1,27 @@
 package ru.wizand.safeorbit.presentation.server
 
+import android.graphics.Typeface
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import ru.wizand.safeorbit.R
-import ru.wizand.safeorbit.data.ActivityLogEntity
 import ru.wizand.safeorbit.data.model.ActivityLogUiModel
 
-class ActivityLogAdapter(private val logs: List<ActivityLogUiModel>) :
-    RecyclerView.Adapter<ActivityLogAdapter.ViewHolder>() {
-
-
-
-//class ActivityLogAdapter(private val logs: List<ActivityLogEntity>) :
-//    RecyclerView.Adapter<ActivityLogAdapter.ViewHolder>() {
+class ActivityLogAdapter : ListAdapter<ActivityLogUiModel, ActivityLogAdapter.ViewHolder>(DiffCallback()) {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val tvDate = view.findViewById<TextView>(R.id.tvDate)
-        val tvTime = view.findViewById<TextView>(R.id.tvTime)
-        val tvMode = view.findViewById<TextView>(R.id.tvMode)
-        val tvSteps = view.findViewById<TextView>(R.id.tvSteps)
-        val tvDistance = view.findViewById<TextView>(R.id.tvDistance)
+        val tvDate: TextView = view.findViewById(R.id.tvDate)
+        val tvTime: TextView = view.findViewById(R.id.tvTime)
+        val tvMode: TextView = view.findViewById(R.id.tvMode)
+        val tvSteps: TextView = view.findViewById(R.id.tvSteps)
+        val tvDistance: TextView = view.findViewById(R.id.tvDistance)
+        val root: LinearLayout = view.findViewById(R.id.itemRoot)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -32,10 +30,21 @@ class ActivityLogAdapter(private val logs: List<ActivityLogUiModel>) :
         return ViewHolder(view)
     }
 
-    override fun getItemCount() = logs.size
-
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val log = logs[position]
+        val log = getItem(position)
+
+        if (log.isSummary) {
+            holder.tvDate.text = log.date
+            holder.tvTime.text = "Итог за день: ${formatNumber(log.dailySteps)} шагов"
+            holder.tvTime.setTypeface(null, Typeface.BOLD)
+            holder.tvTime.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            holder.tvMode.text = ""
+            holder.tvSteps.text = ""
+            holder.tvDistance.text = ""
+
+            holder.root.setBackgroundResource(R.drawable.item_background_summary) // 🎨 фон для итогов
+            return
+        }
 
         holder.tvDate.text = log.date
         holder.tvTime.text = "${log.startHour}:00 - ${log.endHour}:00"
@@ -43,11 +52,27 @@ class ActivityLogAdapter(private val logs: List<ActivityLogUiModel>) :
         holder.tvSteps.text = log.steps?.let { "Шагов: $it" } ?: ""
         holder.tvDistance.text = log.distanceMeters?.let { "Расстояние: ${it} м" } ?: ""
 
-        val root = holder.itemView.findViewById<LinearLayout>(R.id.itemRoot)
         if (log.mode == "Активность") {
-            root.setBackgroundResource(R.drawable.item_background_active)
+            holder.root.setBackgroundResource(R.drawable.item_background_active)
         } else {
-            root.setBackgroundResource(R.drawable.item_background_default)
+            holder.root.setBackgroundResource(R.drawable.item_background_default)
+        }
+
+    }
+
+
+    class DiffCallback : DiffUtil.ItemCallback<ActivityLogUiModel>() {
+        override fun areItemsTheSame(oldItem: ActivityLogUiModel, newItem: ActivityLogUiModel): Boolean {
+            return oldItem.date == newItem.date && oldItem.startHour == newItem.startHour
+        }
+
+        override fun areContentsTheSame(oldItem: ActivityLogUiModel, newItem: ActivityLogUiModel): Boolean {
+            return oldItem == newItem
         }
     }
+
+    private fun formatNumber(number: Int?): String {
+        return number?.let { String.format("%,d", it).replace(',', ' ') } ?: "0"
+    }
+
 }

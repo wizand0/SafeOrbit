@@ -1,3 +1,4 @@
+// Автоматически обновлено: безопасный вызов context
 package ru.wizand.safeorbit.presentation.client
 
 import android.graphics.Bitmap
@@ -7,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -36,23 +38,20 @@ class MapFragment : Fragment() {
     private val handler = Handler(Looper.getMainLooper())
 
     private var activeMarkerId: String? = null
-
     private var hasCenteredOnAnyServer = false
-
     private var serversLoaded = false
-
-    // ✳️ Добавлены кеши
     private var cachedStates: Map<String, ServerMapState>? = null
     private var cachedNames: Map<String, String>? = null
-
     private var isConnected = false
     private var hasShownConnectionToast = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
         if (!mapKitInitialized) {
             MapKitFactory.setApiKey(BuildConfig.YANDEX_MAPKIT_API_KEY)
-            MapKitFactory.initialize(requireContext())
+            context?.let { MapKitFactory.initialize(it) }
             mapKitInitialized = true
         }
     }
@@ -60,7 +59,7 @@ class MapFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val view = inflater.inflate(R.layout.fragment_map, container, false)
         mapView = view.findViewById(R.id.map_view)
-        view.findViewById<View>(R.id.loadingLayout)?.visibility = View.VISIBLE // ✳️ сразу показываем
+        view.findViewById<View>(R.id.loadingLayout)?.visibility = View.VISIBLE
         return view
     }
 
@@ -68,15 +67,12 @@ class MapFragment : Fragment() {
         super.onResume()
         MapKitFactory.getInstance().onStart()
         mapView.onStart()
+        context?.let {
+        }
+        Log.d("MAP", "onResume(), mapView started = ${::mapView.isInitialized}")
 
         observeViewModel()
-
         view?.findViewById<View>(R.id.loadingLayout)?.visibility = View.VISIBLE
-
-//        viewModel.lastKnownCenter?.let {
-//            mapView.mapWindow.map.move(CameraPosition(it, 13.0f, 0.0f, 0.0f))
-//        }
-
         if (!serversLoaded) {
             viewModel.loadAndObserveServers()
             serversLoaded = true
@@ -92,19 +88,17 @@ class MapFragment : Fragment() {
     }
 
     private fun observeViewModel() {
-        // 🔁 Следим за соединением с Firebase
         viewModel.isConnected.observe(viewLifecycleOwner) { connected ->
             isConnected = connected
-
             if (!connected && !hasShownConnectionToast) {
                 handler.postDelayed({
-                    if (!isConnected) {
+                    if (!isConnected && isAdded && context != null) {
                         Toast.makeText(requireContext(), "Нет подключения к Firebase", Toast.LENGTH_LONG).show()
                         hasShownConnectionToast = true
                     }
                 }, 2000)
             } else if (connected) {
-                maybeDraw() // подключились — пробуем рисовать
+                maybeDraw()
             }
         }
 
@@ -114,43 +108,55 @@ class MapFragment : Fragment() {
         }
 
         viewModel.mapStates.observe(viewLifecycleOwner) { states ->
+            Log.d("MAP", "mapStates updated: ${states.size} items")
             cachedStates = states
             maybeDraw()
         }
     }
 
-    // ✳️ Метод, вызывающий drawAll только когда обе LiveData загружены
     private fun maybeDraw() {
-        val view = view ?: return
-
-        if (!isConnected) return
+        if (!isAdded || context == null || view == null) return
 
         val states = cachedStates
         val names = cachedNames
 
+
         if (states != null && names != null && states.isNotEmpty()) {
-            drawAll(states, names)
-            view.findViewById<View>(R.id.loadingLayout)?.visibility = View.GONE
-        } else {
-            // 💡 Скрываем индикатор если ничего не отрисовано спустя 5 секунд
-            handler.postDelayed({
-                if (view.findViewById<View>(R.id.loadingLayout)?.visibility == View.VISIBLE) {
-                    view.findViewById<View>(R.id.loadingLayout)?.visibility = View.GONE
-                    if ((states?.isEmpty() != false || names?.isEmpty() != false) && !hasShownConnectionToast) {
-                        Toast.makeText(requireContext(), "Нет активных серверов или подключения", Toast.LENGTH_LONG).show()
-                        hasShownConnectionToast = true
-                    }
-                }
-            }, 5000)
+            // 🔍 Проверим: есть ли в states хотя бы один id, который есть в names?
+//            val validServers = states.keys.any { names.containsKey(it) }
+            val validServers = states.keys
+                .filterNot { it == "testServer" }
+                .any { names.containsKey(it) }
+
+            if (validServers) {
+                drawAll(states, names)
+                view?.findViewById<View>(R.id.loadingLayout)?.visibility = View.GONE
+                return
+            }
         }
+
+        // ⏱ Отложенная проверка
+        handler.postDelayed({
+            if (!isAdded || view == null || context == null) return@postDelayed
+
+            val stillVisible = view?.findViewById<View>(R.id.loadingLayout)?.visibility == View.VISIBLE
+            if (stillVisible) {
+                view?.findViewById<View>(R.id.loadingLayout)?.visibility = View.GONE
+
+                if (names == null || names.isEmpty()) {
+                    Toast.makeText(requireContext(), "Нет добавленных серверов", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(requireContext(), "Не удалось загрузить данные с серверов", Toast.LENGTH_LONG).show()
+                }
+            }
+        }, 4_000)
     }
 
-    private fun drawAll(
-        states: Map<String, ServerMapState>,
-        nameMap: Map<String, String>
-    ) {
-        val map = mapView.mapWindow.map
 
+
+
+    private fun drawAll(states: Map<String, ServerMapState>, nameMap: Map<String, String>) {
+        val map = mapView.mapWindow.map
         val currentIds = states.keys
         val existingIds = placemarks.keys
 
@@ -165,13 +171,11 @@ class MapFragment : Fragment() {
             val name = nameMap[serverId] ?: "Без имени"
             val point = state.latestPoint
             val iconUri = viewModel.getIconUriForServer(serverId)
-
             val existingPlacemark = placemarks[serverId]
 
             if (existingPlacemark != null) {
                 val newBitmap = createMarkerBitmap(serverId, name, iconUri)
                 existingPlacemark.setIcon(ImageProvider.fromBitmap(newBitmap))
-
                 if (existingPlacemark.geometry != point) {
                     animateMarkerMove(existingPlacemark, existingPlacemark.geometry, point)
                 }
@@ -203,35 +207,18 @@ class MapFragment : Fragment() {
             map.move(CameraPosition(first.latestPoint, 13.0f, 0.0f, 0.0f))
             hasCenteredOnAnyServer = true
         }
-
-
-//        if (states.isNotEmpty() && viewModel.lastKnownCenter == null) {
-//            val first = states.values.first()
-//            map.move(CameraPosition(first.latestPoint, 13.0f, 0.0f, 0.0f))
-//            viewModel.lastKnownCenter = first.latestPoint // на всякий случай
-//        }
-    }
-
-    private fun updateMarkerHighlighting() {
-        for ((serverId, placemark) in placemarks) {
-            val name = viewModel.serverNameMap.value?.get(serverId) ?: "Без имени"
-            val iconUri = viewModel.getIconUriForServer(serverId)
-            val bitmap = createMarkerBitmap(serverId, name, iconUri)
-            placemark.setIcon(ImageProvider.fromBitmap(bitmap))
-        }
     }
 
     private fun createMarkerBitmap(serverId: String, name: String, iconUri: String?): Bitmap {
         val view = layoutInflater.inflate(R.layout.view_marker, null)
-
         val textView = view.findViewById<TextView>(R.id.marker_title)
         val imageView = view.findViewById<ImageView>(R.id.marker_icon)
-
         textView.text = name
 
         if (iconUri != null) {
             try {
-                val bitmap = BitmapFactory.decodeStream(requireContext().contentResolver.openInputStream(Uri.parse(iconUri)))
+                val inputStream = context?.contentResolver?.openInputStream(Uri.parse(iconUri))
+                val bitmap = BitmapFactory.decodeStream(inputStream)
                 imageView.setImageBitmap(bitmap)
             } catch (e: Exception) {
                 imageView.setImageResource(R.drawable.red_dot)
@@ -264,9 +251,11 @@ class MapFragment : Fragment() {
         val delay = duration / steps
         for (i in 1..steps) {
             handler.postDelayed({
-                val lat = from.latitude + (to.latitude - from.latitude) * i / steps
-                val lon = from.longitude + (to.longitude - from.longitude) * i / steps
-                marker.geometry = Point(lat, lon)
+                if (isAdded) {
+                    val lat = from.latitude + (to.latitude - from.latitude) * i / steps
+                    val lon = from.longitude + (to.longitude - from.longitude) * i / steps
+                    marker.geometry = Point(lat, lon)
+                }
             }, i * delay)
         }
     }

@@ -63,7 +63,11 @@ class ServerHistoryFragment : Fragment() {
         }
 
         viewModel.filteredUiLogs.observe(viewLifecycleOwner) { logs ->
-            recyclerView.adapter = ActivityLogAdapter(logs)
+            if (!::adapter.isInitialized) {
+                adapter = ActivityLogAdapter()
+                recyclerView.adapter = adapter
+            }
+            adapter.submitList(logs)
         }
     }
 

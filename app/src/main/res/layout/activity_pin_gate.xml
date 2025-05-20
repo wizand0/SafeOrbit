@@ -5,7 +5,7 @@
     android:padding="24dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/role_screen_background">
+    android:background="@drawable/role_screen_background1">
 
     <TextView
         android:text="Введите PIN"

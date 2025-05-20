@@ -4,7 +4,7 @@
     android:id="@+id/serverRootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/role_screen_background">
+    android:background="@drawable/role_screen_background1">
 
     <!-- Контейнер для фрагментов -->
     <FrameLayout

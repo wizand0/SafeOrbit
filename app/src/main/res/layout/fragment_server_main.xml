@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/role_screen_background"
+    android:background="@drawable/role_screen_background1"
     android:orientation="vertical"
     android:padding="24dp"
     android:gravity="center_horizontal">
@@ -51,4 +51,24 @@
         android:textSize="14sp"
         android:padding="16dp"
         android:background="#80FFFFFF" />
+
+    <TextView
+        android:id="@+id/tvInterval"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Интервал в состоянии покоя: ..."
+        android:textSize="14sp"
+        android:padding="16dp"
+        android:background="#80FFFFFF"
+        android:layout_marginTop="8dp" />
+
+    <TextView
+        android:id="@+id/tvActiveInterval"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Интервал АКТИВНЫЙ: ..."
+        android:textSize="14sp"
+        android:padding="16dp"
+        android:background="#80FFFFFF"
+        android:layout_marginTop="8dp" />
 </LinearLayout>

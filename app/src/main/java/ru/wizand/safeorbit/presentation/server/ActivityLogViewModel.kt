@@ -37,55 +37,91 @@ class ActivityLogViewModel(application: Application) : AndroidViewModel(applicat
         val groupedByDate = logs.groupBy { it.date }
         val result = mutableListOf<ActivityLogUiModel>()
 
+        val now = Calendar.getInstance()
+        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now.time)
+        val currentHour = now.get(Calendar.HOUR_OF_DAY)
+
         for ((date, dayLogs) in groupedByDate) {
-            val hourlyMap = mutableMapOf<Int, ActivityLogEntity>()
-            dayLogs.forEach { hourlyMap[it.startHour] = it }
+            val isToday = date == currentDate
+            val hourLimit = if (isToday) currentHour + 1 else 24
+            val totalStepsForDay = dayLogs.sumOf { it.steps ?: 0 }
+
+            // 👇 Добавляем сводку по шагам
+            result.add(
+                ActivityLogUiModel(
+                    date = date,
+                    dailySteps = totalStepsForDay,
+                    isSummary = true
+                )
+            )
+
+            val fullMap = mutableMapOf<Int, ActivityLogEntity>()
+            dayLogs.forEach { fullMap[it.startHour] = it }
 
             var hour = 0
-            var currentEconomStart: Int? = null
+            var pendingEconomStart: Int? = null
 
-            while (hour < 24) {
-                val entity = hourlyMap[hour]
-                if (entity != null) {
-                    // Завершаем эконом-интервал, если был
-                    if (currentEconomStart != null) {
+            while (hour < hourLimit) {
+                val entity = fullMap[hour]
+
+                if (entity != null || dayLogs.any { it.startHour <= hour && it.endHour > hour && it.mode == "Активность" }) {
+                    if (pendingEconomStart != null) {
                         result.add(
                             ActivityLogUiModel(
-                                date, currentEconomStart, hour, "ЭКОНОМ"
+                                date = date,
+                                startHour = pendingEconomStart,
+                                endHour = hour,
+                                mode = "ЭКОНОМ"
                             )
                         )
-                        currentEconomStart = null
+                        pendingEconomStart = null
+                    }
+
+                    val actualEntity = entity ?: dayLogs.find {
+                        it.startHour <= hour && it.endHour > hour && it.mode == "Активность"
                     }
 
                     result.add(
                         ActivityLogUiModel(
-                            date,
-                            entity.startHour,
-                            entity.endHour,
-                            entity.mode,
-                            entity.steps,
-                            entity.distanceMeters
+                            date = date,
+                            startHour = hour,
+                            endHour = hour + 1,
+                            mode = "Активность",
+                            steps = actualEntity?.steps,
+                            distanceMeters = actualEntity?.distanceMeters
                         )
                     )
-                    hour = entity.endHour
                 } else {
-                    if (currentEconomStart == null) {
-                        currentEconomStart = hour
+                    if (pendingEconomStart == null) {
+                        pendingEconomStart = hour
                     }
-                    hour++
                 }
+
+                hour++
             }
 
-            if (currentEconomStart != null && currentEconomStart < 24) {
+            if (pendingEconomStart != null && pendingEconomStart < hourLimit) {
                 result.add(
-                    ActivityLogUiModel(date, currentEconomStart, 24, "ЭКОНОМ")
+                    ActivityLogUiModel(
+                        date = date,
+                        startHour = pendingEconomStart,
+                        endHour = hourLimit,
+                        mode = "ЭКОНОМ"
+                    )
                 )
             }
         }
 
+//        return result.sortedWith(compareByDescending<ActivityLogUiModel> { it.date }
+//            .thenByDescending { it.isSummary.not() }
+//            .thenByDescending { it.startHour })
+
         return result.sortedWith(compareByDescending<ActivityLogUiModel> { it.date }
-            .thenByDescending { it.startHour })
+                .thenByDescending { it.isSummary } // ✅ summary=true => выше
+                .thenByDescending { it.startHour })
     }
+
+
 
     private fun cleanOldLogs() {
         viewModelScope.launch(Dispatchers.IO) {

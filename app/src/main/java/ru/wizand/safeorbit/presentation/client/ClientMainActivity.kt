@@ -1,31 +1,40 @@
 package ru.wizand.safeorbit.presentation.client
 
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.data.model.UserRole
 import ru.wizand.safeorbit.databinding.ActivityClientMainBinding
 
 class ClientMainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityClientMainBinding
     private val viewModel: ClientViewModel by viewModels()
-
-    // Сохраняем выбранный пункт меню
     private var selectedItemId: Int = R.id.nav_map
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
+        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val currentRole = prefs.getString("user_role", null)
+        val expected = UserRole.CLIENT.name
+        Log.d("DEBUG", "role: $currentRole, expected: $expected")
+        if (currentRole != expected) {
+            Log.d("DEBUG", "ClientMainActivity role mismatch, finishing")
+            finish()
+            return
+        }
+
         binding = ActivityClientMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         selectedItemId = savedInstanceState?.getInt("selected_nav_item") ?: R.id.nav_map
-
         setupBottomNavigation()
-//        setupFab()
 
         if (savedInstanceState == null) {
             showFragmentById(selectedItemId)
