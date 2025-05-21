@@ -82,5 +82,25 @@
             android:text="Удалить"
             android:textColor="#F44336" />
 
+        <TextView
+            android:id="@+id/textStreamTimer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textSize="16sp"
+            android:visibility="gone"
+            android:layout_marginTop="8dp"
+            android:layout_gravity="center_horizontal"/>
+
+        <!-- Анимация звуковых волн -->
+        <ImageView
+            android:id="@+id/imageAudioAnim"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_audio_wave_1"
+            android:layout_gravity="center_horizontal"
+            android:visibility="gone"
+            android:layout_marginTop="4dp"/>
+
     </LinearLayout>
 </ScrollView>

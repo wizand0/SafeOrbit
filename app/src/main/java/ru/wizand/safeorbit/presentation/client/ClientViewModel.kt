@@ -14,6 +14,7 @@ import ru.wizand.safeorbit.data.AppDatabase
 import ru.wizand.safeorbit.data.ServerEntity
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
+import ru.wizand.safeorbit.utils.Event
 import kotlin.math.*
 
 data class ServerMapState(
@@ -27,6 +28,9 @@ data class ServerMapState(
 class ClientViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = FirebaseRepository(application.applicationContext)
     private val db = AppDatabase.getDatabase(application)
+
+    private var lastServerAudioCodeMap: MutableMap<String, String> = mutableMapOf()
+    fun getAudioCodeFor(serverId: String): String? = lastServerAudioCodeMap[serverId]
 
     private var observingStarted = false
 
@@ -46,6 +50,9 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _isConnected = MutableLiveData<Boolean>()
     val isConnected: LiveData<Boolean> = _isConnected
+
+    private val _toastMessage = MutableLiveData<Event<String>>()
+    val toastMessage: LiveData<Event<String>> = _toastMessage
 
     private val serverLocationMap = mutableMapOf<String, LocationData>()
 
@@ -262,6 +269,71 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     }
 
 
+    fun requestListenMocrofoneNow(serverId: String, onCodeReady: (String) -> Unit = {}) {
+        Log.d("CLIENT_CMD", "🎤 Нажатие кнопки запроса микрофона")
+        viewModelScope.launch {
+            val server = db.serverDao().getByServerId(serverId)
+            if (server != null) {
+                val code = server.code
+                lastServerAudioCodeMap[serverId] = code
+                val ref = FirebaseDatabase.getInstance()
+                    .getReference("server_commands/$serverId")
+                    .push()
+
+                val data = mapOf(
+                    "code" to code,
+                    "type" to "START_AUDIO_STREAM",
+                    "timestamp" to System.currentTimeMillis()
+                )
+
+                Log.d("CLIENT_CMD", "📤 Отправка команды запуска аудиопотока: $data")
+                ref.setValue(data).addOnCompleteListener {
+                    if (it.isSuccessful) {
+                        Log.d("CLIENT_CMD", "✅ Команда на микрофон отправлена: ${ref.key}")
+                        _toastMessage.postValue(Event("⏺️ Аудио трансляция запрошена"))
+                        onCodeReady(code) // ← передаём код обратно
+
+                        // ⏱️ Через 60 сек — команда на остановку
+                        viewModelScope.launch {
+                            kotlinx.coroutines.delay(60_000)
+                            stopAudioStream(serverId, code)
+                        }
+
+                    } else {
+                        Log.e("CLIENT_CMD", "❌ Ошибка при отправке команды: ${it.exception}")
+                        _toastMessage.postValue(Event("❌ Не удалось отправить команду"))
+                    }
+                }
+            } else {
+                Log.w("CLIENT_CMD", "⚠️ Сервер не найден в локальной БД: $serverId")
+                _toastMessage.postValue(Event("⚠️ Сервер не найден"))
+            }
+        }
+    }
+
+
+    fun stopAudioStream(serverId: String, code: String) {
+        val ref = FirebaseDatabase.getInstance()
+            .getReference("server_commands/$serverId")
+            .push()
+
+        val data = mapOf(
+            "code" to code,
+            "type" to "STOP_AUDIO_STREAM",
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        Log.d("CLIENT_CMD", "📤 Отправка команды остановки аудиопотока: $data")
+        ref.setValue(data).addOnCompleteListener {
+            if (it.isSuccessful) {
+                Log.d("CLIENT_CMD", "🛑 Команда на остановку аудио отправлена: ${ref.key}")
+                _toastMessage.postValue(Event("🛑 Аудио трансляция завершена"))
+            } else {
+                Log.e("CLIENT_CMD", "❌ Ошибка при отправке команды: ${it.exception}")
+                _toastMessage.postValue(Event("❌ Не удалось остановить трансляцию"))
+            }
+        }
+    }
 
 
 
