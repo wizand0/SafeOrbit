@@ -54,5 +54,33 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Навигация" />
+
+        <Button
+            android:id="@+id/buttonRequestLocation"
+            style="@style/ButtonPrimary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Обновить координаты"
+            android:layout_marginTop="16dp" />
+
+        <Button
+            android:id="@+id/buttonChangeIntervals"
+            style="@style/ButtonPrimary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Изменить интервалы"
+            android:layout_marginTop="12dp" />
+
+        <Button
+            android:id="@+id/buttonListen"
+            style="@style/ButtonPrimary"
+            android:text="Послушать" />
+
+        <Button
+            android:id="@+id/buttonDelete"
+            style="@style/ButtonPrimary"
+            android:text="Удалить"
+            android:textColor="#F44336" />
+
     </LinearLayout>
 </ScrollView>

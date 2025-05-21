@@ -24,13 +24,15 @@ class RoleSelectionActivity : AppCompatActivity() {
         binding = ActivityRoleSelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+
         val fromReset = intent.getBooleanExtra("fromReset", false)
 
         if (!fromReset) {
             viewModel.getUserRole()?.let { role ->
                 when (role) {
                     UserRole.SERVER -> {
-                        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+
                         val pin = prefs.getString("server_pin", null)
                         val verified = prefs.getBoolean("pin_verified", false)
 

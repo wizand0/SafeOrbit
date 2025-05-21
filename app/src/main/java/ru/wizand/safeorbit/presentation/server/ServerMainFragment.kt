@@ -1,3 +1,4 @@
+
 package ru.wizand.safeorbit.presentation.server
 
 import android.Manifest
@@ -14,6 +15,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.presentation.server.ActiveInterval
@@ -52,7 +54,22 @@ class ServerMainFragment : Fragment() {
                 }
             }
 
+            // Обновление режима
             viewModel.updateMode(mode)
+
+            // Обновление интервалов из broadcast
+            val activeInterval = intent?.getLongExtra("active_interval", -1L) ?: -1L
+            val idleInterval = intent?.getLongExtra("inactivity_timeout", -1L) ?: -1L
+
+            if (activeInterval > 0) {
+                val label = ActiveInterval.fromMillis(activeInterval).label
+                tvActiveInterval.text = "Интервал АКТИВНЫЙ: $label"
+            }
+
+            if (idleInterval > 0) {
+                val label = InactivityTimeout.fromMillis(idleInterval).label
+                tvInterval.text = "Интервал ЭКОНОМ: $label"
+            }
         }
     }
 
@@ -64,6 +81,18 @@ class ServerMainFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val introShown = prefs.getBoolean("permissions_intro_shown", false)
+
+        if (!introShown) {
+            showPermissionsIntroDialog {
+                prefs.edit().putBoolean("permissions_intro_shown", true).apply()
+                checkAndStartLocationService(viewModel.serverId.value ?: return@showPermissionsIntroDialog)
+            }
+        } else {
+            checkAndStartLocationService(viewModel.serverId.value ?: return)
+        }
+
         tvServerId = view.findViewById(R.id.tvServerId)
         tvPairCode = view.findViewById(R.id.tvPairCode)
         tvStatus = view.findViewById(R.id.tvStatus)
@@ -72,16 +101,11 @@ class ServerMainFragment : Fragment() {
         tvInterval = view.findViewById(R.id.tvInterval)
         tvActiveInterval = view.findViewById(R.id.tvActiveInterval)
 
-        Log.d("SERVER_FRAGMENT", "TextViews инициализированы")
-
         viewModel.serverId.observe(viewLifecycleOwner) { serverId ->
             tvServerId.text = "ID сервера: $serverId"
-
             if (!serviceStarted) {
                 serviceStarted = true
-                if (serverId != null) {
-                    checkAndStartLocationService(serverId)
-                }
+                if (serverId != null) checkAndStartLocationService(serverId)
             }
         }
 
@@ -115,23 +139,17 @@ class ServerMainFragment : Fragment() {
 
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
+        ) permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION)
             != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissionsToRequest.add(Manifest.permission.ACTIVITY_RECOGNITION)
-        }
+        ) permissionsToRequest.add(Manifest.permission.ACTIVITY_RECOGNITION)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.FOREGROUND_SERVICE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissionsToRequest.add(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
-        }
+        ) permissionsToRequest.add(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
 
         if (permissionsToRequest.isNotEmpty()) {
             requestPermissions(permissionsToRequest.toTypedArray(), LOCATION_PERMISSION_REQUEST)
@@ -152,10 +170,7 @@ class ServerMainFragment : Fragment() {
             .setTitle("Фоновый доступ к геолокации")
             .setMessage("Приложению необходимо разрешение на доступ к местоположению в фоновом режиме, чтобы отслеживать координаты, даже когда вы не используете приложение.")
             .setPositiveButton("Разрешить") { _, _ ->
-                requestPermissions(
-                    arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-                    LOCATION_PERMISSION_REQUEST
-                )
+                requestPermissions(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), LOCATION_PERMISSION_REQUEST)
             }
             .setNegativeButton("Нет", null)
             .show()
@@ -169,22 +184,14 @@ class ServerMainFragment : Fragment() {
     }
 
     override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
         if (requestCode == LOCATION_PERMISSION_REQUEST) {
-            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-            if (allGranted) {
+            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 checkAndStartLocationService(viewModel.serverId.value ?: return)
             } else {
-                Toast.makeText(
-                    requireContext(),
-                    "Не все разрешения выданы. Геолокация не будет работать.",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(requireContext(), "Не все разрешения выданы. Геолокация не будет работать.", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -193,18 +200,6 @@ class ServerMainFragment : Fragment() {
         super.onResume()
         val filter = IntentFilter("LOCATION_UPDATE")
         LocalBroadcastManager.getInstance(requireContext()).registerReceiver(locationReceiver, filter)
-
-        val prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-
-        // Интервал ЭКОНОМ
-        val idleMillis = prefs.getLong("inactivity_timeout", 5 * 60 * 1000L)
-        val idleLabel = InactivityTimeout.fromMillis(idleMillis).label
-        tvInterval.text = "Интервал ЭКОНОМ: $idleLabel"
-
-        // Интевал АКТИВНЫЙ
-        val activeMillis = prefs.getLong("active_interval", 30_000L)
-        val activeLabel = ActiveInterval.fromMillis(activeMillis).label
-        tvActiveInterval.text = "Интервал АКТИВНЫЙ: $activeLabel"
     }
 
     override fun onPause() {
@@ -219,5 +214,25 @@ class ServerMainFragment : Fragment() {
     private fun formatTimestamp(timestamp: Long): String {
         val sdf = java.text.SimpleDateFormat("HH:mm:ss, dd MMMM", java.util.Locale.getDefault())
         return sdf.format(java.util.Date(timestamp))
+    }
+
+    private fun showPermissionsIntroDialog(onContinue: () -> Unit) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Зачем нужны разрешения")
+            .setMessage(
+                """
+            Для корректной работы в роли сервера приложению нужны следующие разрешения:
+
+            • Геолокация — для определения текущего положения.
+            • Фоновый доступ — чтобы работать даже с выключенным экраном.
+            • Распознавание активности — чтобы отслеживать движение и экономить заряд.
+            • Запуск служб — для фоновой работы.
+            
+            Без них приложение не сможет отправлять координаты клиенту.
+            """.trimIndent()
+            )
+            .setPositiveButton("Продолжить") { _, _ -> onContinue() }
+            .setCancelable(false)
+            .show()
     }
 }

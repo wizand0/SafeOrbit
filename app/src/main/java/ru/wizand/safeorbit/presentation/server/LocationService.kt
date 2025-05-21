@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
 import com.google.android.gms.location.*
+import com.google.firebase.database.*
 import kotlinx.coroutines.*
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.*
@@ -73,10 +74,14 @@ class LocationService : Service(), SensorEventListener {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         serverId = intent?.getStringExtra("server_id") ?: ""
+        val code = prefs.getString("server_code", "")
+        Log.d("COMMANDS", "📦 Сервис запущен. serverId=$serverId, code=$code") // ⬅️ ДОБАВЬ
+
         if (!hasLocationPermission()) {
             stopSelf()
             return START_NOT_STICKY
         }
+        listenForClientCommands()
         switchToIdleMode()
         return START_STICKY
     }
@@ -149,6 +154,7 @@ class LocationService : Service(), SensorEventListener {
     }
 
     private fun sendToFirebase(location: Location) {
+        Log.d("COMMANDS", "📤 Отправка координат: ${location.latitude}, ${location.longitude}")
         FirebaseRepository(applicationContext).sendLocation(
             serverId,
             LocationData(location.latitude, location.longitude, System.currentTimeMillis())
@@ -183,6 +189,8 @@ class LocationService : Service(), SensorEventListener {
     private fun broadcastMode() {
         Intent("LOCATION_UPDATE").apply {
             putExtra("mode", if (isInActiveMode) "АКТИВНЫЙ" else "ЭКОНОМ")
+            putExtra("active_interval", activeInterval)
+            putExtra("inactivity_timeout", inactivityTimeout)
         }.also {
             LocalBroadcastManager.getInstance(this).sendBroadcast(it)
         }
@@ -258,6 +266,131 @@ class LocationService : Service(), SensorEventListener {
         else PackageManager.PERMISSION_GRANTED
         return fine == PackageManager.PERMISSION_GRANTED && fg == PackageManager.PERMISSION_GRANTED
     }
+
+    private fun listenForClientCommands() {
+        val commandRootRef = FirebaseDatabase.getInstance()
+            .getReference("server_commands")
+            .child(serverId)
+
+        Log.d("COMMANDS", "⏳ Слушаем команды на server_commands/$serverId")
+
+        commandRootRef.addChildEventListener(object : ChildEventListener {
+            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                val commandId = snapshot.key ?: return
+                val codeFromClient = snapshot.child("code").getValue(String::class.java)
+                val localCode = prefs.getString("server_code", "")
+
+                Log.d("COMMANDS", "📥 Получена команда $commandId: ${snapshot.value}")
+                Log.d("COMMANDS", "🔐 Проверка кода: client=$codeFromClient, local=$localCode")
+
+                if (codeFromClient != localCode) {
+                    Log.w("COMMANDS", "❌ Код не совпадает — игнорируем")
+                    return
+                }
+
+                val active = snapshot.child("update_settings/active_interval").getValue(Long::class.java)
+                val idle = snapshot.child("update_settings/inactivity_timeout").getValue(Long::class.java)
+                val requestNow = snapshot.child("request_location_update").getValue(Boolean::class.java) ?: false
+
+                if (active != null) {
+                    Log.d("COMMANDS", "⚙️ Установка activeInterval = $active")
+                    activeInterval = active
+                    prefs.edit().putLong("active_interval", active).apply()
+                    if (isInActiveMode) switchToActiveMode()
+                }
+
+                if (idle != null) {
+                    Log.d("COMMANDS", "⚙️ Установка inactivityTimeout = $idle")
+                    inactivityTimeout = idle
+                    prefs.edit().putLong("inactivity_timeout", idle).apply()
+                    if (!isInActiveMode) switchToIdleMode()
+                }
+
+                broadcastMode()
+
+                if (requestNow) {
+                    Log.d("COMMANDS", "📡 Принудительная отправка координат")
+
+                    if (hasLocationPermission()) {
+                        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                            .addOnSuccessListener { location ->
+                                if (location != null) {
+                                    lastSentLocation = location
+                                    lastSentTime = System.currentTimeMillis()
+                                    sendToFirebase(location)
+                                    broadcastLocation(location)
+                                    saveActivityLog("Принудительно")
+                                    Log.d("COMMANDS", "📤 Отправлены координаты: ${location.latitude}, ${location.longitude}")
+                                } else {
+                                    Log.w("COMMANDS", "⚠️ Не удалось получить текущую локацию")
+                                }
+                            }
+                            .addOnFailureListener {
+                                Log.e("COMMANDS", "❌ Ошибка при получении локации: ${it.message}")
+                            }
+                    } else {
+                        Log.w("COMMANDS", "⚠️ Нет разрешения на получение локации")
+                    }
+                }
+
+                // 🧹 Удаление команды
+                snapshot.ref.removeValue()
+                Log.d("COMMANDS", "🧹 Команда $commandId удалена после обработки")
+            }
+
+            override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {}
+            override fun onChildRemoved(snapshot: DataSnapshot) {}
+            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("COMMANDS", "🔥 Ошибка чтения команд: ${error.message}")
+            }
+        })
+    }
+
+
+    private fun processCommandSnapshot(snapshot: DataSnapshot) {
+        val parentRef = snapshot.ref.parent ?: return
+
+        parentRef.get().addOnSuccessListener { snapshot ->
+            Log.d("COMMANDS", "📥 Получена команда: ${snapshot.value}")
+
+            val codeFromClient = snapshot.child("code").getValue(String::class.java)
+            val localCode = prefs.getString("server_code", "")
+            Log.d("COMMANDS", "🔐 Проверка кода: client=$codeFromClient, local=$localCode")
+
+            if (codeFromClient != localCode) {
+                Log.w("COMMANDS", "❌ Код не совпадает — игнорируем")
+                return@addOnSuccessListener
+            }
+
+            val active = snapshot.child("update_settings/active_interval").getValue(Long::class.java)
+            val idle = snapshot.child("update_settings/inactivity_timeout").getValue(Long::class.java)
+            val requestNow = snapshot.child("request_location_update").getValue(Boolean::class.java) ?: false
+
+            if (active != null) {
+                Log.d("COMMANDS", "⚙️ Установка activeInterval = $active")
+                activeInterval = active
+                if (isInActiveMode) switchToActiveMode()
+            }
+
+            if (idle != null) {
+                Log.d("COMMANDS", "⚙️ Установка inactivityTimeout = $idle")
+                inactivityTimeout = idle
+                if (!isInActiveMode) switchToIdleMode()
+            }
+
+            if (requestNow) {
+                Log.d("COMMANDS", "📡 Принудительная отправка координат")
+                lastSentLocation?.let { sendToFirebase(it) }
+            }
+
+            parentRef.removeValue()
+            Log.d("COMMANDS", "🧹 Команда обработана и удалена")
+        }.addOnFailureListener {
+            Log.e("COMMANDS", "⚠️ Не удалось прочитать команду: ${it.message}")
+        }
+    }
+
 
     override fun onDestroy() {
         super.onDestroy()

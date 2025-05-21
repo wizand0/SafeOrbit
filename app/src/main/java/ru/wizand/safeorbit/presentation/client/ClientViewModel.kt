@@ -2,10 +2,12 @@ package ru.wizand.safeorbit.presentation.client
 
 import android.app.Application
 import android.graphics.Color
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.database.FirebaseDatabase
 import com.yandex.mapkit.geometry.Point
 import kotlinx.coroutines.launch
 import ru.wizand.safeorbit.data.AppDatabase
@@ -25,6 +27,8 @@ data class ServerMapState(
 class ClientViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = FirebaseRepository(application.applicationContext)
     private val db = AppDatabase.getDatabase(application)
+
+    private var observingStarted = false
 
     private val _serverNameMap = MutableLiveData<Map<String, String>>()
     val serverNameMap: LiveData<Map<String, String>> = _serverNameMap
@@ -81,6 +85,8 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun loadAndObserveServers() {
+        if (observingStarted) return
+        observingStarted = true
         viewModelScope.launch {
             val servers = db.serverDao().getAll()
 
@@ -95,11 +101,25 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun addServer(serverId: String, code: String, name: String) {
+    fun addServer(serverId: String, code: String, name: String, iconUri: String? = null) {
         viewModelScope.launch {
-            db.serverDao().insert(
-                ServerEntity(id = 0, serverId = serverId, code = code, name = name)
-            )
+            // 1. Сохраняем в БД
+            val entity = ServerEntity(id = 0, serverId = serverId, code = code, name = name, serverIconUri = iconUri)
+            db.serverDao().insert(entity)
+            Log.d("CLIENT_ADD", "💾 Сервер сохранён: $serverId, name=$name")
+
+            // 2. Обновляем карты в памяти
+            val updatedNames = _serverNameMap.value.orEmpty().toMutableMap()
+            updatedNames[serverId] = name
+            _serverNameMap.postValue(updatedNames)
+
+            val updatedIcons = _iconUriMap.value.orEmpty().toMutableMap()
+            updatedIcons[serverId] = iconUri
+            _iconUriMap.postValue(updatedIcons)
+
+            // 3. Запускаем наблюдение за координатами
+            Log.d("CLIENT_ADD", "🔄 Подписка на координаты сервера: $serverId")
+            observeAllServerLocations(listOf(serverId))
         }
     }
 
@@ -111,6 +131,7 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun observeAllServerLocations(serverIds: List<String>) {
+        Log.d("CLIENT", "🔄 observeAllServerLocations() вызван")
         serverIds.forEach { serverId ->
             repository.observeServerLocation(serverId) { location ->
                 serverLocationMap[serverId] = location
@@ -120,6 +141,7 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun updateLocation(serverId: String, location: LocationData) {
+        Log.d("CLIENT", "📍 updateLocation() $serverId -> $location")
         val point = Point(location.latitude, location.longitude)
 
         val history = pointHistories.getOrPut(serverId) { mutableListOf() }
@@ -175,4 +197,73 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
             _iconUriMap.postValue(current)
         }
     }
+
+    // Шаг 3: Client (ClientViewModel.kt)
+
+    fun sendServerSettings(serverId: String, activeMs: Long, idleMs: Long) {
+        viewModelScope.launch {
+            val server = db.serverDao().getByServerId(serverId)
+            if (server != null) {
+                val code = server.code
+                Log.d("CLIENT_CMD", "📤 Отправка интервалов: server=$serverId, code=$code, active=$activeMs, idle=$idleMs")
+
+                val ref = FirebaseDatabase.getInstance()
+                    .getReference("server_commands")
+                    .child(serverId)
+                    .push() // cmd_<auto_id>
+
+                val data = mapOf(
+                    "code" to code,
+                    "update_settings" to mapOf(
+                        "active_interval" to activeMs,
+                        "inactivity_timeout" to idleMs
+                    )
+                )
+
+                ref.setValue(data).addOnCompleteListener {
+                    if (it.isSuccessful) {
+                        Log.d("CLIENT_CMD", "✅ Команда отправлена успешно")
+                    } else {
+                        Log.e("CLIENT_CMD", "❌ Ошибка при отправке команды: ${it.exception}")
+                    }
+                }
+            }
+        }
+    }
+
+
+    fun requestServerLocationNow(serverId: String) {
+        Log.d("CLIENT_CMD", "Нажатие кнопки запроса координат")
+        viewModelScope.launch {
+            val server = db.serverDao().getByServerId(serverId)
+            if (server != null) {
+                val code = server.code
+                val ref = FirebaseDatabase.getInstance()
+                    .getReference("server_commands/$serverId")
+                    .push() // генерация уникального ID команды
+
+                val data = mapOf(
+                    "code" to code,
+                    "request_location_update" to true
+                )
+
+                Log.d("CLIENT_CMD", "📤 Отправка команды запроса координат: $data")
+                ref.setValue(data).addOnCompleteListener {
+                    if (it.isSuccessful) {
+                        Log.d("CLIENT_CMD", "✅ Команда отправлена: ${ref.key}")
+                    } else {
+                        Log.e("CLIENT_CMD", "❌ Ошибка при отправке команды: ${it.exception}")
+                    }
+                }
+            } else {
+                Log.w("CLIENT_CMD", "⚠️ Сервер не найден в локальной БД: $serverId")
+            }
+        }
+    }
+
+
+
+
+
+
 }
