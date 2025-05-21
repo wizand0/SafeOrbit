@@ -14,15 +14,18 @@ import android.os.*
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
 import com.google.android.gms.location.*
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import kotlinx.coroutines.*
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.*
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
+import ru.wizand.safeorbit.presentation.server.audio.AudioBroadcastService
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -272,6 +275,9 @@ class LocationService : Service(), SensorEventListener {
             .getReference("server_commands")
             .child(serverId)
 
+        Log.d("COMMANDS", "📛 Firebase UID: ${FirebaseAuth.getInstance().currentUser?.uid}, serverId: $serverId")
+
+
         Log.d("COMMANDS", "⏳ Слушаем команды на server_commands/$serverId")
 
         commandRootRef.addChildEventListener(object : ChildEventListener {
@@ -333,6 +339,19 @@ class LocationService : Service(), SensorEventListener {
                     }
                 }
 
+                val commandType = snapshot.child("type").getValue(String::class.java)
+
+                when (commandType) {
+                    "START_AUDIO_STREAM" -> {
+                        Log.d("COMMANDS", "🎙️ Команда на запуск аудио трансляции")
+                        startAudioBroadcastService()
+                    }
+                    "STOP_AUDIO_STREAM" -> {
+                        Log.d("COMMANDS", "🛑 Команда на остановку аудио трансляции")
+                        stopAudioBroadcastService()
+                    }
+                }
+
                 // 🧹 Удаление команды
                 snapshot.ref.removeValue()
                 Log.d("COMMANDS", "🧹 Команда $commandId удалена после обработки")
@@ -390,6 +409,27 @@ class LocationService : Service(), SensorEventListener {
             Log.e("COMMANDS", "⚠️ Не удалось прочитать команду: ${it.message}")
         }
     }
+
+//    private fun startAudioBroadcastService() {
+//        val intent = Intent(this, ru.wizand.safeorbit.presentation.server.audio.SilentAudioLaunchActivity::class.java)
+//        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+//        intent.putExtra("server_id", serverId)
+//        startActivity(intent)
+//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
+//    }
+
+    private fun startAudioBroadcastService() {
+        val intent = Intent(this, AudioBroadcastService::class.java)
+        ContextCompat.startForegroundService(this, intent)
+        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
+    }
+
+    private fun stopAudioBroadcastService() {
+        val intent = Intent(this, AudioBroadcastService::class.java)
+        stopService(intent)
+        Log.d("COMMANDS", "🛑 AudioBroadcastService остановлен")
+    }
+
 
 
     override fun onDestroy() {

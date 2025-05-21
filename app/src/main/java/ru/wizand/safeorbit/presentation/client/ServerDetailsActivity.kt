@@ -2,10 +2,14 @@ package ru.wizand.safeorbit.presentation.client
 
 import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.drawable.AnimationDrawable
 import android.location.Geocoder
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ImageView
@@ -20,12 +24,32 @@ import ru.wizand.safeorbit.presentation.server.ActiveInterval
 import ru.wizand.safeorbit.presentation.server.InactivityTimeout
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.content.ContextCompat
 
 class ServerDetailsActivity : AppCompatActivity() {
 
     private val viewModel: ClientViewModel by viewModels()
     private lateinit var imageIcon: ImageView
     private lateinit var serverId: String
+
+    private var lastAudioCode: String? = null
+
+    private lateinit var buttonListen: Button
+    private lateinit var textStreamTimer: TextView
+    private lateinit var imageAudioAnim: ImageView
+
+    private var streamStartTime: Long = 0
+    private val streamHandler = Handler(Looper.getMainLooper())
+    private val streamTimerRunnable = object : Runnable {
+        override fun run() {
+            val elapsed = System.currentTimeMillis() - streamStartTime
+            val seconds = (elapsed / 1000).toInt()
+            val minutes = seconds / 60
+            val sec = seconds % 60
+            textStreamTimer.text = String.format("%02d:%02d", minutes, sec)
+            streamHandler.postDelayed(this, 1000)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,6 +89,10 @@ class ServerDetailsActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.textTime).text = "Время: ${formatTimestamp(timestamp)}"
         findViewById<TextView>(R.id.textAddress).text = getAddressFromCoords(latitude, longitude)
 
+        buttonListen = findViewById(R.id.buttonListen)
+        textStreamTimer = findViewById(R.id.textStreamTimer)
+        imageAudioAnim = findViewById(R.id.imageAudioAnim)
+
         findViewById<Button>(R.id.buttonRequestLocation).setOnClickListener {
             Log.d("CLIENT_CMD", "Нажимается кнопка R.id.buttonRequestLocation")
             viewModel.requestServerLocationNow(serverId)
@@ -86,8 +114,30 @@ class ServerDetailsActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<Button>(R.id.buttonListen).setOnClickListener {
-            Toast.makeText(this, "Функция 'Послушать' пока недоступна", Toast.LENGTH_SHORT).show()
+        buttonListen.setOnClickListener {
+            if (buttonListen.text == "Остановить") {
+                stopAudioStreamUI()
+                lastAudioCode?.let { code ->
+//                    viewModel.stopAudioStream(serverId, code)
+                    viewModel.getAudioCodeFor(serverId)?.let { code ->
+                        viewModel.stopAudioStream(serverId, code)
+                    } ?: Log.w("CLIENT_CMD", "⚠️ Нет сохранённого кода для $serverId")
+                } ?: Toast.makeText(this, "Неизвестный код трансляции", Toast.LENGTH_SHORT).show()
+            } else {
+                Log.d("CLIENT_CMD", "Нажимается кнопка R.id.buttonListen")
+                viewModel.requestListenMocrofoneNow(serverId) { code ->
+                    lastAudioCode = code
+                    runOnUiThread { startAudioStreamUI() }
+                }
+                Toast.makeText(this, "Запрошено прослушивание. Ожидайте", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+
+        viewModel.toastMessage.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { message ->
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            }
         }
 
         findViewById<Button>(R.id.buttonDelete).setOnClickListener {
@@ -158,4 +208,31 @@ class ServerDetailsActivity : AppCompatActivity() {
             .setNegativeButton("Отмена", null)
             .show()
     }
+
+    private fun startAudioStreamUI() {
+        buttonListen.text = "Остановить"
+        buttonListen.setTextColor(getColor(R.color.white))
+        buttonListen.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.red))
+
+        textStreamTimer.visibility = View.VISIBLE
+        imageAudioAnim.visibility = View.VISIBLE
+        imageAudioAnim.setImageResource(R.drawable.audio_wave_anim)
+        (imageAudioAnim.drawable as? AnimationDrawable)?.start()
+
+        streamStartTime = System.currentTimeMillis()
+        streamHandler.post(streamTimerRunnable)
+    }
+
+    private fun stopAudioStreamUI() {
+        buttonListen.text = "Послушать"
+        buttonListen.setTextColor(getColor(R.color.white))
+        buttonListen.setBackgroundTintList(null) // сбросить цвет на дефолтный Material
+
+        textStreamTimer.visibility = View.GONE
+        imageAudioAnim.visibility = View.GONE
+        (imageAudioAnim.drawable as? AnimationDrawable)?.stop()
+        streamHandler.removeCallbacks(streamTimerRunnable)
+    }
+
+
 }
