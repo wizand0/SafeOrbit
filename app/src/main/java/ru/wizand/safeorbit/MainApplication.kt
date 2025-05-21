@@ -11,13 +11,30 @@ class MainApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // Инициализация Firebase (необязательна, если в манифесте auto-init = true)
         FirebaseApp.initializeApp(this)
+        clearPrefsIfNewInstall()
+    }
 
-        // Пример инициализации карты или логирования
-        // YandexMapKitFactory.setApiKey("API_KEY")
+    private fun clearPrefsIfNewInstall() {
+        val appPrefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+//        val clientPrefs = getSharedPreferences("client_prefs", MODE_PRIVATE) // если ты их используешь
 
-        // Установка дефолтных значений или поведения
-        Log.d("App", "Приложение запущено")
+        val storedInstallTime = appPrefs.getLong("stored_install_time", -1L)
+        val realInstallTime = packageManager.getPackageInfo(packageName, 0).firstInstallTime
+
+        if (storedInstallTime == -1L || storedInstallTime != realInstallTime) {
+            Log.i("MainApplication", "Новая установка. Очищаем все prefs")
+
+            appPrefs.edit().remove("permissions_intro_shown").apply()
+
+            appPrefs.edit().clear().apply()
+//            clientPrefs.edit().clear().apply()
+
+            appPrefs.edit().putLong("stored_install_time", realInstallTime).apply()
+        } else {
+            Log.d("MainApplication", "Это не новая установка")
+        }
     }
 }
+
+

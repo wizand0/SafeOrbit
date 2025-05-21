@@ -3,6 +3,8 @@ package ru.wizand.safeorbit.presentation.client
 
 import android.app.AlertDialog
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.*
 import android.widget.EditText
 import android.widget.Toast
@@ -47,9 +49,18 @@ class ServerListFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         view.findViewById<FloatingActionButton>(R.id.fabAddInList)?.setOnClickListener {
-            AddServerDialogFragment { serverId, code, name ->
-                viewModel.addServer(serverId, code, name)
-                viewModel.loadAndObserveServers()
+            val existingIds = viewModel.serverNameMap.value?.keys.orEmpty()
+
+            AddServerDialogFragment(existingIds) { serverId, code, nameInput ->
+                val name = if (nameInput.isBlank()) serverId else nameInput
+                if (existingIds.contains(serverId)) {
+                    Toast.makeText(requireContext(), "Сервер с таким ID уже добавлен", Toast.LENGTH_SHORT).show()
+                } else {
+                    viewModel.addServer(serverId, code, name)
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        viewModel.loadAndObserveServers()
+                    }, 300)
+                }
             }.show(parentFragmentManager, "AddServerDialog")
         }
     }

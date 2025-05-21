@@ -12,7 +12,7 @@ import ru.wizand.safeorbit.data.model.LocationData
 
 class ServerViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = FirebaseRepository(application.applicationContext)
-    private val prefs = application.getSharedPreferences("server_prefs", Context.MODE_PRIVATE)
+    private val prefs = application.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
     private val _serverId = MutableLiveData<String?>()
     val serverId: LiveData<String?> = _serverId
@@ -23,7 +23,6 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
     private val _audioRequest = MutableLiveData<AudioRequest>()
     val audioRequest: LiveData<AudioRequest> = _audioRequest
 
-    // ➕ Добавлены поля для последних координат, времени обновления и режима
     private val _lastKnownLatLon = MutableLiveData<Pair<Double, Double>>()
     val lastKnownLatLon: LiveData<Pair<Double, Double>> = _lastKnownLatLon
 
@@ -34,33 +33,46 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
     val mode: LiveData<String> = _mode
 
     init {
+        checkOrRegisterServer()
+    }
+
+    private fun checkOrRegisterServer() {
         val savedId = prefs.getString("server_id", null)
         val savedCode = prefs.getString("server_code", null)
 
         if (savedId != null && savedCode != null) {
-            val id = savedId
-            val code = savedCode
-
-            _serverId.value = id
-            _code.value = code
-            observeAudioRequest(id)
+            Log.d("ServerViewModel", "Используем сохранённый serverId и code")
+            _serverId.value = savedId
+            _code.value = savedCode
+            observeAudioRequest(savedId)
         } else {
+            Log.d("ServerViewModel", "Регистрируем новый сервер...")
             registerServer()
         }
     }
 
-    fun registerServer() {
-        repository.registerServer { id, generatedCode ->
-            _serverId.postValue(id)
-            _code.postValue(generatedCode)
+    fun registerServer(forceNew: Boolean = false) {
+        if (!forceNew && _serverId.value != null && _code.value != null) {
+            Log.d("ServerViewModel", "Сервер уже зарегистрирован, пропускаем.")
+            return
+        }
 
+        repository.registerServer { id, generatedCode ->
             prefs.edit()
                 .putString("server_id", id)
                 .putString("server_code", generatedCode)
                 .apply()
 
+            _serverId.postValue(id)
+            _code.postValue(generatedCode)
             observeAudioRequest(id)
         }
+    }
+
+    fun reset() {
+        prefs.edit().clear().apply()
+        _serverId.postValue(null)
+        _code.postValue(null)
     }
 
     private fun observeAudioRequest(serverId: String) {
@@ -70,12 +82,11 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun sendLocation(location: LocationData) {
-        val serverIdValue = _serverId.value
-        if (serverIdValue != null) {
-            Log.d("SEND_LOCATION", "Отправляем координаты на сервер: $location")
-            repository.sendLocation(serverIdValue, location)
+        val id = _serverId.value
+        if (id != null) {
+            repository.sendLocation(id, location)
         } else {
-            Log.w("SEND_LOCATION", "serverId еще не установлен — координаты не отправлены")
+            Log.w("ServerViewModel", "serverId не задан — координаты не отправлены")
         }
     }
 
@@ -86,11 +97,5 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun updateMode(mode: String) {
         _mode.postValue(mode)
-    }
-
-    fun reset() {
-        prefs.edit().clear().apply()
-        _serverId.postValue(null)
-        _code.postValue(null)
     }
 }
