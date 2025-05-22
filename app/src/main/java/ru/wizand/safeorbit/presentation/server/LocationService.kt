@@ -14,6 +14,7 @@ import android.os.*
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
@@ -416,39 +417,6 @@ class LocationService : Service(), SensorEventListener {
         }
     }
 
-//    private fun startAudioBroadcastService() {
-//        val intent = Intent(this, ru.wizand.safeorbit.presentation.server.audio.SilentAudioLaunchActivity::class.java)
-//        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-//        intent.putExtra("server_id", serverId)
-//        startActivity(intent)
-//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
-//    }
-
-//    private fun startAudioBroadcastService() {
-//        val intent = Intent(this, AudioBroadcastService::class.java)
-//        ContextCompat.startForegroundService(this, intent)
-//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
-//    }
-
-
-//    private fun startAudioBroadcastService() {
-//    val intent = Intent(this, SilentAudioLaunchActivity::class.java).apply {
-//        putExtra("server_id", serverId)
-//    }
-//    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-//    this.startActivity(intent)
-//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
-//    }
-
-//    private fun startAudioBroadcastService() {
-//        val intent = Intent(this, AudioLaunchActivity::class.java).apply {
-//            putExtra("server_id", serverId)
-//            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // важно!
-//        }
-//        this.startActivity(intent)
-//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
-//    }
-
     private fun startAudioBroadcastService() {
         val intent = Intent(this, AudioBroadcastService::class.java).apply {
             putExtra("server_id", serverId)
@@ -479,16 +447,14 @@ class LocationService : Service(), SensorEventListener {
         }
     }
 
-    private fun requestStartViaNotification(serviceIntent: Intent) {
-        val pendingIntent = PendingIntent.getForegroundService(
-            this,
-            0,
-            serviceIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val channelId = "audio_request_channel"
+    fun Context.requestStartViaNotification(serviceIntent: Intent) {
         val notificationManager = getSystemService(NotificationManager::class.java)
+        val channelId = "audio_request_channel"
+
+        if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+            Log.w("AUDIO_STREAM", "❌ Уведомления отключены. Невозможно показать запрос.")
+            return
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -496,32 +462,93 @@ class LocationService : Service(), SensorEventListener {
                 "Audio Requests",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Уведомления для запуска аудиотрансляции"
+                description = "Запросы на трансляцию микрофона"
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             notificationManager.createNotificationChannel(channel)
         }
 
+        val servicePendingIntent = PendingIntent.getForegroundService(
+            this,
+            0,
+            serviceIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val fullScreenIntent = PendingIntent.getActivity(
+            this,
+            1,
+            Intent(this, AudioLaunchActivity::class.java).apply {
+                putExtra("server_id", serviceIntent.getStringExtra("server_id"))
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_mic)
             .setContentTitle("Запустить аудиотрансляцию")
-            .setContentText("Нажмите, чтобы включить микрофон")
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText("SafeOrbit получил команду на трансляцию. Нажмите «Включить», чтобы разрешить использование микрофона.")
-            )
+            .setContentText("Нажмите, чтобы разрешить использование микрофона")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
             .setAutoCancel(true)
             .addAction(
                 NotificationCompat.Action.Builder(
                     R.drawable.ic_mic,
                     "Включить",
-                    pendingIntent
+                    servicePendingIntent
                 ).build()
             )
+            .setFullScreenIntent(fullScreenIntent, true)
             .build()
 
         notificationManager.notify(42, notification)
     }
+
+//    private fun requestStartViaNotification(serviceIntent: Intent) {
+//
+//        Log.d("COMMANDS", "🛑 requestStartViaNotification")
+//        val pendingIntent = PendingIntent.getForegroundService(
+//            this,
+//            0,
+//            serviceIntent,
+//            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+//        )
+//
+//        val channelId = "audio_request_channel"
+//        val notificationManager = getSystemService(NotificationManager::class.java)
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            val channel = NotificationChannel(
+//                channelId,
+//                "Audio Requests",
+//                NotificationManager.IMPORTANCE_HIGH
+//            ).apply {
+//                description = "Уведомления для запуска аудиотрансляции"
+//            }
+//            notificationManager.createNotificationChannel(channel)
+//        }
+//
+//        val notification = NotificationCompat.Builder(this, channelId)
+//            .setSmallIcon(R.drawable.ic_mic)
+//            .setContentTitle("Запустить аудиотрансляцию")
+//            .setContentText("Нажмите, чтобы включить микрофон")
+//            .setStyle(
+//                NotificationCompat.BigTextStyle()
+//                    .bigText("SafeOrbit получил команду на трансляцию. Нажмите «Включить», чтобы разрешить использование микрофона.")
+//            )
+//            .setPriority(NotificationCompat.PRIORITY_HIGH)
+//            .setAutoCancel(true)
+//            .addAction(
+//                NotificationCompat.Action.Builder(
+//                    R.drawable.ic_mic,
+//                    "Включить",
+//                    pendingIntent
+//                ).build()
+//            )
+//            .build()
+//
+//        notificationManager.notify(42, notification)
+//    }
 
 
 

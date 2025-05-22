@@ -50,6 +50,7 @@ class RoleSelectionActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             perms += Manifest.permission.FOREGROUND_SERVICE_LOCATION
             perms += Manifest.permission.FOREGROUND_SERVICE_MICROPHONE
+            perms += Manifest.permission.POST_NOTIFICATIONS
         }
         perms.toTypedArray()
     }
