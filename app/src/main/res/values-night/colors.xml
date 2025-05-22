@@ -15,5 +15,7 @@
     <!-- res/values-night/colors.xml -->
     <color name="text_primary">#FFFFFF</color>
     <color name="surfaceVariantDark">#333333</color> <!-- глубокий серый -->
+    <color name="red">#D32F2F</color>
+
 
 </resources>

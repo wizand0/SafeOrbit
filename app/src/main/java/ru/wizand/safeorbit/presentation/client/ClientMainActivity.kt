@@ -41,11 +41,13 @@ class ClientMainActivity : AppCompatActivity() {
         } else {
             binding.bottomNavigation.selectedItemId = selectedItemId
         }
+
+        viewModel.loadAndObserveServers()
     }
 
     override fun onResume() {
         super.onResume()
-        viewModel.loadAndObserveServers()
+
     }
 
     private fun setupBottomNavigation() {

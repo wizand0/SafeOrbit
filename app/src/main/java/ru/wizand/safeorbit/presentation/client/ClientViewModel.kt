@@ -43,6 +43,9 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     private val _mapStates = MutableLiveData<Map<String, ServerMapState>>()
     val mapStates: LiveData<Map<String, ServerMapState>> = _mapStates
 
+    private val _isAudioStreaming = MutableLiveData<Boolean>()
+    val isAudioStreaming: LiveData<Boolean> = _isAudioStreaming
+
     private val pointHistories = mutableMapOf<String, MutableList<Point>>()
     private val hasCentered = mutableSetOf<String>()
     private val lineColors = mutableMapOf<String, Int>()
@@ -91,11 +94,12 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
         })
     }
 
-    fun loadAndObserveServers() {
-        if (observingStarted) return
-        observingStarted = true
+    fun loadAndObserveServers(forceUpdate: Boolean = false) {
+        Log.d("DELETE_BTN", "loadAndObserveServers called, forceUpdate=$forceUpdate")
+
         viewModelScope.launch {
             val servers = db.serverDao().getAll()
+            Log.d("DELETE_BTN", "db.serverDao().getAll(): $servers")
 
             val nameMap = servers.associate { it.serverId to it.name }
             val iconMap = servers.associate { it.serverId to it.serverIconUri }
@@ -104,7 +108,11 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
             _iconUriMap.postValue(iconMap)
 
             val serverIds = servers.map { it.serverId }
-            observeAllServerLocations(serverIds)
+
+            if (!observingStarted || forceUpdate) {
+                observingStarted = true
+                observeAllServerLocations(serverIds)
+            }
         }
     }
 
@@ -132,12 +140,15 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
 
     fun deleteServer(serverId: String) {
         viewModelScope.launch {
+            Log.d("DELETE_BTN", "before db.serverDao().deleteByServerId(serverId)")
             db.serverDao().deleteByServerId(serverId)
-            loadAndObserveServers()
+            Log.d("DELETE_BTN", "after db.serverDao().deleteByServerId(serverId)")
+            loadAndObserveServers(forceUpdate = true)
         }
     }
 
     private fun observeAllServerLocations(serverIds: List<String>) {
+        Log.d("DELETE_BTN", "observeAllServerLocations")
         Log.d("CLIENT", "🔄 observeAllServerLocations() вызван")
         serverIds.forEach { serverId ->
             repository.observeServerLocation(serverId) { location ->
@@ -269,70 +280,43 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     }
 
 
-    fun requestListenMocrofoneNow(serverId: String, onCodeReady: (String) -> Unit = {}) {
-        Log.d("CLIENT_CMD", "🎤 Нажатие кнопки запроса микрофона")
+    fun requestListenMocrofoneNow(serverId: String, onStarted: (String) -> Unit) {
         viewModelScope.launch {
-            val server = db.serverDao().getByServerId(serverId)
-            if (server != null) {
-                val code = server.code
-                lastServerAudioCodeMap[serverId] = code
-                val ref = FirebaseDatabase.getInstance()
-                    .getReference("server_commands/$serverId")
-                    .push()
+            val server = db.serverDao().getByServerId(serverId) ?: return@launch
+            val code = server.code
+            val commandRef = FirebaseDatabase.getInstance()
+                .getReference("server_commands/$serverId")
+                .push()
+            val command = mapOf(
+                "code" to code,
+                "type" to "START_AUDIO_STREAM",
+                "timestamp" to System.currentTimeMillis()
+            )
+            commandRef.setValue(command).addOnSuccessListener {
+                Log.d("CLIENT_CMD", "✅ Команда на микрофон отправлена: ${commandRef.key}")
+                _isAudioStreaming.postValue(true) // ⬅️ уведомление об активации
+                onStarted(code)
 
-                val data = mapOf(
-                    "code" to code,
-                    "type" to "START_AUDIO_STREAM",
-                    "timestamp" to System.currentTimeMillis()
-                )
-
-                Log.d("CLIENT_CMD", "📤 Отправка команды запуска аудиопотока: $data")
-                ref.setValue(data).addOnCompleteListener {
-                    if (it.isSuccessful) {
-                        Log.d("CLIENT_CMD", "✅ Команда на микрофон отправлена: ${ref.key}")
-                        _toastMessage.postValue(Event("⏺️ Аудио трансляция запрошена"))
-                        onCodeReady(code) // ← передаём код обратно
-
-                        // ⏱️ Через 60 сек — команда на остановку
-                        viewModelScope.launch {
-                            kotlinx.coroutines.delay(60_000)
-                            stopAudioStream(serverId, code)
-                        }
-
-                    } else {
-                        Log.e("CLIENT_CMD", "❌ Ошибка при отправке команды: ${it.exception}")
-                        _toastMessage.postValue(Event("❌ Не удалось отправить команду"))
-                    }
+                viewModelScope.launch {
+                    kotlinx.coroutines.delay(30_000)
+                    stopAudioStream(serverId, code)
+                    _isAudioStreaming.postValue(false) // ⬅️ уведомление об окончании
                 }
-            } else {
-                Log.w("CLIENT_CMD", "⚠️ Сервер не найден в локальной БД: $serverId")
-                _toastMessage.postValue(Event("⚠️ Сервер не найден"))
             }
         }
     }
 
 
-    fun stopAudioStream(serverId: String, code: String) {
-        val ref = FirebaseDatabase.getInstance()
-            .getReference("server_commands/$serverId")
-            .push()
 
-        val data = mapOf(
+    fun stopAudioStream(serverId: String, code: String) {
+        val ref = FirebaseDatabase.getInstance().getReference("server_commands/$serverId").push()
+        val command = mapOf(
             "code" to code,
             "type" to "STOP_AUDIO_STREAM",
             "timestamp" to System.currentTimeMillis()
         )
-
-        Log.d("CLIENT_CMD", "📤 Отправка команды остановки аудиопотока: $data")
-        ref.setValue(data).addOnCompleteListener {
-            if (it.isSuccessful) {
-                Log.d("CLIENT_CMD", "🛑 Команда на остановку аудио отправлена: ${ref.key}")
-                _toastMessage.postValue(Event("🛑 Аудио трансляция завершена"))
-            } else {
-                Log.e("CLIENT_CMD", "❌ Ошибка при отправке команды: ${it.exception}")
-                _toastMessage.postValue(Event("❌ Не удалось остановить трансляцию"))
-            }
-        }
+        ref.setValue(command)
+        _isAudioStreaming.postValue(false)
     }
 
 

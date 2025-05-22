@@ -3,72 +3,85 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/role_screen_background1"
+    android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:gravity="center_horizontal">
+    android:padding="24dp">
 
-    <TextView
-        android:id="@+id/tvServerId"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="ID сервера: ..."
-        android:textSize="18sp"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:id="@+id/tvPairCode"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Код: ..."
-        android:textSize="18sp"
-        android:layout_marginBottom="24dp" />
-
-    <TextView
-        android:id="@+id/tvCurrentCoords"
+    <ScrollView
+        android:id="@+id/scrollView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Координаты: ..."
-        android:textSize="16sp"
-        android:padding="16dp"
-        android:background="#80FFFFFF"
-        android:layout_marginBottom="8dp" />
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent">
 
-    <TextView
-        android:id="@+id/tvStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Время обновления: ..."
-        android:textSize="14sp"
-        android:padding="16dp"
-        android:background="#80FFFFFF"
-        android:layout_marginBottom="8dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/tvMode"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Режим работы: ..."
-        android:textSize="14sp"
-        android:padding="16dp"
-        android:background="#80FFFFFF" />
+            <TextView
+                android:id="@+id/tvServerId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="ID сервера: ..."
+                android:textSize="18sp" />
 
-    <TextView
-        android:id="@+id/tvInterval"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Интервал в состоянии покоя: ..."
-        android:textSize="14sp"
-        android:padding="16dp"
-        android:background="#80FFFFFF"
-        android:layout_marginTop="8dp" />
+            <TextView
+                android:id="@+id/tvPairCode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:text="Код: ..."
+                android:textSize="18sp" />
 
-    <TextView
-        android:id="@+id/tvActiveInterval"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Интервал АКТИВНЫЙ: ..."
-        android:textSize="14sp"
-        android:padding="16dp"
-        android:background="#80FFFFFF"
-        android:layout_marginTop="8dp" />
+            <TextView
+                android:id="@+id/tvCurrentCoords"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:background="#80FFFFFF"
+                android:padding="16dp"
+                android:text="Координаты: ..."
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:background="#80FFFFFF"
+                android:padding="16dp"
+                android:text="Время обновления: ..."
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#80FFFFFF"
+                android:padding="16dp"
+                android:text="Режим работы: ..."
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvInterval"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="#80FFFFFF"
+                android:padding="16dp"
+                android:text="Интервал в состоянии покоя: ..."
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvActiveInterval"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="#80FFFFFF"
+                android:padding="16dp"
+                android:text="Интервал АКТИВНЫЙ: ..."
+                android:textSize="14sp" />
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>

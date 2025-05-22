@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="24dp"
-    android:background="@drawable/role_screen_background1">
+    android:background="@drawable/role_screen_background">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -76,11 +76,15 @@
             style="@style/ButtonPrimary"
             android:text="Послушать" />
 
-        <Button
-            android:id="@+id/buttonDelete"
-            style="@style/ButtonPrimary"
-            android:text="Удалить"
-            android:textColor="#F44336" />
+        <TextView
+            android:id="@+id/textAutoOff"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Автоотключение трансляции через 30 сек."
+            android:textSize="16sp"
+            android:visibility="gone"
+            android:layout_marginTop="8dp"
+            android:layout_gravity="center_horizontal"/>
 
         <TextView
             android:id="@+id/textStreamTimer"

@@ -1,16 +1,26 @@
 package ru.wizand.safeorbit.presentation.role
 
+import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
-import android.os.Bundle
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.*
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import ru.wizand.safeorbit.data.model.UserRole
 import ru.wizand.safeorbit.databinding.ActivityRoleSelectionBinding
 import ru.wizand.safeorbit.presentation.client.ClientMainActivity
+import ru.wizand.safeorbit.presentation.security.PinGateActivity
 import ru.wizand.safeorbit.presentation.server.ServerMainActivity
 
 class RoleSelectionActivity : AppCompatActivity() {
@@ -18,30 +28,103 @@ class RoleSelectionActivity : AppCompatActivity() {
     private lateinit var binding: ActivityRoleSelectionBinding
     private val viewModel: RoleSelectionViewModel by viewModels()
 
+//    private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var permissionLauncher: ActivityResultLauncher<String>
+    private lateinit var settingsLauncher: ActivityResultLauncher<Intent>
+
+    private val deniedPermissions = mutableListOf<String>()
+    private var currentPermissionIndex = 0
+    private var hasPermanentlyDenied = false
+
+    private val permissionsToRequest: Array<String> by lazy {
+        val perms = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            perms += Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            perms += Manifest.permission.ACTIVITY_RECOGNITION
+
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            perms += Manifest.permission.FOREGROUND_SERVICE_LOCATION
+            perms += Manifest.permission.FOREGROUND_SERVICE_MICROPHONE
+        }
+        perms.toTypedArray()
+    }
+
+
+    private lateinit var clientPermissionLauncher: ActivityResultLauncher<Array<String>>
+
+    private val clientPermissions = arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.RECORD_AUDIO
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityRoleSelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            val permission = permissionsToRequest[currentPermissionIndex]
 
+            if (isGranted) {
+                Log.d("PERMISSION_TEST", "✅ Разрешение $permission выдано")
+            } else {
+                val permanentlyDenied = !shouldShowRequestPermissionRationale(permission)
+                if (permanentlyDenied) {
+                    Log.d("PERMISSION_TEST", "⛔ $permission запрещено навсегда")
+                    hasPermanentlyDenied = true
+                } else {
+                    Log.d("PERMISSION_TEST", "❌ $permission не выдано")
+                }
+                deniedPermissions.add(permission)
+            }
+
+            currentPermissionIndex++
+            requestNextPermission()
+        }
+
+
+        clientPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { result ->
+            val denied = result.filterValues { !it }
+            if (denied.isEmpty()) {
+                launchClient()
+            } else {
+                Toast.makeText(this, "Не все разрешения выданы", Toast.LENGTH_LONG).show()
+            }
+        }
+
+
+
+        // Launcher для открытия настроек
+        settingsLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            Log.d("PERMISSION_TEST", "🔁 Возврат из настроек, повторная проверка")
+            checkAndRequestPermissions()
+        }
+
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
         val fromReset = intent.getBooleanExtra("fromReset", false)
 
         if (!fromReset) {
             viewModel.getUserRole()?.let { role ->
                 when (role) {
                     UserRole.SERVER -> {
-
                         val pin = prefs.getString("server_pin", null)
                         val verified = prefs.getBoolean("pin_verified", false)
-
                         val intent = if (pin != null && !verified) {
-                            Intent(this, ru.wizand.safeorbit.presentation.security.PinGateActivity::class.java)
+                            Intent(this, PinGateActivity::class.java)
                         } else {
                             Intent(this, ServerMainActivity::class.java)
                         }
-
                         startActivity(intent)
                         finish()
                         return
@@ -56,55 +139,33 @@ class RoleSelectionActivity : AppCompatActivity() {
             }
         }
 
-        // Показываем выбор
         binding.progressAuth.visibility = View.VISIBLE
         signInAnonymouslyIfNeeded()
         checkFirebaseConnection()
 
         binding.btnServer.setOnClickListener {
-            viewModel.saveUserRole(UserRole.SERVER)
-            saveUserRoleToDatabase("server")
-
-            val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-            val pin = prefs.getString("server_pin", null)
-            val verified = prefs.getBoolean("pin_verified", false)
-
-            val intent = if (pin != null && !verified) {
-                Intent(this, ru.wizand.safeorbit.presentation.security.PinGateActivity::class.java)
-            } else {
-                Intent(this, ServerMainActivity::class.java)
-            }
-
-
-            startActivity(intent)
-            finish()
-        }
-
-        binding.btnClient.setOnClickListener {
-            binding.progressAuth.visibility = View.VISIBLE
-            FirebaseAuth.getInstance().signInAnonymously()
-                .addOnSuccessListener {
-                    viewModel.saveUserRole(UserRole.CLIENT)
-                    saveUserRoleToDatabase("client")
-                    binding.progressAuth.visibility = View.GONE
-                    Toast.makeText(this, "Запуск клиента", Toast.LENGTH_SHORT).show()
-                    startActivity(Intent(this, ClientMainActivity::class.java))
-                    finish()
-                }
-                .addOnFailureListener {
-                    binding.progressAuth.visibility = View.GONE
-                    Toast.makeText(this, "Ошибка входа: ${it.message}", Toast.LENGTH_LONG).show()
-                }
+            showPermissionsIntroAndRequest()
         }
 
 //        binding.btnClient.setOnClickListener {
-//            viewModel.saveUserRole(UserRole.CLIENT)
-//            saveUserRoleToDatabase("client")
-//            Toast.makeText(this, "Запуск клиента", Toast.LENGTH_SHORT).show()
-////            Log.d("DEBUG", "Запуск клиента")
-//            startActivity(Intent(this, ClientMainActivity::class.java))
-//            finish()
+//            binding.progressAuth.visibility = View.VISIBLE
+//            FirebaseAuth.getInstance().signInAnonymously()
+//                .addOnSuccessListener {
+//                    viewModel.saveUserRole(UserRole.CLIENT)
+//                    saveUserRoleToDatabase("client")
+//                    binding.progressAuth.visibility = View.GONE
+//                    Toast.makeText(this, "Запуск клиента", Toast.LENGTH_SHORT).show()
+//                    startActivity(Intent(this, ClientMainActivity::class.java))
+//                    finish()
+//                }
+//                .addOnFailureListener {
+//                    binding.progressAuth.visibility = View.GONE
+//                    Toast.makeText(this, "Ошибка входа: ${it.message}", Toast.LENGTH_LONG).show()
+//                }
 //        }
+        binding.btnClient.setOnClickListener {
+            showClientPermissionDialog()
+        }
     }
 
     private fun signInAnonymouslyIfNeeded() {
@@ -113,7 +174,7 @@ class RoleSelectionActivity : AppCompatActivity() {
             auth.signInAnonymously()
                 .addOnSuccessListener {
                     binding.progressAuth.visibility = View.GONE
-                    Log.d("AUTH", "Анонимный вход выполнен")
+                    Log.d("AUTH", "✅ Анонимный вход выполнен")
                     checkFirebaseConnection()
                 }
                 .addOnFailureListener {
@@ -148,4 +209,146 @@ class RoleSelectionActivity : AppCompatActivity() {
             }
         })
     }
+
+    private fun showPermissionsIntroAndRequest() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Разрешения для сервера")
+            .setMessage(
+                """
+                Перед началом работы в роли сервера нужно выдать разрешения:
+
+                • Геолокация — для определения положения.
+                • Микрофон — для аудиотрансляции.
+                • Камера — для установки иконки.
+                • Распознавание активности — для экономии энергии.
+                • Фоновый доступ — чтобы работать при выключенном экране.
+                """.trimIndent()
+            )
+            .setPositiveButton("Продолжить") { _, _ ->
+                Log.d("PERMISSION_TEST", "📋 Пользователь согласился")
+                binding.root.postDelayed({
+                    checkAndRequestPermissions()
+
+                }, 500)
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun checkAndRequestPermissions() {
+        deniedPermissions.clear()
+        hasPermanentlyDenied = false
+        currentPermissionIndex = 0
+        requestNextPermission()
+    }
+
+    private fun requestNextPermission() {
+        if (currentPermissionIndex >= permissionsToRequest.size) {
+            if (deniedPermissions.isEmpty()) {
+                Log.d("PERMISSION_TEST", "✅ Все разрешения выданы")
+                proceedToServer()
+            } else {
+                Log.d("PERMISSION_TEST", "⛔ Не выданы: ${deniedPermissions.joinToString()}")
+                if (hasPermanentlyDenied) {
+                    Log.d("PERMISSION_TEST", "⚠️ Есть навсегда запрещённые разрешения")
+                    showGoToSettingsDialog()
+                } else {
+                    Toast.makeText(this, "Не все разрешения выданы", Toast.LENGTH_LONG).show()
+                }
+            }
+            return
+        }
+
+        val permission = permissionsToRequest[currentPermissionIndex]
+        val granted = ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+        Log.d("PERMISSION_TEST", "🔎 Проверяем $permission: ${if (granted) "OK" else "НЕ ОК"}")
+
+        if (granted) {
+            currentPermissionIndex++
+            requestNextPermission()
+        } else {
+            val shouldShow = shouldShowRequestPermissionRationale(permission)
+            Log.d("PERMISSION_TEST", "🔍 $permission: denied=true, showRationale=$shouldShow")
+
+            permissionLauncher.launch(permission)
+        }
+    }
+
+    private fun showGoToSettingsDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Разрешения отключены")
+            .setMessage("Вы ранее запретили доступ к разрешениям. Перейдите в настройки приложения, чтобы включить их вручную.")
+            .setPositiveButton("Настройки") { _, _ ->
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                }
+                settingsLauncher.launch(intent)
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    private fun proceedToServer() {
+        Log.d("PERMISSION_TEST", "➡ Переход в режим сервера")
+        viewModel.saveUserRole(UserRole.SERVER)
+        saveUserRoleToDatabase("server")
+
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val pin = prefs.getString("server_pin", null)
+        val verified = prefs.getBoolean("pin_verified", false)
+
+        Log.d("PERMISSION_TEST", "🛡 PIN: ${pin != null}, verified=$verified")
+
+        val intent = if (pin != null && !verified) {
+            Log.d("PERMISSION_TEST", "🔑 Открываем PinGateActivity")
+            Intent(this, PinGateActivity::class.java)
+        } else {
+            Log.d("PERMISSION_TEST", "🏠 Открываем ServerMainActivity")
+            Intent(this, ServerMainActivity::class.java)
+        }
+
+        startActivity(intent)
+        finish()
+    }
+
+    private fun launchClient() {
+        binding.progressAuth.visibility = View.VISIBLE
+
+        FirebaseAuth.getInstance().signInAnonymously()
+            .addOnSuccessListener {
+                viewModel.saveUserRole(UserRole.CLIENT)
+                saveUserRoleToDatabase("client")
+                binding.progressAuth.visibility = View.GONE
+                Toast.makeText(this, "Запуск клиента", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(this, ClientMainActivity::class.java))
+                finish()
+            }
+            .addOnFailureListener {
+                binding.progressAuth.visibility = View.GONE
+                Toast.makeText(this, "Ошибка входа: ${it.message}", Toast.LENGTH_LONG).show()
+            }
+    }
+
+
+    private fun showClientPermissionDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Доступ к геопозиции")
+            .setMessage("Разрешение на определение местоположения необходимо для отображения серверов на карте.")
+            .setPositiveButton("Продолжить") { _, _ ->
+                AlertDialog.Builder(this)
+                    .setTitle("Доступ к микрофону")
+                    .setMessage("Разрешение на микрофон нужно для функции прослушивания сервера.")
+                    .setPositiveButton("Разрешить") { _, _ ->
+                        clientPermissionLauncher.launch(clientPermissions)
+                    }
+                    .setNegativeButton("Отмена", null)
+                    .show()
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+
+
+
 }
