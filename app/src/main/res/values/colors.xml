@@ -12,6 +12,8 @@
     <!-- res/values/colors.xml -->
     <color name="text_primary">#000000</color>
     <color name="surfaceVariantLight">#FFF8DC</color> <!-- светло-бежевый (или #FFF9C4 как в M3) -->
+    <color name="red">#D32F2F</color>
+
 
 
 </resources>

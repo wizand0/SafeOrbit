@@ -57,10 +57,18 @@ class FirebaseRepository(private val context: Context) {
         db.child("servers").child(serverId).child("location")
             .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    snapshot.getValue(LocationData::class.java)?.let(onUpdate)
+                    val location = snapshot.getValue(LocationData::class.java)
+                    if (location != null) {
+                        android.util.Log.d("CLIENT", "📍 FirebaseRepository: получена координата $serverId -> $location")
+                        onUpdate(location)
+                    } else {
+                        android.util.Log.d("CLIENT", "📭 FirebaseRepository: пустая координата для $serverId")
+                    }
                 }
 
-                override fun onCancelled(error: DatabaseError) {}
+                override fun onCancelled(error: DatabaseError) {
+                    android.util.Log.e("CLIENT", "❌ FirebaseRepository: ошибка получения координаты для $serverId: ${error.message}")
+                }
             })
     }
 

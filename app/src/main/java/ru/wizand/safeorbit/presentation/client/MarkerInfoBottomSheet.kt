@@ -68,6 +68,19 @@ class MarkerInfoBottomSheet : BottomSheetDialogFragment() {
             dismiss()
         }
 
+        binding.buttonNavigate.setOnClickListener {
+            val label = Uri.encode(serverName ?: "Метка")
+            val uri = Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude($label)")
+            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            if (intent.resolveActivity(requireContext().packageManager) != null) {
+                startActivity(Intent.createChooser(intent, "Открыть в навигации"))
+            } else {
+                Toast.makeText(requireContext(), "Нет подходящего приложения для навигации", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         binding.buttonDetails.setOnClickListener {
             val intent = Intent(requireContext(), ServerDetailsActivity::class.java).apply {
                 putExtra("serverId", serverId)
@@ -80,21 +93,21 @@ class MarkerInfoBottomSheet : BottomSheetDialogFragment() {
             startActivity(intent)
         }
 
-        binding.buttonListen.setOnClickListener {
-            Toast.makeText(requireContext(), "Функция 'Послушать' пока недоступна", Toast.LENGTH_SHORT).show()
-        }
-
-        binding.buttonDelete.setOnClickListener {
-            AlertDialog.Builder(requireContext())
-                .setTitle("Удалить сервер?")
-                .setMessage("Вы уверены, что хотите удалить $serverName?")
-                .setPositiveButton("Удалить") { _, _ ->
-                    serverId?.let { onDelete?.invoke(it) }
-                    dismiss()
-                }
-                .setNegativeButton("Отмена", null)
-                .show()
-        }
+//        binding.buttonListen.setOnClickListener {
+//            Toast.makeText(requireContext(), "Функция 'Послушать' пока недоступна", Toast.LENGTH_SHORT).show()
+//        }
+//
+//        binding.buttonDelete.setOnClickListener {
+//            AlertDialog.Builder(requireContext())
+//                .setTitle("Удалить сервер?")
+//                .setMessage("Вы уверены, что хотите удалить $serverName?")
+//                .setPositiveButton("Удалить") { _, _ ->
+//                    serverId?.let { onDelete?.invoke(it) }
+//                    dismiss()
+//                }
+//                .setNegativeButton("Отмена", null)
+//                .show()
+//        }
     }
 
     override fun onDestroyView() {

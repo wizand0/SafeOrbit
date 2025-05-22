@@ -133,27 +133,76 @@ class ServerMainFragment : Fragment() {
         }
     }
 
+//    private fun checkAndStartLocationService(serverId: String) {
+//        val context = requireContext()
+//
+//        val permissionsToRequest = mutableListOf<String>()
+//
+//        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+//            != PackageManager.PERMISSION_GRANTED
+//        ) permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+//            ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION)
+//            != PackageManager.PERMISSION_GRANTED
+//        ) permissionsToRequest.add(Manifest.permission.ACTIVITY_RECOGNITION)
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+//            ContextCompat.checkSelfPermission(context, Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+//            != PackageManager.PERMISSION_GRANTED
+//        ) permissionsToRequest.add(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+//
+//        if (permissionsToRequest.isNotEmpty()) {
+//            requestPermissions(permissionsToRequest.toTypedArray(), LOCATION_PERMISSION_REQUEST)
+//        } else {
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+//                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+//                != PackageManager.PERMISSION_GRANTED
+//            ) {
+//                showBackgroundPermissionDialog()
+//            } else {
+//                startLocationService(serverId)
+//            }
+//        }
+//    }
+
+
     private fun checkAndStartLocationService(serverId: String) {
         val context = requireContext()
         val permissionsToRequest = mutableListOf<String>()
 
+        // Геолокация
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
         ) permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
 
+        // Распознавание активности
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION)
             != PackageManager.PERMISSION_GRANTED
         ) permissionsToRequest.add(Manifest.permission.ACTIVITY_RECOGNITION)
 
+        // Службы геолокации (Android 14+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.FOREGROUND_SERVICE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
         ) permissionsToRequest.add(Manifest.permission.FOREGROUND_SERVICE_LOCATION)
 
+        // Разрешения для аудио трансляции
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.FOREGROUND_SERVICE_MICROPHONE)
+            != PackageManager.PERMISSION_GRANTED
+        ) permissionsToRequest.add(Manifest.permission.FOREGROUND_SERVICE_MICROPHONE)
+
+        // Если есть что запрашивать
         if (permissionsToRequest.isNotEmpty()) {
             requestPermissions(permissionsToRequest.toTypedArray(), LOCATION_PERMISSION_REQUEST)
         } else {
+            // Отдельно запрашиваем фоновый доступ (только если остальные уже даны)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                 != PackageManager.PERMISSION_GRANTED
@@ -163,7 +212,30 @@ class ServerMainFragment : Fragment() {
                 startLocationService(serverId)
             }
         }
+
+        // Если все разрешения даны
+        if (permissionsToRequest.isEmpty()) {
+            // Отдельно — фоновая геолокация
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                showBackgroundPermissionDialog()
+            } else {
+                // Также проверим микрофонные разрешения для аудио трансляции
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.FOREGROUND_SERVICE_MICROPHONE) != PackageManager.PERMISSION_GRANTED)
+                ) {
+                    Toast.makeText(context, "Для трансляции требуется доступ к микрофону", Toast.LENGTH_LONG).show()
+                }
+
+                startLocationService(serverId)
+            }
+        }
+
     }
+
 
     private fun showBackgroundPermissionDialog() {
         AlertDialog.Builder(requireContext())
@@ -183,6 +255,19 @@ class ServerMainFragment : Fragment() {
         ContextCompat.startForegroundService(requireContext(), intent)
     }
 
+//    override fun onRequestPermissionsResult(
+//        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+//    ) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+//        if (requestCode == LOCATION_PERMISSION_REQUEST) {
+//            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+//                checkAndStartLocationService(viewModel.serverId.value ?: return)
+//            } else {
+//                Toast.makeText(requireContext(), "Не все разрешения выданы. Геолокация не будет работать.", Toast.LENGTH_LONG).show()
+//            }
+//        }
+//    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
@@ -191,10 +276,11 @@ class ServerMainFragment : Fragment() {
             if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 checkAndStartLocationService(viewModel.serverId.value ?: return)
             } else {
-                Toast.makeText(requireContext(), "Не все разрешения выданы. Геолокация не будет работать.", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "Не все разрешения выданы. Геолокация и трансляция могут не работать.", Toast.LENGTH_LONG).show()
             }
         }
     }
+
 
     override fun onResume() {
         super.onResume()

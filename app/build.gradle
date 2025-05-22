@@ -25,14 +25,20 @@ android {
         applicationId "ru.wizand.safeorbit"
         minSdk 29
         targetSdk 35
-        versionCode 9
-        versionName "1.4.0"
+        versionCode 10
+        versionName "1.5.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         // Проброс в BuildConfig и манифест
         buildConfigField "String", "YANDEX_MAPKIT_API_KEY", "\"${yandexKey}\""
         manifestPlaceholders = [YANDEX_MAPKIT_API_KEY: yandexKey]
+
+        def agoraAppId = localProps.getProperty("AGORA_APP_ID", "")
+        manifestPlaceholders = [
+                YANDEX_MAPKIT_API_KEY: yandexKey,
+                AGORA_APP_ID: agoraAppId
+        ]
 
     }
 
@@ -108,6 +114,10 @@ dependencies {
     implementation libs.androidx.navigation.ui.ktx
 
     implementation 'com.google.android.gms:play-services-location:21.3.0'
+
+    implementation("io.agora.rtc:voice-sdk:4.5.0")
+
+//    implementation("io.agora.rtc:full-sdk:4.5.2")
 
 }
 apply plugin: 'com.google.gms.google-services'

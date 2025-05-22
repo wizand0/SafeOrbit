@@ -25,6 +25,7 @@ import ru.wizand.safeorbit.presentation.server.InactivityTimeout
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.core.content.ContextCompat
+import ru.wizand.safeorbit.presentation.client.audio.AudioStreamPlayerService
 
 class ServerDetailsActivity : AppCompatActivity() {
 
@@ -117,21 +118,31 @@ class ServerDetailsActivity : AppCompatActivity() {
         buttonListen.setOnClickListener {
             if (buttonListen.text == "Остановить") {
                 stopAudioStreamUI()
+
+                // ⏹️ Останавливаем сервис прослушивания на клиенте
+                val stopIntent = Intent(this, AudioStreamPlayerService::class.java)
+                stopService(stopIntent)
+
                 lastAudioCode?.let { code ->
-//                    viewModel.stopAudioStream(serverId, code)
-                    viewModel.getAudioCodeFor(serverId)?.let { code ->
-                        viewModel.stopAudioStream(serverId, code)
+                    viewModel.getAudioCodeFor(serverId)?.let {
+                        viewModel.stopAudioStream(serverId, it)
                     } ?: Log.w("CLIENT_CMD", "⚠️ Нет сохранённого кода для $serverId")
                 } ?: Toast.makeText(this, "Неизвестный код трансляции", Toast.LENGTH_SHORT).show()
             } else {
                 Log.d("CLIENT_CMD", "Нажимается кнопка R.id.buttonListen")
                 viewModel.requestListenMocrofoneNow(serverId) { code ->
                     lastAudioCode = code
+
+                    // ▶️ Запускаем сервис воспроизведения аудио
+                    val startIntent = Intent(this, AudioStreamPlayerService::class.java)
+                    ContextCompat.startForegroundService(this, startIntent)
+
                     runOnUiThread { startAudioStreamUI() }
                 }
                 Toast.makeText(this, "Запрошено прослушивание. Ожидайте", Toast.LENGTH_SHORT).show()
             }
         }
+
 
 
         viewModel.toastMessage.observe(this) { event ->

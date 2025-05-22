@@ -19,6 +19,7 @@ class SettingsFragment : Fragment() {
         view.findViewById<Button>(R.id.btnResetRole).setOnClickListener {
             val prefs = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
             prefs.edit().remove("user_role").apply()
+            prefs.edit().remove("permissions_intro_shown").apply()
             startActivity(Intent(requireContext(), RoleSelectionActivity::class.java))
             requireActivity().finish()
         }

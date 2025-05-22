@@ -98,6 +98,7 @@ class ServerSettingsActivity : AppCompatActivity() {
                 .remove("user_role")
                 .remove("pin_verified")
                 .remove("server_pin")
+                .remove("permissions_intro_shown")
                 .apply()
 
             // Переход на RoleSelectionActivity без автоперехода

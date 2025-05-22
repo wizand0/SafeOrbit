@@ -1,66 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:padding="24dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/role_screen_background1"
-    android:gravity="center_horizontal">
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:padding="24dp">
 
-    <EditText
-        android:id="@+id/etPin"
-        style="@style/EditTextStandard"
-        android:hint="Введите PIN"
-        android:inputType="numberPassword" />
-
-    <Button
-        android:id="@+id/btnCheckPin"
-        style="@style/ButtonPrimary"
-        android:text="Продолжить" />
-
-    <LinearLayout
-        android:id="@+id/settingsContent"
-        android:visibility="gone"
-        android:orientation="vertical"
+    <ScrollView
+        android:id="@+id/scrollView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp">
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent">
 
-        <Button
-            android:id="@+id/btnResetRole"
-            style="@style/ButtonPrimary"
-            android:text="Сбросить роль" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
 
-        <Button
-            android:id="@+id/btnChangePin"
-            style="@style/ButtonPrimary"
-            android:text="Изменить PIN" />
+            <EditText
+                android:id="@+id/etPin"
+                style="@style/EditTextStandard"
+                android:hint="Введите PIN"
+                android:inputType="numberPassword" />
 
-        <Button
-            android:id="@+id/btnEnableAdmin"
-            style="@style/ButtonPrimary"
-            android:text="Сделать приложением администратора" />
+            <Button
+                android:id="@+id/btnCheckPin"
+                style="@style/ButtonPrimary"
+                android:text="Продолжить" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Период бездействия"
-            style="@style/TextBody"
-            android:layout_marginTop="24dp" />
+            <LinearLayout
+                android:id="@+id/settingsContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:orientation="vertical"
+                android:visibility="gone">
 
-        <Spinner
-            android:id="@+id/spinnerInactivity"
-            style="@style/SpinnerStandard" />
+                <Button
+                    android:id="@+id/btnResetRole"
+                    style="@style/ButtonPrimary"
+                    android:text="Сбросить роль" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Интервал активности"
-            style="@style/TextBody"
-            android:layout_marginTop="24dp" />
+                <Button
+                    android:id="@+id/btnChangePin"
+                    style="@style/ButtonPrimary"
+                    android:text="Изменить PIN" />
 
-        <Spinner
-            android:id="@+id/spinnerActive"
-            style="@style/SpinnerStandard" />
-    </LinearLayout>
+                <Button
+                    android:id="@+id/btnEnableAdmin"
+                    style="@style/ButtonPrimary"
+                    android:text="Сделать приложением администратора" />
+
+                <TextView
+                    style="@style/TextBody"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="Период бездействия" />
+
+                <Spinner
+                    android:id="@+id/spinnerInactivity"
+                    style="@style/SpinnerStandard" />
+
+                <TextView
+                    style="@style/TextBody"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="Интервал активности" />
+
+                <Spinner
+                    android:id="@+id/spinnerActive"
+                    style="@style/SpinnerStandard" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>

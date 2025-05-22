@@ -26,6 +26,8 @@ import ru.wizand.safeorbit.data.*
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.presentation.server.audio.AudioBroadcastService
+import ru.wizand.safeorbit.presentation.server.audio.AudioLaunchActivity
+import ru.wizand.safeorbit.presentation.server.audio.SilentAudioLaunchActivity
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -418,11 +420,95 @@ class LocationService : Service(), SensorEventListener {
 //        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
 //    }
 
+//    private fun startAudioBroadcastService() {
+//        val intent = Intent(this, AudioBroadcastService::class.java)
+//        ContextCompat.startForegroundService(this, intent)
+//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
+//    }
+
+
+//    private fun startAudioBroadcastService() {
+//    val intent = Intent(this, SilentAudioLaunchActivity::class.java).apply {
+//        putExtra("server_id", serverId)
+//    }
+//    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+//    this.startActivity(intent)
+//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
+//    }
+
+//    private fun startAudioBroadcastService() {
+//        val intent = Intent(this, AudioLaunchActivity::class.java).apply {
+//            putExtra("server_id", serverId)
+//            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // важно!
+//        }
+//        this.startActivity(intent)
+//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
+//    }
+
     private fun startAudioBroadcastService() {
-        val intent = Intent(this, AudioBroadcastService::class.java)
-        ContextCompat.startForegroundService(this, intent)
-        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
+        val intent = Intent(this, AudioBroadcastService::class.java).apply {
+            putExtra("server_id", serverId)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            // Android 14+: используем ForegroundServiceStartNotAllowedException-safe путь
+            try {
+                ContextCompat.startForegroundService(this, intent)
+            } catch (e: ForegroundServiceStartNotAllowedException) {
+                Log.e("AUDIO_STREAM", "❌ FGS не разрешён. Попробуем PendingIntent через Notification")
+                requestStartViaNotification(intent)
+            }
+        } else {
+            ContextCompat.startForegroundService(this, intent)
+        }
     }
+
+    private fun requestStartViaNotification(serviceIntent: Intent) {
+        val pendingIntent = PendingIntent.getForegroundService(
+            this,
+            0,
+            serviceIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        val channelId = "audio_request_channel"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Audio Requests",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Уведомления для включения аудиотрансляции"
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_mic)
+            .setContentTitle("Запустить аудиотрансляцию")
+            .setContentText("Нажмите, чтобы включить микрофон для прослушивания")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("SafeOrbit получил команду на трансляцию звука. Нажмите \"Включить\", чтобы разрешить запуск микрофона даже при выключенном экране.")
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .addAction(
+                NotificationCompat.Action.Builder(
+                    R.drawable.ic_mic,
+                    "Включить",
+                    pendingIntent
+                ).build()
+            )
+            .build()
+
+        notificationManager.notify(42, notification)
+    }
+
+
+
 
     private fun stopAudioBroadcastService() {
         val intent = Intent(this, AudioBroadcastService::class.java)

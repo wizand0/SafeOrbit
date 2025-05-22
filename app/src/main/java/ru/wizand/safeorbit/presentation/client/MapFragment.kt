@@ -121,6 +121,7 @@ class MapFragment : Fragment() {
         val names = cachedNames
 
 
+//        if (states != null && names != null && states.isNotEmpty()) {
         if (states != null && names != null && states.isNotEmpty()) {
             // 🔍 Проверим: есть ли в states хотя бы один id, который есть в names?
 //            val validServers = states.keys.any { names.containsKey(it) }
@@ -129,6 +130,7 @@ class MapFragment : Fragment() {
                 .any { names.containsKey(it) }
 
             if (validServers) {
+                Log.d("MAP", "🧠 maybeDraw(): valid=${validServers}, states=${states.size}, names=${names.size}")
                 drawAll(states, names)
                 view?.findViewById<View>(R.id.loadingLayout)?.visibility = View.GONE
                 return
@@ -154,46 +156,139 @@ class MapFragment : Fragment() {
 
 
 
+    // На 100% рабочий метод
 
+//    private fun drawAll(states: Map<String, ServerMapState>, nameMap: Map<String, String>) {
+//        val map = mapView.mapWindow.map
+//        val currentIds = states.keys
+//        val existingIds = placemarks.keys
+//
+//        (existingIds - currentIds).forEach { id ->
+//            placemarks[id]?.let { map.mapObjects.remove(it) }
+//            polylines[id]?.let { map.mapObjects.remove(it) }
+//            placemarks.remove(id)
+//            polylines.remove(id)
+//        }
+//
+//        val validStates = states.filter { (id, _) -> nameMap[id]?.isNotBlank() == true }
+//
+////        for ((serverId, state) in states) {
+//        for ((serverId, state) in validStates) {
+//            val name = nameMap[serverId] ?: "Без имени"
+//            val point = state.latestPoint
+//            val iconUri = viewModel.getIconUriForServer(serverId)
+//            val existingPlacemark = placemarks[serverId]
+//
+//            if (existingPlacemark != null) {
+//                val newBitmap = createMarkerBitmap(serverId, name, iconUri)
+//                existingPlacemark.setIcon(ImageProvider.fromBitmap(newBitmap))
+//                if (existingPlacemark.geometry != point) {
+//                    animateMarkerMove(existingPlacemark, existingPlacemark.geometry, point)
+//                }
+//            } else {
+//                val bitmap = createMarkerBitmap(serverId, name, iconUri)
+//                val placemark = map.mapObjects.addPlacemark(point, ImageProvider.fromBitmap(bitmap))
+//                placemarks[serverId] = placemark
+//
+//                placemark.addTapListener { _, _ ->
+//                    showDetails(serverId)
+//                    true
+//                }
+//            }
+//
+//            if (state.history.size >= 2) {
+//                val polyline = polylines[serverId]
+//                if (polyline != null) {
+//                    polyline.geometry = Polyline(state.history)
+//                } else {
+//                    val newPolyline = map.mapObjects.addPolyline(Polyline(state.history))
+//                    newPolyline.setStrokeColor(state.color)
+//                    newPolyline.setStrokeWidth(3f)
+//                    polylines[serverId] = newPolyline
+//                }
+//            }
+//
+//            if (state.shouldCenter) {
+//                map.move(CameraPosition(point, 13.0f, 0.0f, 0.0f))
+//            }
+//        }
+//
+////        if (!hasCenteredOnAnyServer && states.isNotEmpty()) {
+////        if (!hasCenteredOnAnyServer && validStates.isNotEmpty()) {
+////            val first = states.values.first()
+////            map.move(CameraPosition(first.latestPoint, 13.0f, 0.0f, 0.0f))
+////            hasCenteredOnAnyServer = true
+////        }
+//
+//        if (!hasCenteredOnAnyServer && validStates.isNotEmpty()) {
+//            val boundingPoints = validStates.values.map { it.latestPoint }
+//            if (boundingPoints.size == 1) {
+//                map.move(CameraPosition(boundingPoints.first(), 13.0f, 0.0f, 0.0f))
+//            } else {
+//                val boundingBox = boundingPoints.fold(null as com.yandex.mapkit.geometry.BoundingBox?) { box, point ->
+//                    if (box == null) com.yandex.mapkit.geometry.BoundingBox(point, point)
+//                    else com.yandex.mapkit.geometry.BoundingBox(
+//                        Point(minOf(box.southWest.latitude, point.latitude), minOf(box.southWest.longitude, point.longitude)),
+//                        Point(maxOf(box.northEast.latitude, point.latitude), maxOf(box.northEast.longitude, point.longitude))
+//                    )
+//                }
+//                boundingBox?.let {
+//                    map.move(map.cameraPosition(it))
+//                }
+//            }
+//            hasCenteredOnAnyServer = true
+//        }
+//
+//
+//        Log.d("MAP", "✏️ drawAll() called with ${states.size} servers")
+//    }
+
+    // Замена метода
     private fun drawAll(states: Map<String, ServerMapState>, nameMap: Map<String, String>) {
         val map = mapView.mapWindow.map
-        val currentIds = states.keys
-        val existingIds = placemarks.keys
+        val validStates = states.filter { (id, _) -> nameMap[id]?.isNotBlank() == true }
 
-        (existingIds - currentIds).forEach { id ->
-            placemarks[id]?.let { map.mapObjects.remove(it) }
-            polylines[id]?.let { map.mapObjects.remove(it) }
-            placemarks.remove(id)
-            polylines.remove(id)
+        // Удаляем маркеры и линии, которых больше нет
+        val toRemove = placemarks.keys - validStates.keys
+        toRemove.forEach { id ->
+            placemarks.remove(id)?.let { map.mapObjects.remove(it) }
+            polylines.remove(id)?.let { map.mapObjects.remove(it) }
         }
 
-        for ((serverId, state) in states) {
-            val name = nameMap[serverId] ?: "Без имени"
+        for ((serverId, state) in validStates) {
+            val name = nameMap[serverId] ?: continue
             val point = state.latestPoint
             val iconUri = viewModel.getIconUriForServer(serverId)
-            val existingPlacemark = placemarks[serverId]
 
-            if (existingPlacemark != null) {
-                val newBitmap = createMarkerBitmap(serverId, name, iconUri)
-                existingPlacemark.setIcon(ImageProvider.fromBitmap(newBitmap))
+            val existingPlacemark = placemarks[serverId]
+            val bitmap = createMarkerBitmap(serverId, name, iconUri)
+
+            if (existingPlacemark == null) {
+                val placemark = map.mapObjects.addPlacemark(point, ImageProvider.fromBitmap(bitmap))
+                placemarks[serverId] = placemark
+                placemark.addTapListener { _, _ ->
+                    showDetails(serverId)
+                    true
+                }
+            } else {
                 if (existingPlacemark.geometry != point) {
                     animateMarkerMove(existingPlacemark, existingPlacemark.geometry, point)
                 }
-            } else {
-                val bitmap = createMarkerBitmap(serverId, name, iconUri)
-                val placemark = map.mapObjects.addPlacemark(point, ImageProvider.fromBitmap(bitmap))
-                placemarks[serverId] = placemark
+                existingPlacemark.setIcon(ImageProvider.fromBitmap(bitmap))
             }
 
-            if (state.history.size >= 2) {
+            val history = state.history
+            if (history.size >= 2) {
                 val polyline = polylines[serverId]
-                if (polyline != null) {
-                    polyline.geometry = Polyline(state.history)
-                } else {
-                    val newPolyline = map.mapObjects.addPolyline(Polyline(state.history))
+                if (polyline == null) {
+                    val newPolyline = map.mapObjects.addPolyline(Polyline(history))
                     newPolyline.setStrokeColor(state.color)
                     newPolyline.setStrokeWidth(3f)
                     polylines[serverId] = newPolyline
+                } else {
+                    if (polyline.geometry.points.lastOrNull() != history.lastOrNull()) {
+                        polyline.geometry = Polyline(history)
+                    }
                 }
             }
 
@@ -202,12 +297,26 @@ class MapFragment : Fragment() {
             }
         }
 
-        if (!hasCenteredOnAnyServer && states.isNotEmpty()) {
-            val first = states.values.first()
-            map.move(CameraPosition(first.latestPoint, 13.0f, 0.0f, 0.0f))
+        if (!hasCenteredOnAnyServer && validStates.isNotEmpty()) {
+            val points = validStates.values.map { it.latestPoint }
+            if (points.size == 1) {
+                map.move(CameraPosition(points.first(), 13.0f, 0.0f, 0.0f))
+            } else {
+                val bounds = points.fold(null as com.yandex.mapkit.geometry.BoundingBox?) { box, p ->
+                    if (box == null) com.yandex.mapkit.geometry.BoundingBox(p, p) else
+                        com.yandex.mapkit.geometry.BoundingBox(
+                            Point(minOf(box.southWest.latitude, p.latitude), minOf(box.southWest.longitude, p.longitude)),
+                            Point(maxOf(box.northEast.latitude, p.latitude), maxOf(box.northEast.longitude, p.longitude))
+                        )
+                }
+                bounds?.let { map.move(map.cameraPosition(it)) }
+            }
             hasCenteredOnAnyServer = true
         }
+
+        Log.d("MAP", "✏️ drawAll() optimized for ${validStates.size} servers")
     }
+
 
     private fun createMarkerBitmap(serverId: String, name: String, iconUri: String?): Bitmap {
         val view = layoutInflater.inflate(R.layout.view_marker, null)
@@ -259,6 +368,42 @@ class MapFragment : Fragment() {
             }, i * delay)
         }
     }
+
+    private fun showDetails(serverId: String) {
+        val name = viewModel.serverNameMap.value?.get(serverId) ?: "Без имени"
+        val iconUri = viewModel.getIconUriForServer(serverId)
+        val state = viewModel.mapStates.value?.get(serverId)
+        val point = state?.latestPoint
+        val timestamp = state?.timestamp ?: System.currentTimeMillis()
+
+        if (point != null) {
+            val sideInfo = requireActivity().findViewById<View?>(R.id.side_info_container)
+            if (sideInfo != null) {
+                parentFragmentManager.beginTransaction()
+                    .replace(R.id.side_info_container, MarkerInfoSideFragment.newInstance(
+                        serverId = serverId,
+                        serverName = name,
+                        point = point,
+                        timestamp = timestamp,
+                        iconUri = iconUri
+                    ))
+                    .commit()
+            } else {
+                MarkerInfoBottomSheet.newInstance(
+                    serverId = serverId,
+                    serverName = name,
+                    point = point,
+                    timestamp = timestamp,
+                    iconUri = iconUri
+                ).apply {
+                    onDelete = { viewModel.deleteServer(it) }
+                }.show(parentFragmentManager, "info")
+            }
+        } else {
+            Toast.makeText(requireContext(), "Нет координат для сервера", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 
     companion object {
         private var mapKitInitialized = false
