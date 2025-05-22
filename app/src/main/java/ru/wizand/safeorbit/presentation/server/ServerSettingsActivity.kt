@@ -27,6 +27,7 @@ class ServerSettingsActivity : AppCompatActivity() {
     private lateinit var spinnerActive: Spinner
     private lateinit var btnEnableAdmin: Button
 
+
     private lateinit var devicePolicyManager: DevicePolicyManager
     private lateinit var adminComponent: ComponentName
     private val REQUEST_CODE_ENABLE_ADMIN = 1001
@@ -42,9 +43,9 @@ class ServerSettingsActivity : AppCompatActivity() {
         settingsContent = findViewById(R.id.settingsContent)
         btnResetRole = findViewById(R.id.btnResetRole)
         btnChangePin = findViewById(R.id.btnChangePin)
-        spinnerInactivity = findViewById(R.id.spinnerInactivity)
         btnEnableAdmin = findViewById(R.id.btnEnableAdmin)
 
+        spinnerInactivity = findViewById(R.id.spinnerInactivity)
         spinnerActive = findViewById(R.id.spinnerActive)
         setupActiveSpinner(prefs)
 
@@ -145,6 +146,7 @@ class ServerSettingsActivity : AppCompatActivity() {
                 if (initialized) {
                     val newTimeout = timeoutOptions[position].millis
                     prefs.edit().putLong("inactivity_timeout", newTimeout).apply()
+
                     Snackbar.make(spinnerInactivity, "Интервал обновлён", Snackbar.LENGTH_SHORT).show()
                 } else {
                     initialized = true

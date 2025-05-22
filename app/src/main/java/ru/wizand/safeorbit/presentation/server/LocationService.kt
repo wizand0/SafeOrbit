@@ -51,6 +51,8 @@ class LocationService : Service(), SensorEventListener {
     private var lastStepCount = 0f
     private var lastStepEventTime = 0L
 
+    private var commandListener: ChildEventListener? = null
+
     private var activeInterval = 30_000L
     private var inactivityTimeout = 5 * 60 * 1000L
 
@@ -273,16 +275,19 @@ class LocationService : Service(), SensorEventListener {
     }
 
     private fun listenForClientCommands() {
+        if (commandListener != null) {
+            Log.w("COMMANDS", "⚠️ Команды уже слушаются — повторная подписка не требуется")
+            return
+        }
+
         val commandRootRef = FirebaseDatabase.getInstance()
             .getReference("server_commands")
             .child(serverId)
 
         Log.d("COMMANDS", "📛 Firebase UID: ${FirebaseAuth.getInstance().currentUser?.uid}, serverId: $serverId")
-
-
         Log.d("COMMANDS", "⏳ Слушаем команды на server_commands/$serverId")
 
-        commandRootRef.addChildEventListener(object : ChildEventListener {
+        commandListener = object : ChildEventListener {
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
                 val commandId = snapshot.key ?: return
                 val codeFromClient = snapshot.child("code").getValue(String::class.java)
@@ -318,7 +323,6 @@ class LocationService : Service(), SensorEventListener {
 
                 if (requestNow) {
                     Log.d("COMMANDS", "📡 Принудительная отправка координат")
-
                     if (hasLocationPermission()) {
                         fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
                             .addOnSuccessListener { location ->
@@ -341,9 +345,7 @@ class LocationService : Service(), SensorEventListener {
                     }
                 }
 
-                val commandType = snapshot.child("type").getValue(String::class.java)
-
-                when (commandType) {
+                when (snapshot.child("type").getValue(String::class.java)) {
                     "START_AUDIO_STREAM" -> {
                         Log.d("COMMANDS", "🎙️ Команда на запуск аудио трансляции")
                         startAudioBroadcastService()
@@ -354,7 +356,6 @@ class LocationService : Service(), SensorEventListener {
                     }
                 }
 
-                // 🧹 Удаление команды
                 snapshot.ref.removeValue()
                 Log.d("COMMANDS", "🧹 Команда $commandId удалена после обработки")
             }
@@ -365,7 +366,10 @@ class LocationService : Service(), SensorEventListener {
             override fun onCancelled(error: DatabaseError) {
                 Log.e("COMMANDS", "🔥 Ошибка чтения команд: ${error.message}")
             }
-        })
+        }
+
+        commandRootRef.addChildEventListener(commandListener!!)
+        Log.d("COMMANDS", "✅ Listener команд добавлен")
     }
 
 
@@ -450,16 +454,28 @@ class LocationService : Service(), SensorEventListener {
             putExtra("server_id", serverId)
         }
 
+        // Android 14+ (SDK 34)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            // Android 14+: используем ForegroundServiceStartNotAllowedException-safe путь
-            try {
-                ContextCompat.startForegroundService(this, intent)
-            } catch (e: ForegroundServiceStartNotAllowedException) {
-                Log.e("AUDIO_STREAM", "❌ FGS не разрешён. Попробуем PendingIntent через Notification")
+            if (!isAppInForeground()) {
+                Log.w("AUDIO_STREAM", "⛔ Приложение в фоне. Запуск через уведомление.")
                 requestStartViaNotification(intent)
+                return
             }
-        } else {
-            ContextCompat.startForegroundService(this, intent)
+        }
+
+        // До Android 14 или приложение в фокусе — обычный запуск
+        ContextCompat.startForegroundService(this, intent)
+    }
+
+
+    fun Context.isAppInForeground(): Boolean {
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val appProcesses = activityManager?.runningAppProcesses ?: return false
+        val packageName = packageName
+
+        return appProcesses.any {
+            it.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
+                    it.processName == packageName
         }
     }
 
@@ -471,8 +487,8 @@ class LocationService : Service(), SensorEventListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notificationManager = getSystemService(NotificationManager::class.java)
         val channelId = "audio_request_channel"
+        val notificationManager = getSystemService(NotificationManager::class.java)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -480,7 +496,7 @@ class LocationService : Service(), SensorEventListener {
                 "Audio Requests",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Уведомления для включения аудиотрансляции"
+                description = "Уведомления для запуска аудиотрансляции"
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -488,10 +504,10 @@ class LocationService : Service(), SensorEventListener {
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_mic)
             .setContentTitle("Запустить аудиотрансляцию")
-            .setContentText("Нажмите, чтобы включить микрофон для прослушивания")
+            .setContentText("Нажмите, чтобы включить микрофон")
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("SafeOrbit получил команду на трансляцию звука. Нажмите \"Включить\", чтобы разрешить запуск микрофона даже при выключенном экране.")
+                    .bigText("SafeOrbit получил команду на трансляцию. Нажмите «Включить», чтобы разрешить использование микрофона.")
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
@@ -510,6 +526,7 @@ class LocationService : Service(), SensorEventListener {
 
 
 
+
     private fun stopAudioBroadcastService() {
         val intent = Intent(this, AudioBroadcastService::class.java)
         stopService(intent)
@@ -523,6 +540,15 @@ class LocationService : Service(), SensorEventListener {
         stopLocationUpdates()
         sensorManager.unregisterListener(this)
         prefs.unregisterOnSharedPreferenceChangeListener { _, _ -> }
+
+        commandListener?.let {
+            FirebaseDatabase.getInstance()
+                .getReference("server_commands")
+                .child(serverId)
+                .removeEventListener(it)
+            Log.d("COMMANDS", "🧹 Listener команд удалён")
+            commandListener = null
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

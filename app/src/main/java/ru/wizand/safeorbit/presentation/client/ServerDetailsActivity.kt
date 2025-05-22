@@ -2,6 +2,7 @@ package ru.wizand.safeorbit.presentation.client
 
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.drawable.AnimationDrawable
 import android.location.Geocoder
 import android.net.Uri
@@ -25,6 +26,7 @@ import ru.wizand.safeorbit.presentation.server.InactivityTimeout
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.core.content.ContextCompat
+import ru.wizand.safeorbit.data.ServerEntity
 import ru.wizand.safeorbit.presentation.client.audio.AudioStreamPlayerService
 
 class ServerDetailsActivity : AppCompatActivity() {
@@ -37,7 +39,10 @@ class ServerDetailsActivity : AppCompatActivity() {
 
     private lateinit var buttonListen: Button
     private lateinit var textStreamTimer: TextView
+    private lateinit var textAutoOff: TextView
     private lateinit var imageAudioAnim: ImageView
+
+    private var defaultButtonTint: ColorStateList? = null
 
     private var streamStartTime: Long = 0
     private val streamHandler = Handler(Looper.getMainLooper())
@@ -91,7 +96,10 @@ class ServerDetailsActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.textAddress).text = getAddressFromCoords(latitude, longitude)
 
         buttonListen = findViewById(R.id.buttonListen)
+        defaultButtonTint = buttonListen.backgroundTintList
+
         textStreamTimer = findViewById(R.id.textStreamTimer)
+        textAutoOff = findViewById(R.id.textAutoOff)
         imageAudioAnim = findViewById(R.id.imageAudioAnim)
 
         findViewById<Button>(R.id.buttonRequestLocation).setOnClickListener {
@@ -115,6 +123,17 @@ class ServerDetailsActivity : AppCompatActivity() {
             }
         }
 
+        viewModel.isAudioStreaming.observe(this) { isStreaming ->
+            if (isStreaming) {
+                startAudioStreamUI()
+            } else {
+                stopAudioStreamUI()
+                // ⏹️ Останавливаем сервис прослушивания на клиенте
+                val stopIntent = Intent(this, AudioStreamPlayerService::class.java)
+                stopService(stopIntent)
+            }
+        }
+
         buttonListen.setOnClickListener {
             if (buttonListen.text == "Остановить") {
                 stopAudioStreamUI()
@@ -126,6 +145,7 @@ class ServerDetailsActivity : AppCompatActivity() {
                 lastAudioCode?.let { code ->
                     viewModel.getAudioCodeFor(serverId)?.let {
                         viewModel.stopAudioStream(serverId, it)
+
                     } ?: Log.w("CLIENT_CMD", "⚠️ Нет сохранённого кода для $serverId")
                 } ?: Toast.makeText(this, "Неизвестный код трансляции", Toast.LENGTH_SHORT).show()
             } else {
@@ -137,7 +157,7 @@ class ServerDetailsActivity : AppCompatActivity() {
                     val startIntent = Intent(this, AudioStreamPlayerService::class.java)
                     ContextCompat.startForegroundService(this, startIntent)
 
-                    runOnUiThread { startAudioStreamUI() }
+//                    runOnUiThread { startAudioStreamUI() }
                 }
                 Toast.makeText(this, "Запрошено прослушивание. Ожидайте", Toast.LENGTH_SHORT).show()
             }
@@ -150,22 +170,6 @@ class ServerDetailsActivity : AppCompatActivity() {
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             }
         }
-
-        findViewById<Button>(R.id.buttonDelete).setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle("Удалить сервер?")
-                .setMessage("Вы уверены, что хотите удалить $name?")
-                .setPositiveButton("Удалить") { _, _ ->
-                    viewModel.deleteServer(serverId)
-                    Toast.makeText(this, "Сервер удалён", Toast.LENGTH_SHORT).show()
-                    finish()
-                }
-                .setNegativeButton("Отмена", null)
-                .show()
-        }
-
-
-
 
         viewModel.refreshIcon(serverId)
     }
@@ -226,6 +230,7 @@ class ServerDetailsActivity : AppCompatActivity() {
         buttonListen.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.red))
 
         textStreamTimer.visibility = View.VISIBLE
+        textAutoOff.visibility = View.VISIBLE
         imageAudioAnim.visibility = View.VISIBLE
         imageAudioAnim.setImageResource(R.drawable.audio_wave_anim)
         (imageAudioAnim.drawable as? AnimationDrawable)?.start()
@@ -237,9 +242,10 @@ class ServerDetailsActivity : AppCompatActivity() {
     private fun stopAudioStreamUI() {
         buttonListen.text = "Послушать"
         buttonListen.setTextColor(getColor(R.color.white))
-        buttonListen.setBackgroundTintList(null) // сбросить цвет на дефолтный Material
+        buttonListen.setBackgroundTintList(defaultButtonTint) // сбросить цвет на дефолтный Material
 
         textStreamTimer.visibility = View.GONE
+        textAutoOff.visibility = View.GONE
         imageAudioAnim.visibility = View.GONE
         (imageAudioAnim.drawable as? AnimationDrawable)?.stop()
         streamHandler.removeCallbacks(streamTimerRunnable)

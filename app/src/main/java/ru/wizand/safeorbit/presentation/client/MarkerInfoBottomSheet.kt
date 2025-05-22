@@ -4,9 +4,11 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.Toast
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.yandex.mapkit.geometry.Point
@@ -24,6 +26,8 @@ class MarkerInfoBottomSheet : BottomSheetDialogFragment() {
     private var longitude: Double = 0.0
     private var timestamp: Long = 0
     private var iconUri: String? = null
+
+
 
     var onDelete: ((String) -> Unit)? = null
 
@@ -93,21 +97,19 @@ class MarkerInfoBottomSheet : BottomSheetDialogFragment() {
             startActivity(intent)
         }
 
-//        binding.buttonListen.setOnClickListener {
-//            Toast.makeText(requireContext(), "Функция 'Послушать' пока недоступна", Toast.LENGTH_SHORT).show()
-//        }
-//
-//        binding.buttonDelete.setOnClickListener {
-//            AlertDialog.Builder(requireContext())
-//                .setTitle("Удалить сервер?")
-//                .setMessage("Вы уверены, что хотите удалить $serverName?")
-//                .setPositiveButton("Удалить") { _, _ ->
-//                    serverId?.let { onDelete?.invoke(it) }
-//                    dismiss()
-//                }
-//                .setNegativeButton("Отмена", null)
-//                .show()
-//        }
+        binding.buttonDelete.setOnClickListener {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Удалить сервер?")
+                .setMessage("Вы уверены, что хотите удалить $serverName?")
+
+                .setPositiveButton("Удалить") { _, _ ->
+                    Log.d("DELETE_BTN", "setPositiveButton")
+                    serverId?.let { onDelete?.invoke(it) }
+                    dismiss()
+                }
+                .setNegativeButton("Отмена", null)
+                .show()
+        }
     }
 
     override fun onDestroyView() {

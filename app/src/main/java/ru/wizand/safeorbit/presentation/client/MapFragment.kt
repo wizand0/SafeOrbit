@@ -1,10 +1,13 @@
 // Автоматически обновлено: безопасный вызов context
 package ru.wizand.safeorbit.presentation.client
 
+import android.app.AlertDialog
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -15,6 +18,8 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.yandex.mapkit.MapKitFactory
@@ -45,6 +50,11 @@ class MapFragment : Fragment() {
     private var isConnected = false
     private var hasShownConnectionToast = false
 
+    private val permissions = arrayOf(
+        android.Manifest.permission.ACCESS_FINE_LOCATION,
+        android.Manifest.permission.RECORD_AUDIO
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -67,10 +77,10 @@ class MapFragment : Fragment() {
         super.onResume()
         MapKitFactory.getInstance().onStart()
         mapView.onStart()
-        context?.let {
-        }
-        Log.d("MAP", "onResume(), mapView started = ${::mapView.isInitialized}")
 
+        checkAndRequestPermissionsIfNeeded()
+
+        Log.d("MAP", "onResume(), mapView started = ${::mapView.isInitialized}")
         observeViewModel()
         view?.findViewById<View>(R.id.loadingLayout)?.visibility = View.VISIBLE
         if (!serversLoaded) {
@@ -86,6 +96,49 @@ class MapFragment : Fragment() {
         placemarks.clear()
         polylines.clear()
     }
+
+    private fun checkAndRequestPermissionsIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+
+        val notGranted = permissions.filter {
+            ContextCompat.checkSelfPermission(requireContext(), it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (notGranted.isEmpty()) return
+
+        // Показать пояснения по очереди
+        if (android.Manifest.permission.ACCESS_FINE_LOCATION in notGranted) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Доступ к геопозиции")
+                .setMessage("Разрешение на определение местоположения необходимо для отображения координат серверов на карте. Без него вы не сможете видеть, где находятся устройства.")
+                .setPositiveButton("Продолжить") { _, _ ->
+                    // После локации, проверим микрофон
+                    if (android.Manifest.permission.RECORD_AUDIO in notGranted) {
+                        showAudioPermissionDialog(notGranted)
+                    } else {
+                        permissionRequestLauncher.launch(notGranted.toTypedArray())
+                    }
+                }
+                .setNegativeButton("Отмена", null)
+                .show()
+        } else if (android.Manifest.permission.RECORD_AUDIO in notGranted) {
+            // Если локация уже есть, но нет микрофона
+            showAudioPermissionDialog(notGranted)
+        }
+    }
+
+    private fun showAudioPermissionDialog(notGranted: List<String>) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Доступ к микрофону")
+            .setMessage("Разрешение на запись аудио нужно для функции \"аудионяни\" — вы сможете слышать звуки с устройства-сервера.")
+            .setPositiveButton("Разрешить") { _, _ ->
+                permissionRequestLauncher.launch(notGranted.toTypedArray())
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+
 
     private fun observeViewModel() {
         viewModel.isConnected.observe(viewLifecycleOwner) { connected ->
@@ -153,95 +206,6 @@ class MapFragment : Fragment() {
             }
         }, 4_000)
     }
-
-
-
-    // На 100% рабочий метод
-
-//    private fun drawAll(states: Map<String, ServerMapState>, nameMap: Map<String, String>) {
-//        val map = mapView.mapWindow.map
-//        val currentIds = states.keys
-//        val existingIds = placemarks.keys
-//
-//        (existingIds - currentIds).forEach { id ->
-//            placemarks[id]?.let { map.mapObjects.remove(it) }
-//            polylines[id]?.let { map.mapObjects.remove(it) }
-//            placemarks.remove(id)
-//            polylines.remove(id)
-//        }
-//
-//        val validStates = states.filter { (id, _) -> nameMap[id]?.isNotBlank() == true }
-//
-////        for ((serverId, state) in states) {
-//        for ((serverId, state) in validStates) {
-//            val name = nameMap[serverId] ?: "Без имени"
-//            val point = state.latestPoint
-//            val iconUri = viewModel.getIconUriForServer(serverId)
-//            val existingPlacemark = placemarks[serverId]
-//
-//            if (existingPlacemark != null) {
-//                val newBitmap = createMarkerBitmap(serverId, name, iconUri)
-//                existingPlacemark.setIcon(ImageProvider.fromBitmap(newBitmap))
-//                if (existingPlacemark.geometry != point) {
-//                    animateMarkerMove(existingPlacemark, existingPlacemark.geometry, point)
-//                }
-//            } else {
-//                val bitmap = createMarkerBitmap(serverId, name, iconUri)
-//                val placemark = map.mapObjects.addPlacemark(point, ImageProvider.fromBitmap(bitmap))
-//                placemarks[serverId] = placemark
-//
-//                placemark.addTapListener { _, _ ->
-//                    showDetails(serverId)
-//                    true
-//                }
-//            }
-//
-//            if (state.history.size >= 2) {
-//                val polyline = polylines[serverId]
-//                if (polyline != null) {
-//                    polyline.geometry = Polyline(state.history)
-//                } else {
-//                    val newPolyline = map.mapObjects.addPolyline(Polyline(state.history))
-//                    newPolyline.setStrokeColor(state.color)
-//                    newPolyline.setStrokeWidth(3f)
-//                    polylines[serverId] = newPolyline
-//                }
-//            }
-//
-//            if (state.shouldCenter) {
-//                map.move(CameraPosition(point, 13.0f, 0.0f, 0.0f))
-//            }
-//        }
-//
-////        if (!hasCenteredOnAnyServer && states.isNotEmpty()) {
-////        if (!hasCenteredOnAnyServer && validStates.isNotEmpty()) {
-////            val first = states.values.first()
-////            map.move(CameraPosition(first.latestPoint, 13.0f, 0.0f, 0.0f))
-////            hasCenteredOnAnyServer = true
-////        }
-//
-//        if (!hasCenteredOnAnyServer && validStates.isNotEmpty()) {
-//            val boundingPoints = validStates.values.map { it.latestPoint }
-//            if (boundingPoints.size == 1) {
-//                map.move(CameraPosition(boundingPoints.first(), 13.0f, 0.0f, 0.0f))
-//            } else {
-//                val boundingBox = boundingPoints.fold(null as com.yandex.mapkit.geometry.BoundingBox?) { box, point ->
-//                    if (box == null) com.yandex.mapkit.geometry.BoundingBox(point, point)
-//                    else com.yandex.mapkit.geometry.BoundingBox(
-//                        Point(minOf(box.southWest.latitude, point.latitude), minOf(box.southWest.longitude, point.longitude)),
-//                        Point(maxOf(box.northEast.latitude, point.latitude), maxOf(box.northEast.longitude, point.longitude))
-//                    )
-//                }
-//                boundingBox?.let {
-//                    map.move(map.cameraPosition(it))
-//                }
-//            }
-//            hasCenteredOnAnyServer = true
-//        }
-//
-//
-//        Log.d("MAP", "✏️ drawAll() called with ${states.size} servers")
-//    }
 
     // Замена метода
     private fun drawAll(states: Map<String, ServerMapState>, nameMap: Map<String, String>) {
@@ -401,6 +365,15 @@ class MapFragment : Fragment() {
             }
         } else {
             Toast.makeText(requireContext(), "Нет координат для сервера", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val permissionRequestLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionsResult ->
+        val denied = permissionsResult.filterValues { !it }
+        if (denied.isNotEmpty()) {
+            Toast.makeText(requireContext(), "Для работы карты и аудио нужны разрешения", Toast.LENGTH_LONG).show()
         }
     }
 

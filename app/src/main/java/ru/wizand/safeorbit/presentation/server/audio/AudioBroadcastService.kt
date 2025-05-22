@@ -113,7 +113,9 @@ class AudioBroadcastService : Service() {
                 channelId,
                 "Audio Stream",
                 NotificationManager.IMPORTANCE_LOW
-            )
+            ).apply {
+                description = "Трансляция аудио в SafeOrbit"
+            }
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
 
@@ -123,8 +125,10 @@ class AudioBroadcastService : Service() {
             .setSmallIcon(R.drawable.ic_mic)
             .build()
 
+        // 💡 Обязательно — до инициализации Agora
         startForeground(2, notification)
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
