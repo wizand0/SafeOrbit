@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:gravity="center"
     android:padding="24dp"
@@ -7,25 +8,41 @@
     android:layout_height="match_parent"
     android:background="@drawable/role_screen_background1">
 
-    <TextView
-        android:text="Введите PIN"
+    <!-- Заголовок -->
+    <com.google.android.material.textview.MaterialTextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        style="@style/TextSubheading"
-        android:layout_marginBottom="16dp" />
+        android:text="@string/enter_pin"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
 
-    <EditText
-        android:id="@+id/etPinVerify"
+    <!-- Ввод PIN -->
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        style="@style/EditTextStandard"
-        android:hint="PIN"
-        android:inputType="numberPassword" />
+        android:hint="@string/pin"
+        app:counterEnabled="true"
+        app:counterMaxLength="8">
 
-    <Button
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etPinVerify"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberPassword"
+            android:maxLength="8"
+            android:minEms="4"
+            android:digits="0123456789"
+            android:importantForAutofill="yes"
+            android:autofillHints="password" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Кнопка -->
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnVerifyPin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        style="@style/ButtonPrimary"
-        android:text="Продолжить" />
+        android:text="@string/continue_text"
+        style="@style/ButtonFilledMaterial"
+        android:layout_marginTop="24dp" />
 </LinearLayout>

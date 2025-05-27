@@ -1,79 +1,115 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/scrollView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/role_screen_background1"
-    android:gravity="center_horizontal"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="24dp"
+    android:fillViewport="true">
 
-    <ScrollView
-        android:id="@+id/scrollView"
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@android:color/transparent">
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        app:strokeColor="?attr/colorPrimary"
+        app:strokeWidth="1dp">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <EditText
-                android:id="@+id/etPin"
-                style="@style/EditTextStandard"
-                android:hint="Введите PIN"
-                android:inputType="numberPassword" />
+            <!-- PIN ввод -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_enter_pin">
 
-            <Button
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPin"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberPassword" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCheckPin"
-                style="@style/ButtonPrimary"
-                android:text="Продолжить" />
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/ButtonFilledMaterial"
+                android:layout_marginTop="12dp"
+                android:text="@string/button_continue" />
 
+            <!-- Настройки, скрытые до ввода PIN -->
             <LinearLayout
                 android:id="@+id/settingsContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
                 android:orientation="vertical"
-                android:visibility="gone">
+                android:visibility="gone"
+                android:layout_marginTop="24dp">
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnResetRole"
-                    style="@style/ButtonPrimary"
-                    android:text="Сбросить роль" />
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/ButtonFilledMaterial"
+                    android:text="@string/button_reset_role" />
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnChangePin"
-                    style="@style/ButtonPrimary"
-                    android:text="Изменить PIN" />
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/ButtonFilledMaterial"
+                    android:text="@string/button_change_pin" />
 
-                <Button
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnEnableAdmin"
-                    style="@style/ButtonPrimary"
-                    android:text="Сделать приложением администратора" />
-
-                <TextView
-                    style="@style/TextBody"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:text="Период бездействия" />
+                    style="@style/ButtonFilledMaterial"
+                    android:text="@string/button_enable_admin" />
 
-                <Spinner
-                    android:id="@+id/spinnerInactivity"
-                    style="@style/SpinnerStandard" />
-
-                <TextView
-                    style="@style/TextBody"
-                    android:layout_width="wrap_content"
+                <!-- Период бездействия -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:text="Интервал активности" />
+                    android:layout_marginTop="16dp"
+                    android:hint="@string/hint_inactivity_period">
 
-                <Spinner
-                    android:id="@+id/spinnerActive"
-                    style="@style/SpinnerStandard" />
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/spinnerInactivity"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:cursorVisible="false"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"
+                        android:importantForAccessibility="yes" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Интервал активности -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="@string/hint_active_interval">
+
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/spinnerActive"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:cursorVisible="false"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"
+                        android:importantForAccessibility="yes" />
+
+                </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </LinearLayout>
-    </ScrollView>
-</LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</androidx.core.widget.NestedScrollView>

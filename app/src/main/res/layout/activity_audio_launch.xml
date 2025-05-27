@@ -1,24 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/black"
-    android:gravity="center">
+    android:background="?android:colorBackground"
+    android:padding="32dp">
 
+    <!-- Иконка микрофона -->
     <ImageView
         android:id="@+id/imageMic"
         android:layout_width="120dp"
         android:layout_height="120dp"
         android:src="@drawable/ic_mic"
-        android:contentDescription="Микрофон"
-        app:tint="@android:color/white" />
+        android:contentDescription="@string/mic_icon"
+        app:tint="?attr/colorOnBackground"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/progressBarAudio"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="0.4" />
 
-    <ProgressBar
+    <!-- Индикатор загрузки -->
+    <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/progressBarAudio"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginBottom="48dp"
-        android:indeterminate="true" />
-</FrameLayout>
+        app:indicatorSize="48dp"
+        app:trackThickness="4dp"
+        app:indicatorColor="?attr/colorPrimary"
+        app:trackColor="?attr/colorSurfaceVariant" />
+</androidx.constraintlayout.widget.ConstraintLayout>

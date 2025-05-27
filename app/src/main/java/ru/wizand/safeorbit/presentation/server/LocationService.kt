@@ -27,8 +27,10 @@ import ru.wizand.safeorbit.data.*
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.presentation.server.audio.AudioBroadcastService
+//import ru.wizand.safeorbit.presentation.server.audio.AudioBroadcastServiceLiveKit
 import ru.wizand.safeorbit.presentation.server.audio.AudioLaunchActivity
 import ru.wizand.safeorbit.presentation.server.audio.SilentAudioLaunchActivity
+import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -59,7 +61,7 @@ class LocationService : Service(), SensorEventListener {
 
     override fun onCreate() {
         super.onCreate()
-        prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         inactivityTimeout = prefs.getLong("inactivity_timeout", inactivityTimeout)
         prefs.registerOnSharedPreferenceChangeListener { _, key ->
             if (key == "inactivity_timeout") {
@@ -276,9 +278,13 @@ class LocationService : Service(), SensorEventListener {
     }
 
     private fun listenForClientCommands() {
-        if (commandListener != null) {
-            Log.w("COMMANDS", "⚠️ Команды уже слушаются — повторная подписка не требуется")
-            return
+        // Удалить предыдущий listener, если есть
+        commandListener?.let {
+            FirebaseDatabase.getInstance()
+                .getReference("server_commands")
+                .child(serverId)
+                .removeEventListener(it)
+            Log.w("COMMANDS", "🔁 Повторная подписка: старый listener удалён")
         }
 
         val commandRootRef = FirebaseDatabase.getInstance()
@@ -286,7 +292,7 @@ class LocationService : Service(), SensorEventListener {
             .child(serverId)
 
         Log.d("COMMANDS", "📛 Firebase UID: ${FirebaseAuth.getInstance().currentUser?.uid}, serverId: $serverId")
-        Log.d("COMMANDS", "⏳ Слушаем команды на server_commands/$serverId")
+        Log.d("COMMANDS", "🔔 Подписка на команды server_commands/$serverId")
 
         commandListener = object : ChildEventListener {
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
@@ -294,11 +300,11 @@ class LocationService : Service(), SensorEventListener {
                 val codeFromClient = snapshot.child("code").getValue(String::class.java)
                 val localCode = prefs.getString("server_code", "")
 
-                Log.d("COMMANDS", "📥 Получена команда $commandId: ${snapshot.value}")
+                Log.d("COMMANDS", "📥 Команда $commandId: ${snapshot.value}")
                 Log.d("COMMANDS", "🔐 Проверка кода: client=$codeFromClient, local=$localCode")
 
                 if (codeFromClient != localCode) {
-                    Log.w("COMMANDS", "❌ Код не совпадает — игнорируем")
+                    Log.w("COMMANDS", "❌ Код не совпадает — игнор")
                     return
                 }
 
@@ -333,26 +339,26 @@ class LocationService : Service(), SensorEventListener {
                                     sendToFirebase(location)
                                     broadcastLocation(location)
                                     saveActivityLog("Принудительно")
-                                    Log.d("COMMANDS", "📤 Отправлены координаты: ${location.latitude}, ${location.longitude}")
+                                    Log.d("COMMANDS", "📤 Координаты отправлены: ${location.latitude}, ${location.longitude}")
                                 } else {
-                                    Log.w("COMMANDS", "⚠️ Не удалось получить текущую локацию")
+                                    Log.w("COMMANDS", "⚠️ Не удалось получить локацию")
                                 }
                             }
                             .addOnFailureListener {
                                 Log.e("COMMANDS", "❌ Ошибка при получении локации: ${it.message}")
                             }
                     } else {
-                        Log.w("COMMANDS", "⚠️ Нет разрешения на получение локации")
+                        Log.w("COMMANDS", "⚠️ Нет разрешений на локацию")
                     }
                 }
 
                 when (snapshot.child("type").getValue(String::class.java)) {
                     "START_AUDIO_STREAM" -> {
-                        Log.d("COMMANDS", "🎙️ Команда на запуск аудио трансляции")
+                        Log.d("COMMANDS", "🎙️ Команда: START_AUDIO_STREAM")
                         startAudioBroadcastService()
                     }
                     "STOP_AUDIO_STREAM" -> {
-                        Log.d("COMMANDS", "🛑 Команда на остановку аудио трансляции")
+                        Log.d("COMMANDS", "🛑 Команда: STOP_AUDIO_STREAM")
                         stopAudioBroadcastService()
                     }
                 }
@@ -364,13 +370,23 @@ class LocationService : Service(), SensorEventListener {
             override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {}
             override fun onChildRemoved(snapshot: DataSnapshot) {}
             override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
+
             override fun onCancelled(error: DatabaseError) {
-                Log.e("COMMANDS", "🔥 Ошибка чтения команд: ${error.message}")
+                Log.e("COMMANDS", "🔥 Ошибка подписки на команды: ${error.message}")
+                // Повторная попытка через 5 сек
+                Handler(Looper.getMainLooper()).postDelayed({
+                    Log.d("COMMANDS", "🔄 Повторная попытка подписки после onCancelled")
+                    listenForClientCommands()
+                }, 5000)
             }
         }
 
-        commandRootRef.addChildEventListener(commandListener!!)
-        Log.d("COMMANDS", "✅ Listener команд добавлен")
+        try {
+            commandRootRef.addChildEventListener(commandListener!!)
+            Log.d("COMMANDS", "✅ Listener команд добавлен")
+        } catch (e: Exception) {
+            Log.e("COMMANDS", "🚨 Ошибка при добавлении listener: ${e.message}")
+        }
     }
 
 
@@ -417,6 +433,7 @@ class LocationService : Service(), SensorEventListener {
         }
     }
 
+    // For Agola
     private fun startAudioBroadcastService() {
         val intent = Intent(this, AudioBroadcastService::class.java).apply {
             putExtra("server_id", serverId)
@@ -426,14 +443,40 @@ class LocationService : Service(), SensorEventListener {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             if (!isAppInForeground()) {
                 Log.w("AUDIO_STREAM", "⛔ Приложение в фоне. Запуск через уведомление.")
-                requestStartViaNotification(intent)
-                return
+//                requestStartViaNotification(intent)
+//                return
+
+
+                val starterIntent = Intent(this, SilentAudioLaunchActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("server_id", serverId)
+                }
+                startActivity(starterIntent)
             }
         }
 
         // До Android 14 или приложение в фокусе — обычный запуск
         ContextCompat.startForegroundService(this, intent)
     }
+
+    // For LiveKit
+//    private fun startAudioBroadcastService() {
+//        val intent = Intent(this, AudioBroadcastServiceLiveKit::class.java).apply {
+//            putExtra("server_id", serverId)
+//        }
+//
+//        // Android 14+ (SDK 34)
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+//            if (!isAppInForeground()) {
+//                Log.w("AUDIO_STREAM", "⛔ Приложение в фоне. Запуск через уведомление.")
+//                requestStartViaNotification(intent)
+//                return
+//            }
+//        }
+//
+//        // До Android 14 или приложение в фокусе — обычный запуск
+//        ContextCompat.startForegroundService(this, intent)
+//    }
 
 
     fun Context.isAppInForeground(): Boolean {
@@ -553,12 +596,19 @@ class LocationService : Service(), SensorEventListener {
 
 
 
-
+// For Agola
     private fun stopAudioBroadcastService() {
         val intent = Intent(this, AudioBroadcastService::class.java)
         stopService(intent)
         Log.d("COMMANDS", "🛑 AudioBroadcastService остановлен")
     }
+
+// For LiveKit
+//    private fun stopAudioBroadcastService() {
+//        val intent = Intent(this, AudioBroadcastServiceLiveKit::class.java)
+//        stopService(intent)
+//        Log.d("COMMANDS", "🛑 AudioBroadcastService остановлен")
+//    }
 
 
 

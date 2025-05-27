@@ -9,10 +9,11 @@ import androidx.lifecycle.MutableLiveData
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.AudioRequest
 import ru.wizand.safeorbit.data.model.LocationData
+import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
 class ServerViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = FirebaseRepository(application.applicationContext)
-    private val prefs = application.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    private val prefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val _serverId = MutableLiveData<String?>()
     val serverId: LiveData<String?> = _serverId

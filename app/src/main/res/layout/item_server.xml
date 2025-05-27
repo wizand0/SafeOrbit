@@ -1,36 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="8dp">
+    android:padding="8dp"
+    android:background="@drawable/marker_info_background"
+    android:elevation="4dp"
+    android:clipToPadding="false">
 
+    <!-- Иконка сервера -->
     <ImageView
         android:id="@+id/imageServerIcon"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_marginEnd="8dp"
-        android:src="@drawable/ic_marker" />
+        android:scaleType="centerCrop"
+        android:contentDescription="@string/server_icon"
+        android:background="@drawable/material_shape_circle"
+        android:backgroundTint="?attr/colorSurfaceVariant"
+        android:padding="4dp"
+        android:importantForAccessibility="no" />
 
+    <!-- Текстовая информация -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:orientation="vertical">
 
-        <TextView
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/textServerName"
-            style="@style/TextSubheading"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Название" />
+            android:text="@string/server_name"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:importantForAccessibility="yes" />
 
-        <TextView
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/textServerId"
-            style="@style/TextCaption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ID: ..." />
-
+            android:text="@string/server_id"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:maxLines="1"
+            android:ellipsize="end" />
     </LinearLayout>
 </LinearLayout>

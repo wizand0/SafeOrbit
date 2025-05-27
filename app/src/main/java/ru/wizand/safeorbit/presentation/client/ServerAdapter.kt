@@ -2,14 +2,12 @@ package ru.wizand.safeorbit.presentation.client
 
 import android.net.Uri
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.ServerEntity
+import ru.wizand.safeorbit.databinding.ItemServerBinding
 
 class ServerAdapter(
     private var items: List<ServerEntity>,
@@ -18,22 +16,22 @@ class ServerAdapter(
     private val onDelete: (ServerEntity) -> Unit
 ) : RecyclerView.Adapter<ServerAdapter.ServerViewHolder>() {
 
-    inner class ServerViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        private val name: TextView = view.findViewById(R.id.textServerName)
-        private val serverId: TextView = view.findViewById(R.id.textServerId)
-        private val icon: ImageView = view.findViewById(R.id.imageServerIcon)
+    inner class ServerViewHolder(
+        private val binding: ItemServerBinding
+    ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: ServerEntity) {
-            name.text = item.name
-            serverId.text = "ID: ${item.serverId}"
+            binding.textServerName.text = item.name
+            binding.textServerId.text = "ID: ${item.serverId}"
+
             if (!item.serverIconUri.isNullOrEmpty()) {
-                icon.setImageURI(Uri.parse(item.serverIconUri))
+                binding.imageServerIcon.setImageURI(Uri.parse(item.serverIconUri))
             } else {
-                icon.setImageResource(R.drawable.ic_marker)
+                binding.imageServerIcon.setImageResource(R.drawable.ic_marker)
             }
 
-            itemView.setOnClickListener { onShowInfo(item) }
-            itemView.setOnLongClickListener {
+            binding.root.setOnClickListener { onShowInfo(item) }
+            binding.root.setOnLongClickListener {
                 onEditName(item)
                 true
             }
@@ -41,9 +39,8 @@ class ServerAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ServerViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_server, parent, false)
-        return ServerViewHolder(view)
+        val binding = ItemServerBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return ServerViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: ServerViewHolder, position: Int) {

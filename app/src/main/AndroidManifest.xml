@@ -18,6 +18,38 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+    </queries>
+
+    <queries>
+        <!-- Навигационные приложения -->
+        <package android:name="com.google.android.apps.maps" />
+        <package android:name="ru.yandex.yandexnavi" />
+        <package android:name="ru.yandex.yandexmaps" />
+        <package android:name="app.organicmaps" />
+        <package android:name="ru.dublgis.dgismobile" />
+        <package android:name="com.mapswithme.maps.pro" />
+        <package android:name="net.osmand" />
+        <package android:name="com.huawei.maps.app" />
+
+        <!-- Приложения такси -->
+        <package android:name="ru.yandex.taxi" /> <!-- Яндекс Go -->
+        <package android:name="com.ubercab" />     <!-- Uber -->
+        <package android:name="ee.mtakso.client" /> <!-- Bolt -->
+        <package android:name="com.didiglobal.passenger" /> <!-- DiDi -->
+        <package android:name="com.taxsee.taxsee" /> <!-- Maxim -->
+        <package android:name="com.gett.android" /> <!-- Gett -->
+        <package android:name="ru.citymobil.android" /> <!-- Ситимобил -->
+    </queries>
 
     <application
         android:name=".MainApplication"
@@ -31,12 +63,28 @@
         android:theme="@style/Theme.SafeOrbit"
         tools:targetApi="31">
         <activity
+            android:name=".presentation.server.audio.AudioStarterActivity"
+            android:theme="@style/Theme.SafeOrbit.Transparent"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:showOnLockScreen="true" />
+        <activity
+            android:name=".presentation.client.QrScanActivity"
+            android:exported="false" />
+        <activity
             android:name=".presentation.server.audio.AudioLaunchActivity"
             android:exported="false" />
         <activity
             android:name=".presentation.server.audio.SilentAudioLaunchActivity"
+            android:theme="@style/TransparentActivity"
+            android:excludeFromRecents="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:taskAffinity=""
             android:exported="false"
-            android:theme="@style/Theme.SafeOrbit.Transparent" />
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".presentation.security.PinGateActivity"
             android:exported="false" />
@@ -60,12 +108,17 @@
         <service
             android:name=".presentation.server.audio.AudioBroadcastService"
             android:exported="false"
-            android:foregroundServiceType="microphone" />
+            android:foregroundServiceType="microphone" /> <!-- <service -->
+        <!-- android:name=".presentation.server.audio.AudioBroadcastServiceLiveKit" -->
+        <!-- android:exported="false" -->
+        <!-- android:foregroundServiceType="microphone" /> -->
         <service
             android:name=".presentation.client.audio.AudioStreamPlayerService"
             android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
-
+            android:foregroundServiceType="mediaPlayback" /> <!-- <service -->
+        <!-- android:name=".presentation.client.audio.AudioStreamPlayerServiceLiveKit" -->
+        <!-- android:exported="false" -->
+        <!-- android:foregroundServiceType="mediaPlayback" /> -->
         <activity
             android:name=".presentation.server.ServerMainActivity"
             android:exported="false" />
@@ -116,6 +169,11 @@
 
             <intent-filter>
                 <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".presentation.server.BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
     </application>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/role_selection_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -8,23 +9,29 @@
     android:padding="24dp"
     android:background="@drawable/role_screen_background1">
 
-    <ProgressBar
+    <!-- Прогресс-бар -->
+    <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/progressAuth"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"
         android:layout_gravity="center"
-        android:layout_marginBottom="32dp" />
+        android:layout_marginBottom="32dp"
+        app:indicatorSize="48dp"
+        app:trackThickness="4dp"
+        app:indicatorColor="?attr/colorPrimary" />
 
-    <TextView
+    <!-- Заголовок -->
+    <com.google.android.material.textview.MaterialTextView
         android:id="@+id/tvChooseRole"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Выберите роль"
-        android:textSize="24sp"
-        android:textStyle="bold"
+        android:text="@string/chose_role"
+        android:textAppearance="?attr/textAppearanceHeadlineSmall"
+        android:gravity="center"
         android:layout_marginBottom="32dp" />
 
+    <!-- Кнопки выбора -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -32,60 +39,74 @@
         android:gravity="center"
         android:weightSum="2">
 
-        <!-- Кнопка "Сервер" -->
-        <FrameLayout
+        <!-- Сервер -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="0dp"
             android:layout_height="200dp"
             android:layout_weight="1"
-            android:layout_marginEnd="8dp">
+            android:layout_marginEnd="8dp"
+            app:cardCornerRadius="16dp"
+            app:strokeWidth="2dp"
+            app:strokeColor="?attr/colorOutline">
 
-            <ImageButton
-                android:id="@+id/btnServer"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:background="@null"
-                android:contentDescription="Режим сервера"
-                android:src="@drawable/server_role_image" />
+                android:layout_height="match_parent">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Сервер"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:layout_gravity="bottom"
-                android:layout_marginBottom="6dp"
-                android:background="#80FFFFFF" />
-        </FrameLayout>
+                <ImageButton
+                    android:id="@+id/btnServer"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/server_role_image"
+                    android:contentDescription="@string/server_role_desc" />
 
-        <!-- Кнопка "Клиент" -->
-        <FrameLayout
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/server"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:gravity="center"
+                    android:background="#80FFFFFF"
+                    android:layout_gravity="bottom"
+                    android:layout_marginBottom="6dp" />
+            </FrameLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Клиент -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="0dp"
             android:layout_height="200dp"
             android:layout_weight="1"
-            android:layout_marginStart="8dp">
+            android:layout_marginStart="8dp"
+            app:cardCornerRadius="16dp"
+            app:strokeWidth="2dp"
+            app:strokeColor="?attr/colorOutline">
 
-            <ImageButton
-                android:id="@+id/btnClient"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:background="@null"
-                android:contentDescription="Режим клиента"
-                android:src="@drawable/client_role_image" />
+                android:layout_height="match_parent">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Клиент"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:layout_gravity="bottom"
-                android:layout_marginBottom="6dp"
-                android:background="#80FFFFFF" />
-        </FrameLayout>
+                <ImageButton
+                    android:id="@+id/btnClient"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/client_role_image"
+                    android:contentDescription="@string/client_role_desc" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/client"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:gravity="center"
+                    android:background="#80FFFFFF"
+                    android:layout_gravity="bottom"
+                    android:layout_marginBottom="6dp" />
+            </FrameLayout>
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 </LinearLayout>

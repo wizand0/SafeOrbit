@@ -1,87 +1,143 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/role_screen_background1"
-    android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:gravity="center_horizontal"
+    android:padding="24dp"
+    android:background="@drawable/role_screen_background1">
 
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@android:color/transparent">
+        android:background="@android:color/transparent"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <TextView
+            <!-- ID сервера -->
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tvServerId"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:text="ID сервера: ..."
-                android:textSize="18sp" />
+                android:text="@string/label_server_id"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:layout_marginBottom="12dp" />
 
-            <TextView
+            <!-- Код -->
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tvPairCode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:text="Код: ..."
-                android:textSize="18sp" />
+                android:text="@string/label_pair_code"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:layout_marginBottom="24dp" />
 
-            <TextView
-                android:id="@+id/tvCurrentCoords"
+            <!-- Карточка: координаты -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:background="#80FFFFFF"
-                android:padding="16dp"
-                android:text="Координаты: ..."
-                android:textSize="16sp" />
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="?attr/colorSurfaceVariant"
+                app:strokeWidth="1dp">
 
-            <TextView
-                android:id="@+id/tvStatus"
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/tvCurrentCoords"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:text="@string/label_coordinates"
+                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Карточка: статус -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:background="#80FFFFFF"
-                android:padding="16dp"
-                android:text="Время обновления: ..."
-                android:textSize="14sp" />
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="?attr/colorSurfaceVariant"
+                app:strokeWidth="1dp">
 
-            <TextView
-                android:id="@+id/tvMode"
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:text="@string/label_update_time"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Режим работы -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="#80FFFFFF"
-                android:padding="16dp"
-                android:text="Режим работы: ..."
-                android:textSize="14sp" />
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="?attr/colorSurfaceVariant"
+                app:strokeWidth="1dp">
 
-            <TextView
-                android:id="@+id/tvInterval"
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/tvMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:text="@string/label_mode"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Интервалы -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:background="#80FFFFFF"
-                android:padding="16dp"
-                android:text="Интервал в состоянии покоя: ..."
-                android:textSize="14sp" />
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="?attr/colorSurfaceVariant"
+                app:strokeWidth="1dp">
 
-            <TextView
-                android:id="@+id/tvActiveInterval"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="#80FFFFFF"
-                android:padding="16dp"
-                android:text="Интервал АКТИВНЫЙ: ..."
-                android:textSize="14sp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvInterval"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp"
+                        android:text="@string/label_interval_idle"
+                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?attr/colorOutline" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tvActiveInterval"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp"
+                        android:text="@string/label_interval_active"
+                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <ImageView
+                android:id="@+id/ivQrCode"
+                android:layout_width="200dp"
+                android:layout_height="200dp"
+                android:layout_gravity="center"
+                android:layout_marginTop="16dp" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

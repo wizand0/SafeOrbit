@@ -1,24 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:padding="16dp"
-    android:orientation="vertical"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
     android:background="@drawable/role_screen_background1">
 
-    <EditText
-        android:id="@+id/editName"
-        style="@style/EditTextStandard"
-        android:hint="Имя сервера" />
+    <!-- Имя сервера -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:hint="@string/hint_server_name"
+        app:counterEnabled="true"
+        app:counterMaxLength="20">
 
-    <EditText
-        android:id="@+id/editServerId"
-        style="@style/EditTextStandard"
-        android:hint="ID сервера" />
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLength="20"
+            android:inputType="textPersonName"
+            android:importantForAutofill="yes"
+            android:autofillHints="name" />
+    </com.google.android.material.textfield.TextInputLayout>
 
-    <EditText
-        android:id="@+id/editCode"
-        style="@style/EditTextStandard"
-        android:hint="Код"
-        android:inputType="number" />
+    <!-- ID сервера -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:hint="@string/hint_server_id"
+        app:counterEnabled="true"
+        app:counterMaxLength="14">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editServerId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLength="14"
+            android:minEms="10"
+            android:inputType="text"
+            android:importantForAutofill="yes"
+            android:autofillHints="username" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Код -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/hint_code">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:digits="0123456789"
+            android:importantForAutofill="yes"
+            android:autofillHints="password" />
+    </com.google.android.material.textfield.TextInputLayout>
 </LinearLayout>

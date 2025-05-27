@@ -6,6 +6,7 @@ import android.view.*
 import androidx.fragment.app.Fragment
 import ru.wizand.safeorbit.databinding.FragmentMarkerInfoSideBinding
 import com.yandex.mapkit.geometry.Point
+import ru.wizand.safeorbit.R
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -31,14 +32,26 @@ class MarkerInfoSideFragment : Fragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentMarkerInfoSideBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        binding.textCoords.text = "Координаты: %.5f, %.5f".format(point.latitude, point.longitude)
-        binding.textTime.text = "Время: ${formatTimestamp(timestamp)}"
+
+        val text1 = getString(R.string._5f_5f).format(point.latitude, point.longitude)
+        binding.textCoords.text = text1
+//        binding.textCoords.text = "Координаты: %.5f, %.5f".format(point.latitude, point.longitude)
+
+
+//        binding.textTime.text = "Время: ${formatTimestamp(timestamp)}"
+        val text2 = getString(R.string.time_, formatTimestamp(timestamp))
+        binding.textTime.text = text2
+
         binding.textServerName.text = serverName
 
         if (!iconUri.isNullOrEmpty()) {
@@ -46,14 +59,15 @@ class MarkerInfoSideFragment : Fragment() {
         }
 
         binding.buttonDetails.setOnClickListener {
-            val intent = android.content.Intent(requireContext(), ServerDetailsActivity::class.java).apply {
-                putExtra("serverId", serverId)
-                putExtra("name", serverName)
-                putExtra("lat", point.latitude)
-                putExtra("lon", point.longitude)
-                putExtra("time", timestamp)
-                putExtra("icon", iconUri)
-            }
+            val intent =
+                android.content.Intent(requireContext(), ServerDetailsActivity::class.java).apply {
+                    putExtra("serverId", serverId)
+                    putExtra("name", serverName)
+                    putExtra("lat", point.latitude)
+                    putExtra("lon", point.longitude)
+                    putExtra("time", timestamp)
+                    putExtra("icon", iconUri)
+                }
             startActivity(intent)
         }
     }
@@ -69,7 +83,13 @@ class MarkerInfoSideFragment : Fragment() {
     }
 
     companion object {
-        fun newInstance(serverId: String, serverName: String, point: Point, timestamp: Long, iconUri: String?) =
+        fun newInstance(
+            serverId: String,
+            serverName: String,
+            point: Point,
+            timestamp: Long,
+            iconUri: String?
+        ) =
             MarkerInfoSideFragment().apply {
                 arguments = Bundle().apply {
                     putString("serverId", serverId)

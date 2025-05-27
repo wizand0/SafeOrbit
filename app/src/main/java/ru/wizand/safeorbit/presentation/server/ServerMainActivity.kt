@@ -3,7 +3,6 @@ package ru.wizand.safeorbit.presentation.server
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.databinding.ActivityServerMainBinding
@@ -12,7 +11,6 @@ import ru.wizand.safeorbit.databinding.ActivityServerMainBinding
 class ServerMainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityServerMainBinding
-
     private var selectedItemId: Int = R.id.nav_home
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,8 +30,7 @@ class ServerMainActivity : AppCompatActivity() {
     }
 
     private fun setupBottomNavigation() {
-        val nav = findViewById<BottomNavigationView>(R.id.serverBottomNavigation)
-        nav.setOnItemSelectedListener { item ->
+        binding.serverBottomNavigation.setOnItemSelectedListener { item ->
             if (item.itemId != selectedItemId) {
                 selectedItemId = item.itemId
                 showFragmentById(item.itemId)
@@ -50,13 +47,13 @@ class ServerMainActivity : AppCompatActivity() {
             R.id.nav_settings -> {
                 startActivity(Intent(this, ServerSettingsActivity::class.java))
                 return
-            }// или переход в активити, если надо
+            }
             else -> ServerMainFragment()
         }
 
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
-            .replace(R.id.serverFragmentContainer, fragment) // Убедись что этот ID в layout!
+            .replace(binding.serverFragmentContainer.id, fragment)
             .commit()
     }
 

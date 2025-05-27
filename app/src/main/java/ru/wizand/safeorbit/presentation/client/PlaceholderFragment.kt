@@ -4,31 +4,32 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.*
-import android.widget.Button
-import android.widget.LinearLayout
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
-import ru.wizand.safeorbit.BuildConfig
-import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.databinding.FragmentPlaceholderBinding
 
 class PlaceholderFragment : Fragment() {
+
+    private var _binding: FragmentPlaceholderBinding? = null
+    private val binding get() = _binding!!
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.fragment_placeholder, container, false)
+        _binding = FragmentPlaceholderBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        view.findViewById<LinearLayout>(R.id.container)?.animate()
-            ?.alpha(1f)
-            ?.setDuration(500)
-            ?.start()
+        binding.container.animate()
+            .alpha(1f)
+            .setDuration(500)
+            .start()
 
-        view.findViewById<Button>(R.id.btnEmail)?.setOnClickListener {
+        binding.btnEmail.setOnClickListener {
             val intent = Intent(Intent.ACTION_SENDTO).apply {
                 data = Uri.parse("mailto:makandrei@gmail.com")
                 putExtra(Intent.EXTRA_SUBJECT, "SafeOrbit — вопрос/предложение")
@@ -36,10 +37,14 @@ class PlaceholderFragment : Fragment() {
             startActivity(Intent.createChooser(intent, "Выберите почтовое приложение"))
         }
 
-        view.findViewById<Button>(R.id.btnGitHub)?.setOnClickListener {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/wizand0")))
+        binding.btnGitHub.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/wizand0"))
+            startActivity(intent)
         }
+    }
 
-
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

@@ -8,12 +8,11 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.Toast
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.yandex.mapkit.geometry.Point
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.databinding.DialogMarkerInfoBinding
+import ru.wizand.safeorbit.utils.NavigationUtils
 
 class MarkerInfoBottomSheet : BottomSheetDialogFragment() {
 
@@ -26,7 +25,6 @@ class MarkerInfoBottomSheet : BottomSheetDialogFragment() {
     private var longitude: Double = 0.0
     private var timestamp: Long = 0
     private var iconUri: String? = null
-
 
 
     var onDelete: ((String) -> Unit)? = null
@@ -55,9 +53,17 @@ class MarkerInfoBottomSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+
         binding.textServerName.text = serverName ?: "Без имени"
-        binding.textCoords.text = "Координаты: %.5f, %.5f".format(latitude, longitude)
-        binding.textTime.text = "Время: ${formatTimestamp(timestamp)}"
+
+
+//        binding.textCoords.text = "Координаты: %.5f, %.5f".format(latitude, longitude)
+        val text1 = getString(R.string._5f_5f).format(latitude, longitude)
+        binding.textCoords.text = text1
+
+//        binding.textTime.text = "Время: ${formatTimestamp(timestamp)}"
+        val text2 = getString(R.string.time_, formatTimestamp(timestamp))
+        binding.textTime.text = text2
 
         if (!iconUri.isNullOrEmpty()) {
             binding.imageIcon.setImageURI(Uri.parse(iconUri))
@@ -72,18 +78,29 @@ class MarkerInfoBottomSheet : BottomSheetDialogFragment() {
             dismiss()
         }
 
+//        binding.buttonNavigate.setOnClickListener {
+//            val label = Uri.encode(serverName ?: "Метка")
+//            val uri = Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude($label)")
+//            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+//                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+//            }
+//            if (intent.resolveActivity(requireContext().packageManager) != null) {
+//                startActivity(Intent.createChooser(intent, "Открыть в навигации"))
+//            } else {
+//                Toast.makeText(requireContext(), "Нет подходящего приложения для навигации", Toast.LENGTH_SHORT).show()
+//            }
+//        }
+
         binding.buttonNavigate.setOnClickListener {
             val label = Uri.encode(serverName ?: "Метка")
-            val uri = Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude($label)")
-            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            if (intent.resolveActivity(requireContext().packageManager) != null) {
-                startActivity(Intent.createChooser(intent, "Открыть в навигации"))
-            } else {
-                Toast.makeText(requireContext(), "Нет подходящего приложения для навигации", Toast.LENGTH_SHORT).show()
-            }
+            NavigationUtils.openNavigationChooser(
+                requireContext(),
+                latitude = this.latitude,
+                longitude = this.longitude,
+                name = label
+            )
         }
+
 
         binding.buttonDetails.setOnClickListener {
             val intent = Intent(requireContext(), ServerDetailsActivity::class.java).apply {

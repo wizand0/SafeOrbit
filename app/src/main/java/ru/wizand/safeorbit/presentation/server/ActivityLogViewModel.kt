@@ -112,10 +112,6 @@ class ActivityLogViewModel(application: Application) : AndroidViewModel(applicat
             }
         }
 
-//        return result.sortedWith(compareByDescending<ActivityLogUiModel> { it.date }
-//            .thenByDescending { it.isSummary.not() }
-//            .thenByDescending { it.startHour })
-
         return result.sortedWith(compareByDescending<ActivityLogUiModel> { it.date }
                 .thenByDescending { it.isSummary } // ✅ summary=true => выше
                 .thenByDescending { it.startHour })

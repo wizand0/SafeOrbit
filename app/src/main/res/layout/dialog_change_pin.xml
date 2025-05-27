@@ -9,13 +9,13 @@
     <EditText
         android:id="@+id/etOldPin"
         style="@style/EditTextStandard"
-        android:hint="Старый PIN"
+        android:hint="@string/old_pin"
         android:inputType="numberPassword"
         android:layout_marginBottom="16dp" />
 
     <EditText
         android:id="@+id/etNewPin"
         style="@style/EditTextStandard"
-        android:hint="Новый PIN"
+        android:hint="@string/new_pin"
         android:inputType="numberPassword" />
 </LinearLayout>

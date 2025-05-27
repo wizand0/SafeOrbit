@@ -10,7 +10,6 @@ import ru.wizand.safeorbit.data.model.AudioRequest
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.utils.Constants
 import ru.wizand.safeorbit.utils.generateReadableId
-import java.util.UUID
 
 class FirebaseRepository(private val context: Context) {
 
@@ -41,7 +40,8 @@ class FirebaseRepository(private val context: Context) {
                 val match = it.getValue(String::class.java) == code
                 if (match) {
                     val clientId = auth.currentUser?.uid ?: return@addOnSuccessListener
-                    db.child("clients").child(clientId).child("linked_servers").child(serverId).setValue(true)
+                    db.child("clients").child(clientId).child("linked_servers").child(serverId)
+                        .setValue(true)
                         .addOnSuccessListener { onResult(true) }
                 } else {
                     onResult(false)
@@ -59,15 +59,24 @@ class FirebaseRepository(private val context: Context) {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val location = snapshot.getValue(LocationData::class.java)
                     if (location != null) {
-                        android.util.Log.d("CLIENT", "📍 FirebaseRepository: получена координата $serverId -> $location")
+                        android.util.Log.d(
+                            "CLIENT",
+                            "📍 FirebaseRepository: получена координата $serverId -> $location"
+                        )
                         onUpdate(location)
                     } else {
-                        android.util.Log.d("CLIENT", "📭 FirebaseRepository: пустая координата для $serverId")
+                        android.util.Log.d(
+                            "CLIENT",
+                            "📭 FirebaseRepository: пустая координата для $serverId"
+                        )
                     }
                 }
 
                 override fun onCancelled(error: DatabaseError) {
-                    android.util.Log.e("CLIENT", "❌ FirebaseRepository: ошибка получения координаты для $serverId: ${error.message}")
+                    android.util.Log.e(
+                        "CLIENT",
+                        "❌ FirebaseRepository: ошибка получения координаты для $serverId: ${error.message}"
+                    )
                 }
             })
     }
@@ -117,8 +126,4 @@ class FirebaseRepository(private val context: Context) {
             generateUniqueServerId(onReady, retryCount + 1, maxRetries)
         }
     }
-
-
-
-
 }

@@ -1,26 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:padding="24dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center_horizontal"
-    android:background="@drawable/role_screen_background1"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:padding="24dp"
+    android:background="@drawable/role_screen_background1">
 
+    <!-- Превью изображения -->
     <ImageView
         android:id="@+id/imagePreview"
         android:layout_width="120dp"
         android:layout_height="120dp"
         android:layout_gravity="center"
-        android:src="@drawable/ic_marker" />
+        android:src="@drawable/ic_marker"
+        android:contentDescription="@string/server_icon"
+        android:scaleType="centerCrop"
+        android:layout_marginBottom="24dp"
+        android:backgroundTint="?attr/colorSurfaceVariant"
+        android:background="@drawable/material_shape_circle" />
 
-    <Button
+    <!-- Кнопка выбора изображения -->
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonPickImage"
-        style="@style/ButtonPrimary"
-        android:text="Выбрать из галереи" />
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/choose_from_gallery"
+        app:icon="@drawable/ic_gallery"
+        app:iconGravity="textStart"
+        app:iconPadding="8dp"
+        app:iconTint="?attr/colorOnPrimary"
+        style="@style/ButtonFilledMaterial"
+        android:layout_marginBottom="16dp" />
 
-    <Button
+    <!-- Кнопка сохранения -->
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonSaveIcon"
-        style="@style/ButtonPrimary"
-        android:text="Сохранить" />
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/save"
+        app:icon="@drawable/ic_save"
+        app:iconGravity="textStart"
+        app:iconPadding="8dp"
+        app:iconTint="?attr/colorOnPrimary"
+        style="@style/ButtonFilledMaterial" />
+
 </LinearLayout>

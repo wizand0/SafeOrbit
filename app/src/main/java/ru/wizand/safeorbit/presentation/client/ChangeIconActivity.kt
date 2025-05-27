@@ -1,7 +1,6 @@
 package ru.wizand.safeorbit.presentation.client
 
 import android.app.AlertDialog
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -16,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.snackbar.Snackbar
+import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.databinding.ActivityChangeIconBinding
 import java.io.File
 import java.io.FileOutputStream
@@ -65,21 +65,23 @@ class ChangeIconActivity : AppCompatActivity() {
             if (path != null) {
                 viewModel.saveIcon(serverId, path) {
                     clientViewModel.refreshIcon(serverId)
-                    Snackbar.make(binding.root, "Иконка сохранена", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(binding.root,
+                        getString(R.string.icon_saved), Snackbar.LENGTH_SHORT).show()
                     Handler(Looper.getMainLooper()).postDelayed({
                         finish()
                     }, 1200)
                 }
             } else {
-                Toast.makeText(this, "Сначала выберите изображение", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.choose_image), Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun showSourceDialog() {
-        val options = arrayOf("Сделать фото", "Выбрать из галереи")
+        val options = arrayOf(getString(R.string.make_photo),
+            getString(R.string.choose_from_gallery))
         AlertDialog.Builder(this)
-            .setTitle("Выберите источник")
+            .setTitle(getString(R.string.choose_from))
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> launchCamera()

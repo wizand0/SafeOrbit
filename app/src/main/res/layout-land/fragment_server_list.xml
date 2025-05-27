@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/layout_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/role_screen_background1">
 
-    <!-- Основная горизонтальная раскладка -->
+    <!-- Основная горизонтальная область -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="horizontal">
+        android:clipToPadding="false"
+        android:orientation="horizontal"
+        android:padding="12dp">
 
         <!-- Список серверов -->
         <androidx.recyclerview.widget.RecyclerView
@@ -18,25 +21,53 @@
             android:layout_height="match_parent"
             android:layout_weight="2"
             android:clipToPadding="false"
-            android:paddingEnd="8dp"
-            android:paddingBottom="72dp" />
+            android:contentDescription="@string/server_list_desc"
+            android:paddingEnd="12dp"
+            android:scrollbars="vertical" />
 
-        <!-- Боковая панель с инфой -->
-        <FrameLayout
-            android:id="@+id/side_info_container"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@android:color/white" />
+        <!-- Группа кнопок -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:gravity="end"
+            android:orientation="vertical">
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fabScanQr"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:contentDescription="@string/scan_qr"
+                app:backgroundTint="?attr/colorSecondary"
+                app:srcCompat="@drawable/ic_camera"
+                app:tint="@color/white" />
+
+            <!-- Боковая панель с информацией -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/side_info_container"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:contentDescription="@string/server_info_panel_desc"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp" />
+
+
+            <!-- FAB: Добавить -->
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fabAddInList"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/add_server"
+                app:backgroundTint="?attr/colorPrimary"
+                app:srcCompat="@drawable/ic_add"
+                app:tint="@color/white" />
+        </LinearLayout>
     </LinearLayout>
-
-    <!-- FAB поверх -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabAddInList"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:contentDescription="Добавить сервер"
-        android:src="@drawable/ic_add" />
 </FrameLayout>

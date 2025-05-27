@@ -1,4 +1,3 @@
-// Автоматически обновлено: безопасный вызов context
 package ru.wizand.safeorbit.presentation.client
 
 import android.app.AlertDialog
@@ -11,12 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.TextView
+import android.view.*
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -28,16 +22,18 @@ import com.yandex.mapkit.geometry.Polyline
 import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.map.PolylineMapObject
-import com.yandex.mapkit.mapview.MapView
 import com.yandex.runtime.image.ImageProvider
 import ru.wizand.safeorbit.BuildConfig
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.databinding.FragmentMapBinding
+import ru.wizand.safeorbit.databinding.ViewMarkerBinding
 
 class MapFragment : Fragment() {
 
-    private lateinit var mapView: MapView
-    private val viewModel: ClientViewModel by activityViewModels()
+    private var _binding: FragmentMapBinding? = null
+    private val binding get() = _binding!!
 
+    private val viewModel: ClientViewModel by activityViewModels()
     private val placemarks = mutableMapOf<String, PlacemarkMapObject>()
     private val polylines = mutableMapOf<String, PolylineMapObject>()
     private val handler = Handler(Looper.getMainLooper())
@@ -57,8 +53,6 @@ class MapFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-
         if (!mapKitInitialized) {
             MapKitFactory.setApiKey(BuildConfig.YANDEX_MAPKIT_API_KEY)
             context?.let { MapKitFactory.initialize(it) }
@@ -66,23 +60,22 @@ class MapFragment : Fragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val view = inflater.inflate(R.layout.fragment_map, container, false)
-        mapView = view.findViewById(R.id.map_view)
-        view.findViewById<View>(R.id.loadingLayout)?.visibility = View.VISIBLE
-        return view
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentMapBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onResume() {
         super.onResume()
         MapKitFactory.getInstance().onStart()
-        mapView.onStart()
-
+        binding.mapView.onStart()
         checkAndRequestPermissionsIfNeeded()
-
-        Log.d("MAP", "onResume(), mapView started = ${::mapView.isInitialized}")
         observeViewModel()
-        view?.findViewById<View>(R.id.loadingLayout)?.visibility = View.VISIBLE
+        binding.loadingLayout.visibility = View.VISIBLE
         if (!serversLoaded) {
             viewModel.loadAndObserveServers()
             serversLoaded = true
@@ -91,28 +84,32 @@ class MapFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        mapView.onStop()
+        binding.mapView.onStop()
         MapKitFactory.getInstance().onStop()
         placemarks.clear()
         polylines.clear()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
     private fun checkAndRequestPermissionsIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
-
         val notGranted = permissions.filter {
-            ContextCompat.checkSelfPermission(requireContext(), it) != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                it
+            ) != PackageManager.PERMISSION_GRANTED
         }
-
         if (notGranted.isEmpty()) return
 
-        // Показать пояснения по очереди
         if (android.Manifest.permission.ACCESS_FINE_LOCATION in notGranted) {
             AlertDialog.Builder(requireContext())
-                .setTitle("Доступ к геопозиции")
-                .setMessage("Разрешение на определение местоположения необходимо для отображения координат серверов на карте. Без него вы не сможете видеть, где находятся устройства.")
+                .setTitle(getString(R.string.access_to_geo))
+                .setMessage(getString(R.string.location_permission_recuired))
                 .setPositiveButton("Продолжить") { _, _ ->
-                    // После локации, проверим микрофон
                     if (android.Manifest.permission.RECORD_AUDIO in notGranted) {
                         showAudioPermissionDialog(notGranted)
                     } else {
@@ -122,31 +119,32 @@ class MapFragment : Fragment() {
                 .setNegativeButton("Отмена", null)
                 .show()
         } else if (android.Manifest.permission.RECORD_AUDIO in notGranted) {
-            // Если локация уже есть, но нет микрофона
             showAudioPermissionDialog(notGranted)
         }
     }
 
     private fun showAudioPermissionDialog(notGranted: List<String>) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Доступ к микрофону")
-            .setMessage("Разрешение на запись аудио нужно для функции \"аудионяни\" — вы сможете слышать звуки с устройства-сервера.")
+            .setTitle(getString(R.string.acess_to_microphone))
+            .setMessage(getString(R.string.need_permission_for_audio))
             .setPositiveButton("Разрешить") { _, _ ->
                 permissionRequestLauncher.launch(notGranted.toTypedArray())
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton((getString(R.string.cancel)), null)
             .show()
     }
-
-
 
     private fun observeViewModel() {
         viewModel.isConnected.observe(viewLifecycleOwner) { connected ->
             isConnected = connected
             if (!connected && !hasShownConnectionToast) {
                 handler.postDelayed({
-                    if (!isConnected && isAdded && context != null) {
-                        Toast.makeText(requireContext(), "Нет подключения к Firebase", Toast.LENGTH_LONG).show()
+                    if (!isConnected && isAdded) {
+                        Toast.makeText(
+                            requireContext(),
+                            getString(R.string.no_connection_to_firebase),
+                            Toast.LENGTH_LONG
+                        ).show()
                         hasShownConnectionToast = true
                     }
                 }, 2000)
@@ -155,64 +153,44 @@ class MapFragment : Fragment() {
             }
         }
 
-        viewModel.serverNameMap.observe(viewLifecycleOwner) { nameMap ->
-            cachedNames = nameMap
+        viewModel.serverNameMap.observe(viewLifecycleOwner) {
+            cachedNames = it
             maybeDraw()
         }
 
-        viewModel.mapStates.observe(viewLifecycleOwner) { states ->
-            Log.d("MAP", "mapStates updated: ${states.size} items")
-            cachedStates = states
+        viewModel.mapStates.observe(viewLifecycleOwner) {
+            cachedStates = it
             maybeDraw()
         }
     }
 
     private fun maybeDraw() {
-        if (!isAdded || context == null || view == null) return
-
         val states = cachedStates
         val names = cachedNames
-
-
-//        if (states != null && names != null && states.isNotEmpty()) {
         if (states != null && names != null && states.isNotEmpty()) {
-            // 🔍 Проверим: есть ли в states хотя бы один id, который есть в names?
-//            val validServers = states.keys.any { names.containsKey(it) }
-            val validServers = states.keys
-                .filterNot { it == "testServer" }
-                .any { names.containsKey(it) }
-
-            if (validServers) {
-                Log.d("MAP", "🧠 maybeDraw(): valid=${validServers}, states=${states.size}, names=${names.size}")
+            val valid = states.keys.filterNot { it == "testServer" }.any { names.containsKey(it) }
+            if (valid) {
                 drawAll(states, names)
-                view?.findViewById<View>(R.id.loadingLayout)?.visibility = View.GONE
+                binding.loadingLayout.visibility = View.GONE
                 return
             }
         }
 
-        // ⏱ Отложенная проверка
         handler.postDelayed({
-            if (!isAdded || view == null || context == null) return@postDelayed
-
-            val stillVisible = view?.findViewById<View>(R.id.loadingLayout)?.visibility == View.VISIBLE
-            if (stillVisible) {
-                view?.findViewById<View>(R.id.loadingLayout)?.visibility = View.GONE
-
-                if (names == null || names.isEmpty()) {
-                    Toast.makeText(requireContext(), "Нет добавленных серверов", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(requireContext(), "Не удалось загрузить данные с серверов", Toast.LENGTH_LONG).show()
-                }
+            if (!isAdded) return@postDelayed
+            if (binding.loadingLayout.visibility == View.VISIBLE) {
+                binding.loadingLayout.visibility = View.GONE
+                val msg = if (names.isNullOrEmpty()) getString(R.string.no_saved_servers)
+                else getString(R.string.problem_with_downloading_from_server)
+                Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
             }
-        }, 4_000)
+        }, 4000)
     }
 
-    // Замена метода
     private fun drawAll(states: Map<String, ServerMapState>, nameMap: Map<String, String>) {
-        val map = mapView.mapWindow.map
+        val map = binding.mapView.mapWindow.map
         val validStates = states.filter { (id, _) -> nameMap[id]?.isNotBlank() == true }
 
-        // Удаляем маркеры и линии, которых больше нет
         val toRemove = placemarks.keys - validStates.keys
         toRemove.forEach { id ->
             placemarks.remove(id)?.let { map.mapObjects.remove(it) }
@@ -223,10 +201,9 @@ class MapFragment : Fragment() {
             val name = nameMap[serverId] ?: continue
             val point = state.latestPoint
             val iconUri = viewModel.getIconUriForServer(serverId)
-
-            val existingPlacemark = placemarks[serverId]
             val bitmap = createMarkerBitmap(serverId, name, iconUri)
 
+            val existingPlacemark = placemarks[serverId]
             if (existingPlacemark == null) {
                 val placemark = map.mapObjects.addPlacemark(point, ImageProvider.fromBitmap(bitmap))
                 placemarks[serverId] = placemark
@@ -266,57 +243,64 @@ class MapFragment : Fragment() {
             if (points.size == 1) {
                 map.move(CameraPosition(points.first(), 13.0f, 0.0f, 0.0f))
             } else {
-                val bounds = points.fold(null as com.yandex.mapkit.geometry.BoundingBox?) { box, p ->
-                    if (box == null) com.yandex.mapkit.geometry.BoundingBox(p, p) else
-                        com.yandex.mapkit.geometry.BoundingBox(
-                            Point(minOf(box.southWest.latitude, p.latitude), minOf(box.southWest.longitude, p.longitude)),
-                            Point(maxOf(box.northEast.latitude, p.latitude), maxOf(box.northEast.longitude, p.longitude))
-                        )
-                }
+                val bounds =
+                    points.fold(null as com.yandex.mapkit.geometry.BoundingBox?) { box, p ->
+                        if (box == null) com.yandex.mapkit.geometry.BoundingBox(p, p) else
+                            com.yandex.mapkit.geometry.BoundingBox(
+                                Point(
+                                    minOf(box.southWest.latitude, p.latitude),
+                                    minOf(box.southWest.longitude, p.longitude)
+                                ),
+                                Point(
+                                    maxOf(box.northEast.latitude, p.latitude),
+                                    maxOf(box.northEast.longitude, p.longitude)
+                                )
+                            )
+                    }
                 bounds?.let { map.move(map.cameraPosition(it)) }
             }
             hasCenteredOnAnyServer = true
         }
-
-        Log.d("MAP", "✏️ drawAll() optimized for ${validStates.size} servers")
     }
 
-
     private fun createMarkerBitmap(serverId: String, name: String, iconUri: String?): Bitmap {
-        val view = layoutInflater.inflate(R.layout.view_marker, null)
-        val textView = view.findViewById<TextView>(R.id.marker_title)
-        val imageView = view.findViewById<ImageView>(R.id.marker_icon)
-        textView.text = name
+        val bindingMarker = ViewMarkerBinding.inflate(LayoutInflater.from(context))
 
-        if (iconUri != null) {
+        bindingMarker.markerTitle.text = name
+
+        if (!iconUri.isNullOrEmpty()) {
             try {
                 val inputStream = context?.contentResolver?.openInputStream(Uri.parse(iconUri))
                 val bitmap = BitmapFactory.decodeStream(inputStream)
-                imageView.setImageBitmap(bitmap)
+                bindingMarker.markerIcon.setImageBitmap(bitmap)
             } catch (e: Exception) {
-                imageView.setImageResource(R.drawable.red_dot)
+                bindingMarker.markerIcon.setImageResource(R.drawable.red_dot)
             }
         } else {
-            imageView.setImageResource(R.drawable.red_dot)
+            bindingMarker.markerIcon.setImageResource(R.drawable.red_dot)
         }
 
         if (serverId == activeMarkerId) {
-            view.setBackgroundResource(R.drawable.marker_background)
-            view.scaleX = 1.2f
-            view.scaleY = 1.2f
+            bindingMarker.root.setBackgroundResource(R.drawable.marker_background)
+            bindingMarker.root.scaleX = 1.2f
+            bindingMarker.root.scaleY = 1.2f
         } else {
-            view.scaleX = 1.0f
-            view.scaleY = 1.0f
+            bindingMarker.root.scaleX = 1.0f
+            bindingMarker.root.scaleY = 1.0f
         }
 
+        val view = bindingMarker.root
         view.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         view.layout(0, 0, view.measuredWidth, view.measuredHeight)
 
-        val output = Bitmap.createBitmap(view.measuredWidth, view.measuredHeight, Bitmap.Config.ARGB_8888)
+        val output =
+            Bitmap.createBitmap(view.measuredWidth, view.measuredHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
         view.draw(canvas)
+
         return output
     }
+
 
     private fun animateMarkerMove(marker: PlacemarkMapObject, from: Point, to: Point) {
         val duration = 300L
@@ -339,18 +323,19 @@ class MapFragment : Fragment() {
         val state = viewModel.mapStates.value?.get(serverId)
         val point = state?.latestPoint
         val timestamp = state?.timestamp ?: System.currentTimeMillis()
-
         if (point != null) {
             val sideInfo = requireActivity().findViewById<View?>(R.id.side_info_container)
             if (sideInfo != null) {
                 parentFragmentManager.beginTransaction()
-                    .replace(R.id.side_info_container, MarkerInfoSideFragment.newInstance(
-                        serverId = serverId,
-                        serverName = name,
-                        point = point,
-                        timestamp = timestamp,
-                        iconUri = iconUri
-                    ))
+                    .replace(
+                        R.id.side_info_container, MarkerInfoSideFragment.newInstance(
+                            serverId = serverId,
+                            serverName = name,
+                            point = point,
+                            timestamp = timestamp,
+                            iconUri = iconUri
+                        )
+                    )
                     .commit()
             } else {
                 MarkerInfoBottomSheet.newInstance(
@@ -364,7 +349,8 @@ class MapFragment : Fragment() {
                 }.show(parentFragmentManager, "info")
             }
         } else {
-            Toast.makeText(requireContext(), "Нет координат для сервера", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(),
+                getString(R.string.no_coorinates_for_server), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -373,10 +359,13 @@ class MapFragment : Fragment() {
     ) { permissionsResult ->
         val denied = permissionsResult.filterValues { !it }
         if (denied.isNotEmpty()) {
-            Toast.makeText(requireContext(), "Для работы карты и аудио нужны разрешения", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                requireContext(),
+                getString(R.string.need_permissions_for_map_and_audio),
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
-
 
     companion object {
         private var mapKitInitialized = false
