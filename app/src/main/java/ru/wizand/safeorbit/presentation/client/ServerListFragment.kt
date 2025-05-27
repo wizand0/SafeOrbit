@@ -9,7 +9,10 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.database.FirebaseDatabase
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import ru.wizand.safeorbit.data.ServerEntity
@@ -23,63 +26,18 @@ class ServerListFragment : Fragment() {
     private val viewModel: ClientViewModel by activityViewModels()
     private lateinit var adapter: ServerAdapter
 
-
-
-
     private val qrScannerLauncher = registerForActivityResult(ScanContract()) { result ->
         if (result.contents != null) {
             val parts = result.contents.split("|")
             if (parts.size == 2) {
                 val serverId = parts[0]
                 val code = parts[1]
-                val name = serverId
-
-                val existingIds = viewModel.serverNameMap.value?.keys.orEmpty()
-                if (existingIds.contains(serverId)) {
-                    Toast.makeText(requireContext(), "Сервер уже добавлен", Toast.LENGTH_SHORT).show()
-                } else {
-                    viewModel.addServer(serverId, code, name)
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        viewModel.loadAndObserveServers()
-                    }, 300)
-                    Toast.makeText(requireContext(), "Сервер $serverId добавлен", Toast.LENGTH_SHORT).show()
-                }
+                tryAddServer(serverId, code, serverId)
             } else {
                 Toast.makeText(requireContext(), "Некорректный QR-код", Toast.LENGTH_SHORT).show()
             }
         }
     }
-
-
-
-
-    // QR сканер
-//    private val qrLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-//        if (result.resultCode == Activity.RESULT_OK) {
-//            val qr = result.data?.getStringExtra("qr_result")
-//            qr?.let {
-//                val parts = it.split("|")
-//                if (parts.size == 2) {
-//                    val serverId = parts[0]
-//                    val code = parts[1]
-//                    val name = serverId // Можно расширить до запроса имени
-//
-//                    val existingIds = viewModel.serverNameMap.value?.keys.orEmpty()
-//                    if (existingIds.contains(serverId)) {
-//                        Toast.makeText(requireContext(), "Сервер уже добавлен", Toast.LENGTH_SHORT).show()
-//                    } else {
-//                        viewModel.addServer(serverId, code, name)
-//                        Handler(Looper.getMainLooper()).postDelayed({
-//                            viewModel.loadAndObserveServers()
-//                        }, 300)
-//                        Toast.makeText(requireContext(), "Сервер $serverId добавлен", Toast.LENGTH_SHORT).show()
-//                    }
-//                } else {
-//                    Toast.makeText(requireContext(), "Некорректный QR-код", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//        }
-//    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -97,6 +55,18 @@ class ServerListFragment : Fragment() {
         )
         binding.serverRecyclerView.adapter = adapter
 
+        // Добавим поддержку свайпа
+        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
+            override fun onMove(
+                rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder
+            ): Boolean = false
+
+            override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
+                val server = adapter.currentItems[vh.adapterPosition]
+                deleteServer(server)
+            }
+        }).attachToRecyclerView(binding.serverRecyclerView)
+
         return binding.root
     }
 
@@ -107,34 +77,48 @@ class ServerListFragment : Fragment() {
             val existingIds = viewModel.serverNameMap.value?.keys.orEmpty()
             AddServerDialogFragment(existingIds) { serverId, code, nameInput ->
                 val name = if (nameInput.isBlank()) serverId else nameInput
-                if (existingIds.contains(serverId)) {
-                    Toast.makeText(requireContext(), "Сервер с таким ID уже добавлен", Toast.LENGTH_SHORT).show()
-                } else {
-                    viewModel.addServer(serverId, code, name)
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        viewModel.loadAndObserveServers()
-                    }, 300)
-                }
+                tryAddServer(serverId, code, name)
             }.show(parentFragmentManager, "AddServerDialog")
         }
-
-        // Кнопка сканирования QR
-//        binding.fabScanQr?.setOnClickListener {
-//            qrLauncher.launch(Intent(requireContext(), QrScanActivity::class.java))
-//        }
 
         binding.fabScanQr?.setOnClickListener {
             val options = ScanOptions().apply {
                 setPrompt("Отсканируйте QR с ID и кодом")
                 setBeepEnabled(true)
                 setOrientationLocked(false)
-                setCameraId(0) // Камера по умолчанию
             }
             qrScannerLauncher.launch(options)
         }
 
-
         observeData()
+    }
+
+    private fun tryAddServer(serverId: String, code: String, name: String) {
+        val existingIds = viewModel.serverNameMap.value?.keys.orEmpty()
+        if (existingIds.contains(serverId)) {
+            Toast.makeText(requireContext(), "Сервер уже добавлен", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val ref = FirebaseDatabase.getInstance()
+            .getReference("servers")
+            .child(serverId)
+            .child("code")
+
+        ref.get().addOnSuccessListener {
+            val actualCode = it.getValue(String::class.java)
+            if (actualCode == code) {
+                viewModel.addServer(serverId, code, name)
+                Handler(Looper.getMainLooper()).postDelayed({
+                    viewModel.loadAndObserveServers()
+                }, 300)
+                Toast.makeText(requireContext(), "Сервер $serverId добавлен", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(), "Неверный ID или код", Toast.LENGTH_SHORT).show()
+            }
+        }.addOnFailureListener {
+            Toast.makeText(requireContext(), "Ошибка подключения к Firebase", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun observeData() {
@@ -181,7 +165,9 @@ class ServerListFragment : Fragment() {
             .setPositiveButton("Удалить") { _, _ ->
                 viewModel.deleteServer(server.serverId)
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton("Отмена") { _, _ ->
+                adapter.notifyDataSetChanged() // Вернуть элемент после отмены
+            }
             .show()
     }
 
@@ -193,13 +179,16 @@ class ServerListFragment : Fragment() {
         if (point != null) {
             if (binding.sideInfoContainer != null) {
                 parentFragmentManager.beginTransaction()
-                    .replace(binding.sideInfoContainer!!.id, MarkerInfoSideFragment.newInstance(
-                        serverId = server.serverId,
-                        serverName = server.name,
-                        point = point,
-                        timestamp = timestamp,
-                        iconUri = server.serverIconUri
-                    ))
+                    .replace(
+                        binding.sideInfoContainer!!.id,
+                        MarkerInfoSideFragment.newInstance(
+                            serverId = server.serverId,
+                            serverName = server.name,
+                            point = point,
+                            timestamp = timestamp,
+                            iconUri = server.serverIconUri
+                        )
+                    )
                     .commit()
             } else {
                 MarkerInfoBottomSheet.newInstance(

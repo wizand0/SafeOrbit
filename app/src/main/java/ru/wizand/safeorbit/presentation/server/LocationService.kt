@@ -27,7 +27,6 @@ import ru.wizand.safeorbit.data.*
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.presentation.server.audio.AudioBroadcastService
-//import ru.wizand.safeorbit.presentation.server.audio.AudioBroadcastServiceLiveKit
 import ru.wizand.safeorbit.presentation.server.audio.AudioLaunchActivity
 import ru.wizand.safeorbit.presentation.server.audio.SilentAudioLaunchActivity
 import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
@@ -85,15 +84,35 @@ class LocationService : Service(), SensorEventListener {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         serverId = intent?.getStringExtra("server_id") ?: ""
         val code = prefs.getString("server_code", "")
-        Log.d("COMMANDS", "📦 Сервис запущен. serverId=$serverId, code=$code") // ⬅️ ДОБАВЬ
+        Log.d("COMMANDS", "📦 Сервис запущен. serverId=$serverId, code=$code")
 
         if (!hasLocationPermission()) {
             stopSelf()
             return START_NOT_STICKY
         }
+
+        // 🔐 Гарантируем авторизацию Firebase перед продолжением
+        val auth = FirebaseAuth.getInstance()
+        if (auth.currentUser == null) {
+            auth.signInAnonymously()
+                .addOnSuccessListener {
+                    Log.d("COMMANDS", "✅ Анонимная авторизация Firebase выполнена")
+                    postStart()
+                }
+                .addOnFailureListener {
+                    Log.e("COMMANDS", "❌ Ошибка Firebase Auth: ${it.message}")
+                    stopSelf()
+                }
+        } else {
+            postStart()
+        }
+
+        return START_STICKY
+    }
+
+    private fun postStart() {
         listenForClientCommands()
         switchToIdleMode()
-        return START_STICKY
     }
 
     private fun setupStepSensor() {
@@ -122,13 +141,7 @@ class LocationService : Service(), SensorEventListener {
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
+
                 return
             }
             fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
@@ -459,25 +472,6 @@ class LocationService : Service(), SensorEventListener {
         ContextCompat.startForegroundService(this, intent)
     }
 
-    // For LiveKit
-//    private fun startAudioBroadcastService() {
-//        val intent = Intent(this, AudioBroadcastServiceLiveKit::class.java).apply {
-//            putExtra("server_id", serverId)
-//        }
-//
-//        // Android 14+ (SDK 34)
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-//            if (!isAppInForeground()) {
-//                Log.w("AUDIO_STREAM", "⛔ Приложение в фоне. Запуск через уведомление.")
-//                requestStartViaNotification(intent)
-//                return
-//            }
-//        }
-//
-//        // До Android 14 или приложение в фокусе — обычный запуск
-//        ContextCompat.startForegroundService(this, intent)
-//    }
-
 
     fun Context.isAppInForeground(): Boolean {
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
@@ -547,54 +541,6 @@ class LocationService : Service(), SensorEventListener {
         notificationManager.notify(42, notification)
     }
 
-//    private fun requestStartViaNotification(serviceIntent: Intent) {
-//
-//        Log.d("COMMANDS", "🛑 requestStartViaNotification")
-//        val pendingIntent = PendingIntent.getForegroundService(
-//            this,
-//            0,
-//            serviceIntent,
-//            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-//        )
-//
-//        val channelId = "audio_request_channel"
-//        val notificationManager = getSystemService(NotificationManager::class.java)
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            val channel = NotificationChannel(
-//                channelId,
-//                "Audio Requests",
-//                NotificationManager.IMPORTANCE_HIGH
-//            ).apply {
-//                description = "Уведомления для запуска аудиотрансляции"
-//            }
-//            notificationManager.createNotificationChannel(channel)
-//        }
-//
-//        val notification = NotificationCompat.Builder(this, channelId)
-//            .setSmallIcon(R.drawable.ic_mic)
-//            .setContentTitle("Запустить аудиотрансляцию")
-//            .setContentText("Нажмите, чтобы включить микрофон")
-//            .setStyle(
-//                NotificationCompat.BigTextStyle()
-//                    .bigText("SafeOrbit получил команду на трансляцию. Нажмите «Включить», чтобы разрешить использование микрофона.")
-//            )
-//            .setPriority(NotificationCompat.PRIORITY_HIGH)
-//            .setAutoCancel(true)
-//            .addAction(
-//                NotificationCompat.Action.Builder(
-//                    R.drawable.ic_mic,
-//                    "Включить",
-//                    pendingIntent
-//                ).build()
-//            )
-//            .build()
-//
-//        notificationManager.notify(42, notification)
-//    }
-
-
-
 
 // For Agola
     private fun stopAudioBroadcastService() {
@@ -602,13 +548,6 @@ class LocationService : Service(), SensorEventListener {
         stopService(intent)
         Log.d("COMMANDS", "🛑 AudioBroadcastService остановлен")
     }
-
-// For LiveKit
-//    private fun stopAudioBroadcastService() {
-//        val intent = Intent(this, AudioBroadcastServiceLiveKit::class.java)
-//        stopService(intent)
-//        Log.d("COMMANDS", "🛑 AudioBroadcastService остановлен")
-//    }
 
 
 

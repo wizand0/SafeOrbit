@@ -82,17 +82,16 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun observeConnection() {
         val ref = com.google.firebase.database.FirebaseDatabase.getInstance().reference
-        ref.child(".info/connected")
-            .addValueEventListener(object : com.google.firebase.database.ValueEventListener {
-                override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
-                    val connected = snapshot.getValue(Boolean::class.java) ?: false
-                    _isConnected.postValue(connected)
-                }
+        ref.child(".info/connected").addValueEventListener(object : com.google.firebase.database.ValueEventListener {
+            override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                val connected = snapshot.getValue(Boolean::class.java) ?: false
+                _isConnected.postValue(connected)
+            }
 
-                override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
-                    _isConnected.postValue(false)
-                }
-            })
+            override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
+                _isConnected.postValue(false)
+            }
+        })
     }
 
     fun loadAndObserveServers(forceUpdate: Boolean = false) {
@@ -120,13 +119,7 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     fun addServer(serverId: String, code: String, name: String, iconUri: String? = null) {
         viewModelScope.launch {
             // 1. Сохраняем в БД
-            val entity = ServerEntity(
-                id = 0,
-                serverId = serverId,
-                code = code,
-                name = name,
-                serverIconUri = iconUri
-            )
+            val entity = ServerEntity(id = 0, serverId = serverId, code = code, name = name, serverIconUri = iconUri)
             db.serverDao().insert(entity)
             Log.d("CLIENT_ADD", "💾 Сервер сохранён: $serverId, name=$name")
 
@@ -230,10 +223,7 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
             val server = db.serverDao().getByServerId(serverId)
             if (server != null) {
                 val code = server.code
-                Log.d(
-                    "CLIENT_CMD",
-                    "📤 Отправка интервалов: server=$serverId, code=$code, active=$activeMs, idle=$idleMs"
-                )
+                Log.d("CLIENT_CMD", "📤 Отправка интервалов: server=$serverId, code=$code, active=$activeMs, idle=$idleMs")
 
                 val ref = FirebaseDatabase.getInstance()
                     .getReference("server_commands")
@@ -317,6 +307,7 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     }
 
 
+
     fun stopAudioStream(serverId: String, code: String) {
         val ref = FirebaseDatabase.getInstance().getReference("server_commands/$serverId").push()
         val command = mapOf(
@@ -327,6 +318,8 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
         ref.setValue(command)
         _isAudioStreaming.postValue(false)
     }
+
+
 
 
 }

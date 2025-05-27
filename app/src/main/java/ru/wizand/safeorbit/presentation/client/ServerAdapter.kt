@@ -16,6 +16,10 @@ class ServerAdapter(
     private val onDelete: (ServerEntity) -> Unit
 ) : RecyclerView.Adapter<ServerAdapter.ServerViewHolder>() {
 
+    // Публичный геттер для доступа к текущим элементам извне
+    val currentItems: List<ServerEntity>
+        get() = items
+
     inner class ServerViewHolder(
         private val binding: ItemServerBinding
     ) : RecyclerView.ViewHolder(binding.root) {
