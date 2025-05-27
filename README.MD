@@ -4,7 +4,7 @@
 In the current version, there is an issue with audio streaming on Android 14.
 Unfortunately, it has not been resolved yet.
 This is due to new privacy restrictions at the OS level.
-I may find a solution in the future.
+I may find a solution in the future. ))
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/your-username/safeorbit/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
