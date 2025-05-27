@@ -56,8 +56,8 @@
 //    }
 //
 //    private fun startLiveKitAudio() {
-//        val url = "wss://safeosint-vp0jv9bs.livekit.cloud"
-//        val token = "epph9iCyFQut03e1cuzBm2fHpwo4q0mF2L8Zao5Y9gvB"
+//        val url = " "
+//        val token = " "
 //
 //        coroutineScope.launch {
 //            try {
