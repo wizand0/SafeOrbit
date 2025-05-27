@@ -13,22 +13,22 @@
         android:id="@+id/loadingLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="#66000000"
         android:gravity="center"
         android:orientation="vertical"
-        android:background="#66000000"
         android:visibility="gone">
 
-        <ProgressBar
+        <com.google.android.material.progressindicator.CircularProgressIndicator
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3.CircularProgressIndicator" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Подключение к серверу..."
-            android:textColor="@android:color/white"
-            android:textSize="16sp"/>
+            android:text="@string/connecting"
+            android:textAppearance="?attr/textAppearanceBodyLarge"
+            android:textColor="@android:color/white" />
     </LinearLayout>
-
 </FrameLayout>

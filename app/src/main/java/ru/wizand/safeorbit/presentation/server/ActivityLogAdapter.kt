@@ -3,63 +3,55 @@ package ru.wizand.safeorbit.presentation.server
 import android.graphics.Typeface
 import android.util.TypedValue
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.model.ActivityLogUiModel
+import ru.wizand.safeorbit.databinding.ItemActivityLogBinding
 
 class ActivityLogAdapter : ListAdapter<ActivityLogUiModel, ActivityLogAdapter.ViewHolder>(DiffCallback()) {
 
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val tvDate: TextView = view.findViewById(R.id.tvDate)
-        val tvTime: TextView = view.findViewById(R.id.tvTime)
-        val tvMode: TextView = view.findViewById(R.id.tvMode)
-        val tvSteps: TextView = view.findViewById(R.id.tvSteps)
-        val tvDistance: TextView = view.findViewById(R.id.tvDistance)
-        val root: LinearLayout = view.findViewById(R.id.itemRoot)
+    inner class ViewHolder(private val binding: ItemActivityLogBinding) :
+        RecyclerView.ViewHolder(binding.root) {
+
+        fun bind(log: ActivityLogUiModel) {
+            if (log.isSummary) {
+                binding.tvDate.text = log.date
+                binding.tvTime.text = "Итог за день: ${formatNumber(log.dailySteps)} шагов"
+                binding.tvTime.setTypeface(null, Typeface.BOLD)
+                binding.tvTime.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                binding.tvMode.text = ""
+                binding.tvSteps.text = ""
+                binding.tvDistance.text = ""
+                binding.itemRoot.setBackgroundResource(R.drawable.item_background_summary)
+            } else {
+                binding.tvDate.text = log.date
+                binding.tvTime.text = "${log.startHour}:00 - ${log.endHour}:00"
+                binding.tvTime.setTypeface(null, Typeface.NORMAL)
+                binding.tvTime.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                binding.tvMode.text = log.mode
+                binding.tvSteps.text = log.steps?.let { "Шагов: $it" } ?: ""
+                binding.tvDistance.text = log.distanceMeters?.let { "Расстояние: ${it} м" } ?: ""
+
+                if (log.mode == "Активность") {
+                    binding.itemRoot.setBackgroundResource(R.drawable.item_background_active)
+                } else {
+                    binding.itemRoot.setBackgroundResource(R.drawable.item_background_default)
+                }
+            }
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_activity_log, parent, false)
-        return ViewHolder(view)
+        val binding = ItemActivityLogBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return ViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val log = getItem(position)
-
-        if (log.isSummary) {
-            holder.tvDate.text = log.date
-            holder.tvTime.text = "Итог за день: ${formatNumber(log.dailySteps)} шагов"
-            holder.tvTime.setTypeface(null, Typeface.BOLD)
-            holder.tvTime.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            holder.tvMode.text = ""
-            holder.tvSteps.text = ""
-            holder.tvDistance.text = ""
-
-            holder.root.setBackgroundResource(R.drawable.item_background_summary) // 🎨 фон для итогов
-            return
-        }
-
-        holder.tvDate.text = log.date
-        holder.tvTime.text = "${log.startHour}:00 - ${log.endHour}:00"
-        holder.tvMode.text = log.mode
-        holder.tvSteps.text = log.steps?.let { "Шагов: $it" } ?: ""
-        holder.tvDistance.text = log.distanceMeters?.let { "Расстояние: ${it} м" } ?: ""
-
-        if (log.mode == "Активность") {
-            holder.root.setBackgroundResource(R.drawable.item_background_active)
-        } else {
-            holder.root.setBackgroundResource(R.drawable.item_background_default)
-        }
-
+        holder.bind(getItem(position))
     }
-
 
     class DiffCallback : DiffUtil.ItemCallback<ActivityLogUiModel>() {
         override fun areItemsTheSame(oldItem: ActivityLogUiModel, newItem: ActivityLogUiModel): Boolean {
@@ -74,5 +66,4 @@ class ActivityLogAdapter : ListAdapter<ActivityLogUiModel, ActivityLogAdapter.Vi
     private fun formatNumber(number: Int?): String {
         return number?.let { String.format("%,d", it).replace(',', ' ') } ?: "0"
     }
-
 }

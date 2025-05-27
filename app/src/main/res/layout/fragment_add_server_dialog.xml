@@ -3,12 +3,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".presentation.client.AddServerDialogFragment">
+    tools:context=".presentation.client.AddServerDialogFragment"
+    android:background="?android:windowBackground">
 
-    <!-- TODO: Update blank fragment layout -->
-    <TextView
+    <com.google.android.material.textview.MaterialTextView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/hello_blank_fragment"
+        android:textAppearance="?attr/textAppearanceHeadlineSmall"
+        android:padding="32dp" />
 
 </FrameLayout>

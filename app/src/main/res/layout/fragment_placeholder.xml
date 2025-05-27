@@ -10,102 +10,125 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="24dp"
+        android:clipToPadding="false"
+        android:fillViewport="true"
         android:background="@android:color/transparent">
 
-
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="8dp"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        app:strokeColor="?attr/colorPrimary"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
-            android:id="@+id/container"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:alpha="0"
-            android:animateLayoutChanges="true">
+            android:layout_margin="8dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:strokeColor="?attr/colorPrimary"
+            app:strokeWidth="1dp">
 
-            <!-- Иконка -->
-            <ImageView
-                android:layout_width="96dp"
-                android:layout_height="96dp"
-                android:layout_gravity="center"
-                android:layout_marginBottom="16dp"
-                android:src="@drawable/ic_logo_placeholder"
-                android:contentDescription="@string/app_name" />
-
-            <!-- Заголовок -->
-            <TextView
+            <LinearLayout
+                android:id="@+id/container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                style="@style/TextHeading"
-                android:layout_marginBottom="12dp"
-                android:text="SafeOrbit — режим клиента" />
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:animateLayoutChanges="true">
 
-            <!-- Описание -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                style="@style/TextBody"
-                android:layout_marginBottom="12dp"
-                android:text="В режиме клиента вы можете наблюдать за перемещением сервера на карте в реальном времени и получать обновления о его активности." />
+                <!-- Логотип -->
+                <ImageView
+                    android:layout_width="96dp"
+                    android:layout_height="96dp"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="16dp"
+                    android:src="@drawable/ic_logo_placeholder"
+                    android:contentDescription="@string/app_name"
+                    android:background="@drawable/material_shape_circle"
+                    android:scaleType="centerInside"
+                    android:backgroundTint="?attr/colorSurfaceVariant" />
 
-            <!-- Как использовать -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                style="@style/TextSubheading"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp"
-                android:text="Как использовать приложение:" />
+                <!-- Заголовок -->
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/client_mode_title"
+                    android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                    android:layout_marginBottom="12dp" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                style="@style/TextBody"
-                android:text="1. Получите ID и код от сервера.\n2. Введите их в форму подключения.\n3. Разрешите доступ к интернету и карте.\n4. Наблюдайте за сервером в списке или на карте.\n5. Нажмите на маркер для подробностей и навигации." />
+                <!-- Описание -->
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/client_mode_description"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:layout_marginBottom="12dp" />
 
-            <!-- Настройки -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                style="@style/TextSubheading"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp"
-                android:text="Настройки клиента:" />
+                <!-- Инструкция -->
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/client_mode_how_to_connect_title"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                style="@style/TextBody"
-                android:text="• Установка иконок серверов\n• Выбор навигационного приложения\n• Отображение подробной информации\n• Удаление подключений" />
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/client_mode_how_to_connect_text"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
 
-            <!-- Контакты -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                style="@style/TextSubheading"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp"
-                android:text="Поддержка и предложения:" />
+                <!-- Возможности клиента -->
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/client_mode_features_title"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
 
-            <Button
-                android:id="@+id/btnEmail"
-                style="@style/ButtonPrimary"
-                android:text="📧 Написать письмо" />
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/client_mode_features_text"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
 
-            <Button
-                android:id="@+id/btnGitHub"
-                style="@style/ButtonPrimary"
-                android:text="🌐 Открыть GitHub" />
+                <!-- Настройки -->
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/client_mode_settings_title"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
 
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/client_mode_settings_text"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+                <!-- Поддержка -->
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/client_mode_support_title"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Кнопки -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/button_send_email"
+                    style="@style/ButtonFilledMaterial"
+                    android:layout_marginBottom="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGitHub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/button_open_github"
+                    style="@style/ButtonFilledMaterial" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
     </ScrollView>
 </FrameLayout>

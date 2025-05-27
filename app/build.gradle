@@ -25,8 +25,8 @@ android {
         applicationId "ru.wizand.safeorbit"
         minSdk 29
         targetSdk 35
-        versionCode 10
-        versionName "1.5.0"
+        versionCode 16
+        versionName "1.6.3"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -44,7 +44,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -59,6 +60,15 @@ android {
     kotlinOptions {
         jvmTarget = '11'
     }
+    splits {
+        abi {
+            enable true
+            reset()
+            // Оставляем только нужные архитектуры для реальных Android-устройств:
+            include 'armeabi-v7a', 'arm64-v8a'
+            universalApk true // отключаем универсальный APK с ВСЕМИ ABI
+        }
+    }
 }
 
 dependencies {
@@ -66,6 +76,7 @@ dependencies {
     implementation libs.androidx.core.ktx
     implementation libs.androidx.appcompat
     implementation libs.material
+
     implementation libs.androidx.activity
     implementation libs.androidx.constraintlayout
     implementation libs.firebase.database.ktx
@@ -79,7 +90,6 @@ dependencies {
     implementation libs.firebase.storage.ktx
     implementation libs.firebase.perf.ktx
     implementation libs.firebase.bom
-    implementation libs.firebase.installations
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.espresso.core
@@ -112,12 +122,16 @@ dependencies {
 
     implementation libs.androidx.navigation.fragment.ktx
     implementation libs.androidx.navigation.ui.ktx
-
-    implementation 'com.google.android.gms:play-services-location:21.3.0'
-
+// Agola
     implementation("io.agora.rtc:voice-sdk:4.5.0")
-
 //    implementation("io.agora.rtc:full-sdk:4.5.2")
+
+// LiveKit
+//    implementation libs.livekit.android
+
+    // QR Codes
+    implementation libs.core
+    implementation libs.zxing.android.embedded
 
 }
 apply plugin: 'com.google.gms.google-services'

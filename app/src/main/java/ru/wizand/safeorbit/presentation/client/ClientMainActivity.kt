@@ -5,10 +5,10 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.model.UserRole
 import ru.wizand.safeorbit.databinding.ActivityClientMainBinding
+import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
 class ClientMainActivity : AppCompatActivity() {
 
@@ -19,12 +19,10 @@ class ClientMainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
-        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        // Проверка роли
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val currentRole = prefs.getString("user_role", null)
-        val expected = UserRole.CLIENT.name
-        Log.d("DEBUG", "role: $currentRole, expected: $expected")
-        if (currentRole != expected) {
+        if (currentRole != UserRole.CLIENT.name) {
             Log.d("DEBUG", "ClientMainActivity role mismatch, finishing")
             finish()
             return
@@ -45,14 +43,8 @@ class ClientMainActivity : AppCompatActivity() {
         viewModel.loadAndObserveServers()
     }
 
-    override fun onResume() {
-        super.onResume()
-
-    }
-
     private fun setupBottomNavigation() {
-        val nav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
-        nav.setOnItemSelectedListener { item ->
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
             if (item.itemId != selectedItemId) {
                 selectedItemId = item.itemId
                 showFragmentById(item.itemId)
@@ -69,6 +61,7 @@ class ClientMainActivity : AppCompatActivity() {
             R.id.nav_settings -> SettingsFragment()
             else -> MapFragment()
         }
+
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
             .replace(R.id.fragmentContainer, fragment)

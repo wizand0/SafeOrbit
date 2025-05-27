@@ -10,7 +10,6 @@ import ru.wizand.safeorbit.data.model.AudioRequest
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.utils.Constants
 import ru.wizand.safeorbit.utils.generateReadableId
-import java.util.UUID
 
 class FirebaseRepository(private val context: Context) {
 
@@ -41,7 +40,8 @@ class FirebaseRepository(private val context: Context) {
                 val match = it.getValue(String::class.java) == code
                 if (match) {
                     val clientId = auth.currentUser?.uid ?: return@addOnSuccessListener
-                    db.child("clients").child(clientId).child("linked_servers").child(serverId).setValue(true)
+                    db.child("clients").child(clientId).child("linked_servers").child(serverId)
+                        .setValue(true)
                         .addOnSuccessListener { onResult(true) }
                 } else {
                     onResult(false)
@@ -50,8 +50,32 @@ class FirebaseRepository(private val context: Context) {
     }
 
     fun sendLocation(serverId: String, location: LocationData) {
+        val user = auth.currentUser
+        if (user == null) {
+            android.util.Log.e("FIREBASE", "❌ Невозможно отправить координаты: пользователь не авторизован")
+            return
+        }
+
         db.child("servers").child(serverId).child("location").setValue(location)
+            .addOnFailureListener {
+                android.util.Log.e("FIREBASE", "❌ Ошибка при отправке координат: ${it.message}", it)
+            }
+            .addOnSuccessListener {
+                android.util.Log.d("FIREBASE", "✅ Координаты успешно отправлены")
+            }
     }
+
+
+    fun verifyServerExists(serverId: String, code: String, callback: (Boolean) -> Unit) {
+        val ref = FirebaseDatabase.getInstance().getReference("servers").child(serverId).child("code")
+        ref.get().addOnSuccessListener {
+            val actualCode = it.getValue(String::class.java)
+            callback(actualCode == code)
+        }.addOnFailureListener {
+            callback(false)
+        }
+    }
+
 
     fun observeServerLocation(serverId: String, onUpdate: (LocationData) -> Unit) {
         db.child("servers").child(serverId).child("location")
@@ -59,15 +83,15 @@ class FirebaseRepository(private val context: Context) {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val location = snapshot.getValue(LocationData::class.java)
                     if (location != null) {
-                        android.util.Log.d("CLIENT", "📍 FirebaseRepository: получена координата $serverId -> $location")
+                        android.util.Log.d("CLIENT", "📍 Получена координата $serverId -> $location")
                         onUpdate(location)
                     } else {
-                        android.util.Log.d("CLIENT", "📭 FirebaseRepository: пустая координата для $serverId")
+                        android.util.Log.w("CLIENT", "📭 Нет координат в БД для $serverId (value: ${snapshot.value})")
                     }
                 }
 
                 override fun onCancelled(error: DatabaseError) {
-                    android.util.Log.e("CLIENT", "❌ FirebaseRepository: ошибка получения координаты для $serverId: ${error.message}")
+                    android.util.Log.e("CLIENT", "❌ Ошибка подписки на координаты $serverId: ${error.message}")
                 }
             })
     }
@@ -117,8 +141,4 @@ class FirebaseRepository(private val context: Context) {
             generateUniqueServerId(onReady, retryCount + 1, maxRetries)
         }
     }
-
-
-
-
 }

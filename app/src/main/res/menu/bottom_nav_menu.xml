@@ -2,21 +2,21 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/nav_map"
-        android:title="Карта"
+        android:title="@string/map"
         android:icon="@drawable/ic_map" />
 
     <item
         android:id="@+id/nav_servers"
-        android:title="Все сервера"
+        android:title="@string/all_servers"
         android:icon="@drawable/ic_servers" />
 
     <item
         android:id="@+id/nav_placeholder"
-        android:title="Заглушка"
+        android:title="@string/nav_function_title"
         android:icon="@drawable/ic_placeholder" />
 
     <item
         android:id="@+id/nav_settings"
-        android:title="Настройки"
+        android:title="@string/preferences"
         android:icon="@drawable/ic_settings" />
 </menu>

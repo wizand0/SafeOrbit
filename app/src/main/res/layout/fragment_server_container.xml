@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/role_screen_background1"
-    tools:context=".presentation.server.serverFragmentContainer">
+    tools:context=".presentation.server.serverFragmentContainer"
+    android:padding="24dp">
 
-    <TextView
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/textPlaceholder"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:text="@string/hello_blank_fragment"
-        style="@style/TextBody" />
+        android:textAppearance="?attr/textAppearanceBodyLarge"
+        android:gravity="center"
+        android:layout_gravity="center"
+        android:importantForAccessibility="yes"
+        android:accessibilityLiveRegion="polite"
+        tools:text="Здесь будет содержимое фрагмента сервера" />
 </FrameLayout>

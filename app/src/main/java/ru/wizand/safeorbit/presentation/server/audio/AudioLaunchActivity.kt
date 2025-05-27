@@ -3,28 +3,24 @@ package ru.wizand.safeorbit.presentation.server.audio
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.*
+import android.os.Build
+import android.os.Bundle
 import android.view.animation.AnimationUtils
-import android.widget.ImageView
-import android.widget.ProgressBar
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import ru.wizand.safeorbit.databinding.ActivityAudioLaunchBinding
 import ru.wizand.safeorbit.R
 
 class AudioLaunchActivity : ComponentActivity() {
 
-    private lateinit var micIcon: ImageView
-    private lateinit var progressBar: ProgressBar
-
+    private lateinit var binding: ActivityAudioLaunchBinding
     private val REQUEST_AUDIO_PERMISSIONS = 4001
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_audio_launch)
-
-        micIcon = findViewById(R.id.imageMic)
-        progressBar = findViewById(R.id.progressBarAudio)
+        binding = ActivityAudioLaunchBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         startMicAnimation()
         requestPermissionsIfNeeded()
@@ -32,7 +28,7 @@ class AudioLaunchActivity : ComponentActivity() {
 
     private fun startMicAnimation() {
         val animation = AnimationUtils.loadAnimation(this, R.anim.pulse)
-        micIcon.startAnimation(animation)
+        binding.imageMic.startAnimation(animation)
     }
 
     private fun requestPermissionsIfNeeded() {
@@ -50,7 +46,11 @@ class AudioLaunchActivity : ComponentActivity() {
         if (notGranted.isEmpty()) {
             startAudioService()
         } else {
-            ActivityCompat.requestPermissions(this, notGranted.toTypedArray(), REQUEST_AUDIO_PERMISSIONS)
+            ActivityCompat.requestPermissions(
+                this,
+                notGranted.toTypedArray(),
+                REQUEST_AUDIO_PERMISSIONS
+            )
         }
     }
 
@@ -69,7 +69,10 @@ class AudioLaunchActivity : ComponentActivity() {
 
     private fun startAudioService() {
         val serverId = intent.getStringExtra("server_id") ?: return finish()
+        // Agola
         val intent = Intent(this, AudioBroadcastService::class.java).apply {
+            // LiveKit
+//        val intent = Intent(this, AudioBroadcastServiceLiveKit::class.java).apply {
             putExtra("server_id", serverId)
         }
         ContextCompat.startForegroundService(this, intent)

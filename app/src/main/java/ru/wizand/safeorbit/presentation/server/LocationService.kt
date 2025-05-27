@@ -14,6 +14,7 @@ import android.os.*
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
@@ -28,6 +29,7 @@ import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.presentation.server.audio.AudioBroadcastService
 import ru.wizand.safeorbit.presentation.server.audio.AudioLaunchActivity
 import ru.wizand.safeorbit.presentation.server.audio.SilentAudioLaunchActivity
+import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -58,7 +60,7 @@ class LocationService : Service(), SensorEventListener {
 
     override fun onCreate() {
         super.onCreate()
-        prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         inactivityTimeout = prefs.getLong("inactivity_timeout", inactivityTimeout)
         prefs.registerOnSharedPreferenceChangeListener { _, key ->
             if (key == "inactivity_timeout") {
@@ -82,15 +84,35 @@ class LocationService : Service(), SensorEventListener {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         serverId = intent?.getStringExtra("server_id") ?: ""
         val code = prefs.getString("server_code", "")
-        Log.d("COMMANDS", "📦 Сервис запущен. serverId=$serverId, code=$code") // ⬅️ ДОБАВЬ
+        Log.d("COMMANDS", "📦 Сервис запущен. serverId=$serverId, code=$code")
 
         if (!hasLocationPermission()) {
             stopSelf()
             return START_NOT_STICKY
         }
+
+        // 🔐 Гарантируем авторизацию Firebase перед продолжением
+        val auth = FirebaseAuth.getInstance()
+        if (auth.currentUser == null) {
+            auth.signInAnonymously()
+                .addOnSuccessListener {
+                    Log.d("COMMANDS", "✅ Анонимная авторизация Firebase выполнена")
+                    postStart()
+                }
+                .addOnFailureListener {
+                    Log.e("COMMANDS", "❌ Ошибка Firebase Auth: ${it.message}")
+                    stopSelf()
+                }
+        } else {
+            postStart()
+        }
+
+        return START_STICKY
+    }
+
+    private fun postStart() {
         listenForClientCommands()
         switchToIdleMode()
-        return START_STICKY
     }
 
     private fun setupStepSensor() {
@@ -119,13 +141,7 @@ class LocationService : Service(), SensorEventListener {
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
+
                 return
             }
             fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
@@ -275,9 +291,13 @@ class LocationService : Service(), SensorEventListener {
     }
 
     private fun listenForClientCommands() {
-        if (commandListener != null) {
-            Log.w("COMMANDS", "⚠️ Команды уже слушаются — повторная подписка не требуется")
-            return
+        // Удалить предыдущий listener, если есть
+        commandListener?.let {
+            FirebaseDatabase.getInstance()
+                .getReference("server_commands")
+                .child(serverId)
+                .removeEventListener(it)
+            Log.w("COMMANDS", "🔁 Повторная подписка: старый listener удалён")
         }
 
         val commandRootRef = FirebaseDatabase.getInstance()
@@ -285,7 +305,7 @@ class LocationService : Service(), SensorEventListener {
             .child(serverId)
 
         Log.d("COMMANDS", "📛 Firebase UID: ${FirebaseAuth.getInstance().currentUser?.uid}, serverId: $serverId")
-        Log.d("COMMANDS", "⏳ Слушаем команды на server_commands/$serverId")
+        Log.d("COMMANDS", "🔔 Подписка на команды server_commands/$serverId")
 
         commandListener = object : ChildEventListener {
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
@@ -293,11 +313,11 @@ class LocationService : Service(), SensorEventListener {
                 val codeFromClient = snapshot.child("code").getValue(String::class.java)
                 val localCode = prefs.getString("server_code", "")
 
-                Log.d("COMMANDS", "📥 Получена команда $commandId: ${snapshot.value}")
+                Log.d("COMMANDS", "📥 Команда $commandId: ${snapshot.value}")
                 Log.d("COMMANDS", "🔐 Проверка кода: client=$codeFromClient, local=$localCode")
 
                 if (codeFromClient != localCode) {
-                    Log.w("COMMANDS", "❌ Код не совпадает — игнорируем")
+                    Log.w("COMMANDS", "❌ Код не совпадает — игнор")
                     return
                 }
 
@@ -332,26 +352,26 @@ class LocationService : Service(), SensorEventListener {
                                     sendToFirebase(location)
                                     broadcastLocation(location)
                                     saveActivityLog("Принудительно")
-                                    Log.d("COMMANDS", "📤 Отправлены координаты: ${location.latitude}, ${location.longitude}")
+                                    Log.d("COMMANDS", "📤 Координаты отправлены: ${location.latitude}, ${location.longitude}")
                                 } else {
-                                    Log.w("COMMANDS", "⚠️ Не удалось получить текущую локацию")
+                                    Log.w("COMMANDS", "⚠️ Не удалось получить локацию")
                                 }
                             }
                             .addOnFailureListener {
                                 Log.e("COMMANDS", "❌ Ошибка при получении локации: ${it.message}")
                             }
                     } else {
-                        Log.w("COMMANDS", "⚠️ Нет разрешения на получение локации")
+                        Log.w("COMMANDS", "⚠️ Нет разрешений на локацию")
                     }
                 }
 
                 when (snapshot.child("type").getValue(String::class.java)) {
                     "START_AUDIO_STREAM" -> {
-                        Log.d("COMMANDS", "🎙️ Команда на запуск аудио трансляции")
+                        Log.d("COMMANDS", "🎙️ Команда: START_AUDIO_STREAM")
                         startAudioBroadcastService()
                     }
                     "STOP_AUDIO_STREAM" -> {
-                        Log.d("COMMANDS", "🛑 Команда на остановку аудио трансляции")
+                        Log.d("COMMANDS", "🛑 Команда: STOP_AUDIO_STREAM")
                         stopAudioBroadcastService()
                     }
                 }
@@ -363,13 +383,23 @@ class LocationService : Service(), SensorEventListener {
             override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {}
             override fun onChildRemoved(snapshot: DataSnapshot) {}
             override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
+
             override fun onCancelled(error: DatabaseError) {
-                Log.e("COMMANDS", "🔥 Ошибка чтения команд: ${error.message}")
+                Log.e("COMMANDS", "🔥 Ошибка подписки на команды: ${error.message}")
+                // Повторная попытка через 5 сек
+                Handler(Looper.getMainLooper()).postDelayed({
+                    Log.d("COMMANDS", "🔄 Повторная попытка подписки после onCancelled")
+                    listenForClientCommands()
+                }, 5000)
             }
         }
 
-        commandRootRef.addChildEventListener(commandListener!!)
-        Log.d("COMMANDS", "✅ Listener команд добавлен")
+        try {
+            commandRootRef.addChildEventListener(commandListener!!)
+            Log.d("COMMANDS", "✅ Listener команд добавлен")
+        } catch (e: Exception) {
+            Log.e("COMMANDS", "🚨 Ошибка при добавлении listener: ${e.message}")
+        }
     }
 
 
@@ -416,39 +446,7 @@ class LocationService : Service(), SensorEventListener {
         }
     }
 
-//    private fun startAudioBroadcastService() {
-//        val intent = Intent(this, ru.wizand.safeorbit.presentation.server.audio.SilentAudioLaunchActivity::class.java)
-//        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-//        intent.putExtra("server_id", serverId)
-//        startActivity(intent)
-//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
-//    }
-
-//    private fun startAudioBroadcastService() {
-//        val intent = Intent(this, AudioBroadcastService::class.java)
-//        ContextCompat.startForegroundService(this, intent)
-//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
-//    }
-
-
-//    private fun startAudioBroadcastService() {
-//    val intent = Intent(this, SilentAudioLaunchActivity::class.java).apply {
-//        putExtra("server_id", serverId)
-//    }
-//    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-//    this.startActivity(intent)
-//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
-//    }
-
-//    private fun startAudioBroadcastService() {
-//        val intent = Intent(this, AudioLaunchActivity::class.java).apply {
-//            putExtra("server_id", serverId)
-//            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // важно!
-//        }
-//        this.startActivity(intent)
-//        Log.d("COMMANDS", "🎤 SilentAudioLaunchActivity запущена для старта AudioBroadcastService")
-//    }
-
+    // For Agola
     private fun startAudioBroadcastService() {
         val intent = Intent(this, AudioBroadcastService::class.java).apply {
             putExtra("server_id", serverId)
@@ -458,8 +456,15 @@ class LocationService : Service(), SensorEventListener {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             if (!isAppInForeground()) {
                 Log.w("AUDIO_STREAM", "⛔ Приложение в фоне. Запуск через уведомление.")
-                requestStartViaNotification(intent)
-                return
+//                requestStartViaNotification(intent)
+//                return
+
+
+                val starterIntent = Intent(this, SilentAudioLaunchActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("server_id", serverId)
+                }
+                startActivity(starterIntent)
             }
         }
 
@@ -479,16 +484,14 @@ class LocationService : Service(), SensorEventListener {
         }
     }
 
-    private fun requestStartViaNotification(serviceIntent: Intent) {
-        val pendingIntent = PendingIntent.getForegroundService(
-            this,
-            0,
-            serviceIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val channelId = "audio_request_channel"
+    fun Context.requestStartViaNotification(serviceIntent: Intent) {
         val notificationManager = getSystemService(NotificationManager::class.java)
+        val channelId = "audio_request_channel"
+
+        if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+            Log.w("AUDIO_STREAM", "❌ Уведомления отключены. Невозможно показать запрос.")
+            return
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -496,37 +499,50 @@ class LocationService : Service(), SensorEventListener {
                 "Audio Requests",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Уведомления для запуска аудиотрансляции"
+                description = "Запросы на трансляцию микрофона"
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             notificationManager.createNotificationChannel(channel)
         }
 
+        val servicePendingIntent = PendingIntent.getForegroundService(
+            this,
+            0,
+            serviceIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val fullScreenIntent = PendingIntent.getActivity(
+            this,
+            1,
+            Intent(this, AudioLaunchActivity::class.java).apply {
+                putExtra("server_id", serviceIntent.getStringExtra("server_id"))
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_mic)
             .setContentTitle("Запустить аудиотрансляцию")
-            .setContentText("Нажмите, чтобы включить микрофон")
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText("SafeOrbit получил команду на трансляцию. Нажмите «Включить», чтобы разрешить использование микрофона.")
-            )
+            .setContentText("Нажмите, чтобы разрешить использование микрофона")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
             .setAutoCancel(true)
             .addAction(
                 NotificationCompat.Action.Builder(
                     R.drawable.ic_mic,
                     "Включить",
-                    pendingIntent
+                    servicePendingIntent
                 ).build()
             )
+            .setFullScreenIntent(fullScreenIntent, true)
             .build()
 
         notificationManager.notify(42, notification)
     }
 
 
-
-
-
+// For Agola
     private fun stopAudioBroadcastService() {
         val intent = Intent(this, AudioBroadcastService::class.java)
         stopService(intent)

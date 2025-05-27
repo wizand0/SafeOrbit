@@ -3,20 +3,24 @@
     <item
         android:id="@+id/nav_home"
         android:icon="@drawable/ic_servers"
-        android:title="Главная" />
+        android:title="@string/nav_home_title"
+        android:contentDescription="@string/nav_home_desc" />
 
     <item
         android:id="@+id/navigation_history"
         android:icon="@drawable/ic_history_new"
-        android:title="История"/>
+        android:title="@string/nav_history_title"
+        android:contentDescription="@string/nav_history_desc" />
 
     <item
         android:id="@+id/nav_placeholder"
         android:icon="@drawable/ic_placeholder"
-        android:title="Функция" />
+        android:title="@string/nav_function_title"
+        android:contentDescription="@string/help" />
 
     <item
         android:id="@+id/nav_settings"
         android:icon="@drawable/ic_settings"
-        android:title="Настройки" />
+        android:title="@string/nav_settings_title"
+        android:contentDescription="@string/nav_settings_desc" />
 </menu>

@@ -1,35 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/role_screen_background1"
-    android:padding="8dp">
+    android:padding="16dp">
 
-    <LinearLayout
+    <!-- Панель выбора даты -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp"
+        app:strokeColor="?attr/colorOutline"
+        app:strokeWidth="1dp">
 
-        <Button
-            android:id="@+id/btnSelectDate"
-            style="@style/ButtonPrimary"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Выбрать дату" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="12dp">
 
-        <TextView
-            android:id="@+id/tvSelectedDate"
-            style="@style/TextBody"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="(все)" />
-    </LinearLayout>
+            <!-- Кнопка выбора даты -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSelectDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/hoose_date"
+                style="@style/ButtonFilledMaterial"
+                app:icon="@drawable/ic_calendar"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp"
+                app:iconTint="?attr/colorOnPrimary" />
 
+            <!-- Отображение выбранной даты -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/tvSelectedDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="(все)"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:importantForAccessibility="yes"
+                android:accessibilityLiveRegion="polite" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Список истории -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewHistory"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp"
+        android:scrollbars="vertical"
+        android:contentDescription="@string/activities_history" />
 </LinearLayout>

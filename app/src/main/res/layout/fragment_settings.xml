@@ -1,13 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:padding="24dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/role_screen_background1">
+    android:background="@drawable/role_screen_background1"
+    android:gravity="center">
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnResetRole"
-        style="@style/ButtonPrimary"
-        android:text="Сбросить роль" />
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/button_reset_role"
+        android:contentDescription="Сбросить роль и вернуться к выбору"
+        style="@style/ButtonFilledMaterial"
+        app:icon="@drawable/ic_reset"
+        app:iconGravity="textStart"
+        app:iconPadding="8dp"
+        app:iconTint="?attr/colorOnPrimary"
+        android:importantForAccessibility="yes" />
 </LinearLayout>

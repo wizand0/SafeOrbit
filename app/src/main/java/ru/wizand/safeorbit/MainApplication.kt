@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.HiltAndroidApp
+import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
 @HiltAndroidApp
 class MainApplication : Application() {
@@ -16,7 +17,7 @@ class MainApplication : Application() {
     }
 
     private fun clearPrefsIfNewInstall() {
-        val appPrefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val appPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 //        val clientPrefs = getSharedPreferences("client_prefs", MODE_PRIVATE) // если ты их используешь
 
         val storedInstallTime = appPrefs.getLong("stored_install_time", -1L)

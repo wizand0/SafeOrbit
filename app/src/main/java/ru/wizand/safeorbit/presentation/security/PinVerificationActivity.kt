@@ -2,25 +2,26 @@ package ru.wizand.safeorbit.presentation.security
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.*
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.databinding.ActivityPinVerificationBinding
 import ru.wizand.safeorbit.presentation.server.ServerMainActivity
+import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
 class PinVerificationActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityPinVerificationBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_pin_verification)
+        binding = ActivityPinVerificationBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        val etPin = findViewById<EditText>(R.id.etPinVerify)
-        val btnVerify = findViewById<Button>(R.id.btnVerifyPin)
-
-        val savedPin = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val savedPin = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getString("server_pin", null)
 
-        btnVerify.setOnClickListener {
-            val entered = etPin.text.toString()
+        binding.btnVerifyPin.setOnClickListener {
+            val entered = binding.etPinVerify.text.toString()
             if (entered == savedPin) {
                 startActivity(Intent(this, ServerMainActivity::class.java))
                 finish()

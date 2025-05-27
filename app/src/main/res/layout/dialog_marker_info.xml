@@ -1,91 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:background="@android:color/transparent"
-    android:padding="24dp">
+    android:layout_margin="16dp"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="4dp"
+    android:background="@android:color/transparent">
 
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="24dp">
 
             <!-- 🖼 Иконка -->
             <ImageView
                 android:id="@+id/imageIcon"
                 android:layout_width="96dp"
                 android:layout_height="96dp"
-                android:layout_gravity="center"
-                android:layout_marginBottom="8dp"
-                android:src="@drawable/ic_marker" />
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="16dp"
+                android:src="@drawable/ic_marker"
+                android:contentDescription="@string/desc_server_icon" />
 
-            <!-- 🧩 Инфо о сервере -->
-            <TextView
+            <!-- 🧩 Инфо -->
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/textServerName"
-                style="@style/TextSubheading"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Имя сервера" />
+                android:text="@string/server_name"
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:layout_marginBottom="12dp" />
 
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/textCoords"
-                style="@style/TextCaption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text="Координаты:" />
+                android:text="@string/label_coordinates"
+                android:textAppearance="?attr/textAppearanceBodySmall" />
 
-            <TextView
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/textTime"
-                style="@style/TextCaption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:text="Время:" />
+                android:text="@string/label_time"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:layout_marginBottom="24dp" />
 
-                <TextView
-                    style="@style/TextCaption"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="Чтобы увидеть другие команды или подробную информацию нажмите кнопку:" />
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/instruction_details"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:layout_marginBottom="8dp" />
 
-                <Button
-                    android:id="@+id/buttonDetails"
-                    style="@style/ButtonPrimary"
-                    android:layout_marginBottom="16dp"
-                    android:text="Подробнее" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonDetails"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/button_details"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_marginBottom="16dp" />
 
-                <TextView
-                    style="@style/TextCaption"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:text="Для открытия карты или навигатора нажмите кнопку:" />
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/instruction_navigate"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:layout_marginBottom="8dp" />
 
-                <Button
-                    android:id="@+id/buttonNavigate"
-                    style="@style/ButtonPrimary"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Навигация" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonNavigate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:text="@string/button_navigate" />
 
-                <Button
-                    android:id="@+id/buttonDelete"
-                    style="@style/ButtonPrimary"
-                    android:text="Удалить"
-                    android:textColor="#F44336" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonDelete"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/button_delete"
+                android:textColor="@android:color/holo_red_dark"
+                app:icon="@drawable/ic_delete"
+                app:iconGravity="textEnd"
+                app:iconPadding="8dp"
+                app:iconTint="@android:color/holo_red_dark"
+                style="@style/Widget.Material3.Button.OutlinedButton" />
 
         </LinearLayout>
     </ScrollView>
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>
