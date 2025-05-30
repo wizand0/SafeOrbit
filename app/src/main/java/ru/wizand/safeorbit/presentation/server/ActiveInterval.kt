@@ -5,7 +5,8 @@ enum class ActiveInterval(val label: String, val millis: Long) {
     SECONDS_15("15 sec", 15_000L),
     SECONDS_30("30 sec", 30_000L),
     SECONDS_60("60 sec", 60_000L),
-    SECONDS_120("120 sec", 2 * 60_000L);
+    SECONDS_120("120 sec", 2 * 60_000L),
+    SECONDS_240("240 sec", 4 * 60_000L);
 
     override fun toString(): String = label
 
