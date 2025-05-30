@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import io.agora.rtc2.*
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 import java.util.*
 
 class AudioStreamPlayerService : Service() {
@@ -25,6 +26,15 @@ class AudioStreamPlayerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val role = prefs.getString("user_role", null)
+        if (role != "client") {
+            Log.w("AUDIO_CLIENT", "❌ Неверная роль: $role. Сервис не запущен.")
+            stopSelf()
+            return
+        }
+
         Log.d("AUDIO_CLIENT", "🟢 Сервис клиента создан")
         startForegroundService()
         initAgora()

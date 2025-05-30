@@ -11,6 +11,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import io.agora.rtc2.*
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
 class AudioBroadcastService : Service() {
 
@@ -35,6 +36,15 @@ class AudioBroadcastService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val role = prefs.getString("user_role", null)
+        if (role != "server") {
+            Log.w("AUDIO_SERVER", "❌ Неверная роль: $role. Сервис не запущен.")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
         startForegroundSafely()
 
         serverId = intent?.getStringExtra("server_id") ?: ""

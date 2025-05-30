@@ -167,11 +167,20 @@ class ServerMainFragment : Fragment() {
     }
 
     private fun startLocationService(serverId: String) {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val role = prefs.getString("user_role", null)
+
+        if (role != "server") {
+            Log.w("SERVER_FRAGMENT", "⛔ Попытка запустить LocationService при роли: $role")
+            return
+        }
+
         val intent = Intent(requireContext(), LocationService::class.java).apply {
             putExtra("server_id", serverId)
         }
         ContextCompat.startForegroundService(requireContext(), intent)
     }
+
 
     private fun formatTimestamp(timestamp: Long): String {
         val sdf = java.text.SimpleDateFormat("HH:mm:ss, dd MMMM", java.util.Locale.getDefault())
