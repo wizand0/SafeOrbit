@@ -202,6 +202,16 @@ class ServerListFragment : Fragment() {
                 }.show(parentFragmentManager, "info")
             }
         } else {
+
+            AlertDialog.Builder(requireContext())
+                .setTitle("Нет координат")
+                .setMessage("Отправить запрос координат серверу?")
+                .setPositiveButton("Да") { _, _ ->
+                    viewModel.requestServerLocationNow(server.serverId)
+                }
+                .setNegativeButton("Отмена", null)
+                .show()
+
             Toast.makeText(requireContext(), "Нет координат для сервера", Toast.LENGTH_SHORT).show()
         }
     }

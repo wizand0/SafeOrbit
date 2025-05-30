@@ -12,13 +12,21 @@ import com.google.android.gms.location.Priority
 import kotlinx.coroutines.tasks.await
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
+import ru.wizand.safeorbit.data.model.UserRole
+import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
 class IdleLocationWorker(appContext: Context, workerParams: WorkerParameters)
     : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val prefs = applicationContext.getSharedPreferences("safeorbit_prefs", Context.MODE_PRIVATE)
+        val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val serverId = prefs.getString("server_id", null) ?: return Result.failure()
+
+        val role = prefs.getString("user_role", null)
+        if (role != UserRole.SERVER.name) {
+            Log.w("IdleLocationWorker", "⛔ Не режим сервера, отмена")
+            return Result.failure()
+        }
 
         if (!hasPermission()) {
             Log.w("IdleLocationWorker", "❌ Нет разрешений")
@@ -37,11 +45,6 @@ class IdleLocationWorker(appContext: Context, workerParams: WorkerParameters)
         } catch (e: SecurityException) {
             Log.e("LOCATION", "❌ Нет разрешения на получение локации: ${e.message}")
         }
-
-//        val location = locationClient.getCurrentLocation(
-//            com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
-//            null
-//        ).await()
 
         if (location != null) {
             Log.d("IdleLocationWorker", "📤 Отправка координат: ${location.latitude}, ${location.longitude}")

@@ -5,7 +5,8 @@ enum class InactivityTimeout(val label: String, val millis: Long) {
     MINUTES_5("5 min", 5 * 60 * 1000L),
     MINUTES_10("10 min", 10 * 60 * 1000L),
     MINUTES_30("30 min", 30 * 60 * 1000L),
-    MINUTES_60("60 min", 60 * 60 * 1000L);
+    MINUTES_60("60 min", 60 * 60 * 1000L),
+    MINUTES_120("120 min", 2 * 60 * 60 * 1000L);
 
     override fun toString(): String = label
 

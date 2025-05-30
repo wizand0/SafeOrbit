@@ -28,6 +28,7 @@ import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.*
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
+import ru.wizand.safeorbit.data.model.UserRole
 import ru.wizand.safeorbit.presentation.server.audio.AudioBroadcastService
 import ru.wizand.safeorbit.presentation.server.audio.AudioLaunchActivity
 import ru.wizand.safeorbit.presentation.server.audio.SilentAudioLaunchActivity
@@ -67,7 +68,7 @@ class LocationService : Service(), SensorEventListener {
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         val role = prefs.getString("user_role", null)
-        if (role != "server") {
+        if (role != UserRole.SERVER.name) {
             Log.w("LocationService", "❌ Неверная роль: $role. Сервис не запущен.")
             stopSelf()
             return
@@ -109,6 +110,11 @@ class LocationService : Service(), SensorEventListener {
             return START_NOT_STICKY
         }
 
+        // 🔐 Слушаем команды независимо от авторизации
+//        listenForClientCommands()
+//        switchToIdleMode()
+        postStart()
+
         // 🔐 Гарантируем авторизацию Firebase перед продолжением
         val auth = FirebaseAuth.getInstance()
         if (auth.currentUser == null) {
@@ -121,14 +127,16 @@ class LocationService : Service(), SensorEventListener {
                     Log.e("COMMANDS", "❌ Ошибка Firebase Auth: ${it.message}")
                     stopSelf()
                 }
-        } else {
-            postStart()
         }
+//        else {
+//            postStart()
+//        }
 
         return START_STICKY
     }
 
     private fun postStart() {
+        Log.d("COMMANDS", "🚀 postStart вызван, активируем listener")
         listenForClientCommands()
         switchToIdleMode()
     }
@@ -202,12 +210,10 @@ class LocationService : Service(), SensorEventListener {
         )
     }
 
-    private fun switchToActiveMode() {
-        isInActiveMode = true
-        stopLocationUpdates()
-        startLocationUpdates(activeInterval)
-        broadcastMode()
-    }
+//    Если заменить requestLocationUpdates() на WorkManager.getCurrentLocation() даже в активном
+//    режиме с интервалом ≥ 30 сек, то:
+//    🔋 Энергоэффективность увеличится в 5–6 раз
+//    🔻 Потребление снизится с ~30 мАч до ~5 мАч в час (на GPS).
 
     // В новой версии был переход к гибридной версии сервиса
 //    private fun switchToIdleMode() {
@@ -217,18 +223,47 @@ class LocationService : Service(), SensorEventListener {
 //        broadcastMode()
 //    }
 
-    private fun switchToIdleMode() {
-        isInActiveMode = false
+//    private fun switchToActiveMode() {
+//        isInActiveMode = true
+//        stopLocationUpdates()
+//        startLocationUpdates(activeInterval)
+//        broadcastMode()
+//    }
+
+    private fun switchToActiveMode() {
+        isInActiveMode = true
         stopLocationUpdates()
-        scheduleOneTimeLocationFetch() // Новый метод через WorkManager
+        if (activeInterval >= 30_000) {
+            Log.d("COMMANDS", "📆 switchToActiveMode activeInterval >= 30_000")
+            scheduleOneTimeLocationFetch(activeInterval)
+        } else {
+            Log.d("COMMANDS", "📆 switchToActiveMode activeInterval < 30_000")
+            startLocationUpdates(activeInterval)
+        }
         broadcastMode()
     }
 
-    private fun scheduleOneTimeLocationFetch() {
+
+
+    private fun switchToIdleMode() {
+        isInActiveMode = false
+        stopLocationUpdates()
+        Log.d("COMMANDS", "📆 switchToIdleMode")
+        scheduleOneTimeLocationFetch(inactivityTimeout) // Новый метод через WorkManager
+        broadcastMode()
+    }
+
+    private fun scheduleOneTimeLocationFetch(Interval: Long) {
+        Log.d("COMMANDS", "📆 scheduleOneTimeLocationFetch Интервал: $Interval мс")
         val workRequest = OneTimeWorkRequestBuilder<IdleLocationWorker>()
-            .setInitialDelay(inactivityTimeout, TimeUnit.MILLISECONDS)
+            .setInitialDelay(Interval, TimeUnit.MILLISECONDS)
             .build()
         WorkManager.getInstance(this).enqueue(workRequest)
+
+
+
+
+
         Log.d("COMMANDS", "📆 IdleLocationWorker запланирован через ${inactivityTimeout}мс")
     }
 
@@ -590,7 +625,10 @@ class LocationService : Service(), SensorEventListener {
     override fun onDestroy() {
         super.onDestroy()
         stopLocationUpdates()
-        sensorManager.unregisterListener(this)
+        if (::sensorManager.isInitialized) {
+            sensorManager.unregisterListener(this)
+        }
+//        sensorManager.unregisterListener(this)
         prefs.unregisterOnSharedPreferenceChangeListener { _, _ -> }
 
         commandListener?.let {
