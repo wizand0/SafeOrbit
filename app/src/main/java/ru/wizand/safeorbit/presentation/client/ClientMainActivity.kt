@@ -20,7 +20,7 @@ class ClientMainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         // Проверка роли
-        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val currentRole = prefs.getString("user_role", null)
         if (currentRole != UserRole.CLIENT.name) {
             Log.d("DEBUG", "ClientMainActivity role mismatch, finishing")

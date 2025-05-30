@@ -18,6 +18,8 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.google.android.gms.location.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
@@ -29,9 +31,11 @@ import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.presentation.server.audio.AudioBroadcastService
 import ru.wizand.safeorbit.presentation.server.audio.AudioLaunchActivity
 import ru.wizand.safeorbit.presentation.server.audio.SilentAudioLaunchActivity
+import ru.wizand.safeorbit.presentation.server.worker.IdleLocationWorker
 import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class LocationService : Service(), SensorEventListener {
 
@@ -61,6 +65,20 @@ class LocationService : Service(), SensorEventListener {
     override fun onCreate() {
         super.onCreate()
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+
+        val role = prefs.getString("user_role", null)
+        if (role != "server") {
+            Log.w("LocationService", "❌ Неверная роль: $role. Сервис не запущен.")
+            stopSelf()
+            return
+        }
+
+        if (!hasLocationPermission()) {
+            Log.w("LocationService", "❌ Нет разрешений. Сервис не запущен.")
+            stopSelf()
+            return
+        }
+
         inactivityTimeout = prefs.getLong("inactivity_timeout", inactivityTimeout)
         prefs.registerOnSharedPreferenceChangeListener { _, key ->
             if (key == "inactivity_timeout") {
@@ -191,12 +209,30 @@ class LocationService : Service(), SensorEventListener {
         broadcastMode()
     }
 
+    // В новой версии был переход к гибридной версии сервиса
+//    private fun switchToIdleMode() {
+//        isInActiveMode = false
+//        stopLocationUpdates()
+//        startLocationUpdates(inactivityTimeout)
+//        broadcastMode()
+//    }
+
     private fun switchToIdleMode() {
         isInActiveMode = false
         stopLocationUpdates()
-        startLocationUpdates(inactivityTimeout)
+        scheduleOneTimeLocationFetch() // Новый метод через WorkManager
         broadcastMode()
     }
+
+    private fun scheduleOneTimeLocationFetch() {
+        val workRequest = OneTimeWorkRequestBuilder<IdleLocationWorker>()
+            .setInitialDelay(inactivityTimeout, TimeUnit.MILLISECONDS)
+            .build()
+        WorkManager.getInstance(this).enqueue(workRequest)
+        Log.d("COMMANDS", "📆 IdleLocationWorker запланирован через ${inactivityTimeout}мс")
+    }
+
+
 
     private fun broadcastLocation(location: Location) {
         Intent("LOCATION_UPDATE").apply {
