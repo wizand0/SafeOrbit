@@ -17,8 +17,12 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import ru.wizand.safeorbit.data.ServerEntity
 import ru.wizand.safeorbit.databinding.FragmentServerListBinding
+import ru.wizand.safeorbit.presentation.client.commands.CommandViewModel
 
 class ServerListFragment : Fragment() {
+
+    private val mapViewModel: ServerMapViewModel by activityViewModels()
+    private val commandViewModel: CommandViewModel by activityViewModels()
 
     private var _binding: FragmentServerListBinding? = null
     private val binding get() = _binding!!
@@ -172,7 +176,8 @@ class ServerListFragment : Fragment() {
     }
 
     private fun showDetails(server: ServerEntity) {
-        val state = viewModel.mapStates.value?.get(server.serverId)
+//        val state = viewModel.mapStates.value?.get(server.serverId)
+        val state = mapViewModel.mapStates.value?.get(server.serverId)
         val point = state?.latestPoint
         val timestamp = state?.timestamp ?: System.currentTimeMillis()
 
@@ -207,7 +212,9 @@ class ServerListFragment : Fragment() {
                 .setTitle("Нет координат")
                 .setMessage("Отправить запрос координат серверу?")
                 .setPositiveButton("Да") { _, _ ->
-                    viewModel.requestServerLocationNow(server.serverId)
+//                    viewModel.requestServerLocationNow(server.serverId)
+                    commandViewModel.requestLocationUpdate(server.serverId)
+
                 }
                 .setNegativeButton("Отмена", null)
                 .show()

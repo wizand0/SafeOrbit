@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.presentation.server
+package ru.wizand.safeorbit.presentation.common
 
 import android.Manifest
 import android.app.AlertDialog

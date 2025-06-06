@@ -5,11 +5,13 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.model.UserRole
 import ru.wizand.safeorbit.databinding.ActivityClientMainBinding
 import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
+@AndroidEntryPoint
 class ClientMainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityClientMainBinding
