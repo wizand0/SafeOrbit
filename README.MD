@@ -1,4 +1,4 @@
-# SafeOrbit
+# SafeOrbit v.1.6.8
 
 **⚠️ Attention!**
 In the current version, there is an issue with audio streaming on Android 14.

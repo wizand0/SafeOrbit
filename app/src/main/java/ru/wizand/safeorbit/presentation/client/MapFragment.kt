@@ -30,6 +30,8 @@ import ru.wizand.safeorbit.databinding.ViewMarkerBinding
 
 class MapFragment : Fragment() {
 
+    private val mapViewModel: ServerMapViewModel by activityViewModels()
+
     private var _binding: FragmentMapBinding? = null
     private val binding get() = _binding!!
 
@@ -155,10 +157,12 @@ class MapFragment : Fragment() {
 
         viewModel.serverNameMap.observe(viewLifecycleOwner) {
             cachedNames = it
+            val ids = it.keys.toList()
+            mapViewModel.observeServerLocations(ids) // ✅ ВАЖНО
             maybeDraw()
         }
 
-        viewModel.mapStates.observe(viewLifecycleOwner) {
+        mapViewModel.mapStates.observe(viewLifecycleOwner) {
             cachedStates = it
             maybeDraw()
         }
@@ -320,7 +324,8 @@ class MapFragment : Fragment() {
     private fun showDetails(serverId: String) {
         val name = viewModel.serverNameMap.value?.get(serverId) ?: "Без имени"
         val iconUri = viewModel.getIconUriForServer(serverId)
-        val state = viewModel.mapStates.value?.get(serverId)
+//        val state = viewModel.mapStates.value?.get(serverId)
+        val state = mapViewModel.mapStates.value?.get(serverId)
         val point = state?.latestPoint
         val timestamp = state?.timestamp ?: System.currentTimeMillis()
         if (point != null) {

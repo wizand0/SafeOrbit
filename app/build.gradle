@@ -2,11 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id 'kotlin-kapt'
-    id("com.google.devtools.ksp")
+    id 'com.google.devtools.ksp'
     id 'com.google.dagger.hilt.android'
-
     id 'com.google.gms.google-services'
-
 }
 
 def localProps = new Properties()
@@ -15,6 +13,7 @@ if (localPropsFile.exists()) {
     localProps.load(new FileInputStream(localPropsFile))
 }
 def yandexKey = localProps.getProperty("YANDEX_MAPKIT_API_KEY", "")
+def agoraAppId = localProps.getProperty("AGORA_APP_ID", "")
 
 android {
     namespace 'ru.wizand.safeorbit'
@@ -24,21 +23,17 @@ android {
         applicationId "ru.wizand.safeorbit"
         minSdk 29
         targetSdk 35
-        versionCode 19
-        versionName "1.6.6"
+        versionCode 20
+        versionName "1.6.8"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        // Проброс в BuildConfig и манифест
         buildConfigField "String", "YANDEX_MAPKIT_API_KEY", "\"${yandexKey}\""
-        manifestPlaceholders = [YANDEX_MAPKIT_API_KEY: yandexKey]
 
-        def agoraAppId = localProps.getProperty("AGORA_APP_ID", "")
         manifestPlaceholders = [
                 YANDEX_MAPKIT_API_KEY: yandexKey,
                 AGORA_APP_ID         : agoraAppId
         ]
-
     }
 
     buildTypes {
@@ -48,92 +43,90 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
     buildFeatures {
         viewBinding true
-        buildConfig true // ← вот это нужно добавить
+        buildConfig true
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = '11'
     }
+
     splits {
         abi {
             enable true
             reset()
-            // Оставляем только нужные архитектуры для реальных Android-устройств:
             include 'armeabi-v7a', 'arm64-v8a'
-            universalApk true // отключаем универсальный APK с ВСЕМИ ABI
+            universalApk true
         }
     }
 }
 
 dependencies {
-
+    // Core
     implementation libs.androidx.core.ktx
     implementation libs.androidx.appcompat
     implementation libs.material
-
     implementation libs.androidx.activity
     implementation libs.androidx.constraintlayout
-    implementation libs.firebase.database.ktx
-    implementation libs.firebase.auth.ktx
     implementation libs.androidx.fragment.ktx
-
-    implementation libs.maps.mobile
-
     implementation libs.androidx.recyclerview
 
+    // Firebase
+    implementation libs.firebase.database.ktx
+    implementation libs.firebase.auth.ktx
     implementation libs.firebase.storage.ktx
     implementation libs.firebase.perf.ktx
-    implementation libs.firebase.bom
-    testImplementation libs.junit
-    androidTestImplementation libs.androidx.junit
-    androidTestImplementation libs.androidx.espresso.core
+    implementation platform(libs.firebase.bom)
 
-    // Lifecycle ViewModel + LiveData
+    // Lifecycle
     implementation libs.androidx.lifecycle.viewmodel.ktx
     implementation libs.androidx.lifecycle.livedata.ktx
+    implementation "androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.1"
 
-//    Hilt
+    // Hilt
     implementation libs.hilt.android
-    ksp libs.hilt.compiler
+    kapt libs.hilt.compiler
+    implementation "androidx.hilt:hilt-navigation-fragment:1.0.0" // стабильная
+    implementation libs.kotlinx.metadata.jvm // 👈 fix для Kotlin 2.1.x
 
     // Kotlin Coroutines
     implementation libs.kotlinx.coroutines.android
 
+    // Room
     def room_version = "2.7.1"
-
     implementation "androidx.room:room-runtime:$room_version"
-
-    // If this project uses any Kotlin source, use Kotlin Symbol Processing (KSP)
-    // See KSP Quickstart to add KSP to your build
     ksp "androidx.room:room-compiler:$room_version"
-
-    // Для Kotlin coroutines
     implementation "androidx.room:room-ktx:$room_version"
 
-    implementation libs.play.services.location
-
+    // WorkManager
     implementation libs.androidx.work.runtime.ktx
 
+    // Navigation
     implementation libs.androidx.navigation.fragment.ktx
     implementation libs.androidx.navigation.ui.ktx
-// Agola
-    implementation("io.agora.rtc:voice-sdk:4.5.0")
-//    implementation("io.agora.rtc:full-sdk:4.5.2")
 
-// LiveKit
-//    implementation libs.livekit.android
+    // Location + MapKit
+    implementation libs.play.services.location
+    implementation libs.mapsMobile
 
-    // QR Codes
+    // QR
     implementation libs.core
     implementation libs.zxing.android.embedded
 
-    implementation "androidx.work:work-runtime-ktx:2.10.1"
+    // Agora
+    implementation "io.agora.rtc:voice-sdk:4.5.0"
 
-
+    // Tests
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espresso.core
 }
+
 apply plugin: 'com.google.gms.google-services'
