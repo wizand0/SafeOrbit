@@ -1,93 +1,203 @@
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
-
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
 
 # ========= Общие правила =========
 
-# Оставить ViewBinding
--keep class **Binding { *; }
+# Сохраняем информацию для отладки stack traces
+-keepattributes SourceFile,LineNumberTable,Signature,*Annotation*,EnclosingMethod,InnerClasses
 
-# Оставить BuildConfig поля
+# Оставить ViewBinding (только нужные классы)
+-keep class **.*Binding { *; }
+
+# Оставить BuildConfig
 -keep class **.BuildConfig { *; }
 
-# Kotlin metadata
+# Kotlin metadata (для reflection)
 -keep class kotlin.Metadata { *; }
+-keep class kotlin.reflect.** { *; }
 -dontwarn kotlin.**
 
-# Сохраняем enum-значения (например, для Firebase или Room)
+# Сохраняем enum-значения
 -keepclassmembers enum * {
     public static **[] values();
     public static ** valueOf(java.lang.String);
 }
 
-# ========= Firebase =========
--keep class com.google.firebase.** { *; }
+# ========= Firebase Models (критично!) =========
+# LocationData должна сохраняться для Firebase serialization
+-keep @com.google.firebase.database.IgnoreExtraProperties class * { *; }
+-keep @androidx.annotation.Keep class * { *; }
+
+-keep class ru.wizand.safeorbit.data.model.LocationData {
+    <init>();
+    <fields>;
+    <methods>;
+}
+
+-keep class ru.wizand.safeorbit.data.model.AudioRequest {
+    <init>();
+    <fields>;
+    <methods>;
+}
+
+# Все Firebase data models
+-keep class ru.wizand.safeorbit.data.model.** {
+    <init>();
+    <fields>;
+}
+
+# ========= Firebase SDK =========
+-keep class com.google.firebase.database.** { *; }
+-keep class com.google.firebase.auth.** { *; }
+-keepclassmembers class com.google.firebase.** {
+    <init>();
+}
 -dontwarn com.google.firebase.**
 -dontwarn com.google.android.gms.**
 
-# ========= Hilt =========
+# Firebase GenericTypeIndicator
+-keepclassmembers class * {
+    *** getValue();
+}
+
+# ========= Hilt / Dagger =========
 -keep class dagger.hilt.** { *; }
 -keep class javax.inject.** { *; }
 -keep class dagger.** { *; }
--dontwarn dagger.hilt.**
+-keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
 
-# ========= Room (KSP) =========
+# Hilt generated classes
+-keep class **_HiltModules { *; }
+-keep class **_HiltComponents { *; }
+-keep class **_ComponentTreeDeps { *; }
+-keep class **_Factory { *; }
+-keep class **_MembersInjector { *; }
+
+-dontwarn dagger.hilt.**
+-dontwarn javax.inject.**
+
+# Аннотированные классы для DI
+-keep @dagger.hilt.android.AndroidEntryPoint class * { *; }
+-keep @dagger.hilt.InstallIn class * { *; }
+-keep @dagger.Module class * { *; }
+
+# ========= Room Database =========
 -keep class androidx.room.** { *; }
--dontwarn androidx.room.**
+-keep @androidx.room.Entity class * { *; }
+-keep @androidx.room.Database class * { *; }
+-keep @androidx.room.Dao class * { *; }
+
 -keepclassmembers class * {
     @androidx.room.* <methods>;
     @androidx.room.* <fields>;
 }
 
+# Room entities с @Keep аннотацией
+-keep @androidx.annotation.Keep class * {
+    <init>();
+    <fields>;
+    <methods>;
+}
+
+-dontwarn androidx.room.**
+
+# ========= EncryptedSharedPreferences =========
+-keep class androidx.security.crypto.** { *; }
+-keepclassmembers class androidx.security.crypto.** {
+    <init>(...);
+    <fields>;
+    <methods>;
+}
+
 # ========= Yandex Maps =========
--keep class com.yandex.** { *; }
+-keep class com.yandex.mapkit.** { *; }
+-keep class com.yandex.runtime.** { *; }
 -dontwarn com.yandex.**
 
-# ========= ZXing =========
--keep class com.journeyapps.** { *; }
--dontwarn com.journeyapps.**
+# ========= ZXing (QR Code) =========
+-keep class com.journeyapps.barcodescanner.** { *; }
 -keep class com.google.zxing.** { *; }
+-dontwarn com.journeyapps.**
 -dontwarn com.google.zxing.**
 
 # ========= Agora SDK =========
--keep class io.agora.** { *; }
+-keep class io.agora.rtc2.** { *; }
+-keep class io.agora.base.** { *; }
+-keepclassmembers class io.agora.** {
+    <init>(...);
+    <methods>;
+}
 -dontwarn io.agora.**
 
 # ========= WorkManager =========
 -keep class androidx.work.** { *; }
+-keep class * extends androidx.work.Worker
+-keep class * extends androidx.work.ListenableWorker
+-keepclassmembers class * extends androidx.work.Worker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
 -dontwarn androidx.work.**
 
-# ========= Android Navigation =========
+# ========= Navigation Component =========
 -keep class androidx.navigation.** { *; }
+-keepnames class androidx.navigation.fragment.NavHostFragment
 
 # ========= LiveData/ViewModel =========
 -keep class androidx.lifecycle.** { *; }
+-keep class * extends androidx.lifecycle.ViewModel {
+    <init>();
+}
+-keep class * extends androidx.lifecycle.AndroidViewModel {
+    <init>(android.app.Application);
+}
 
 # ========= Coroutines =========
+-keepclassmembers class kotlinx.coroutines.** {
+    volatile <fields>;
+}
+-keepclassmembernames class kotlinx.** {
+    volatile <fields>;
+}
 -dontwarn kotlinx.coroutines.**
 
-# ========= Для классов, используемых через reflection =========
--keepnames class * {
-    @androidx.room.Entity *;
+# ========= Serialization (если используется) =========
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
 }
--keepnames class * {
-    @com.google.firebase.database.IgnoreExtraProperties *;
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
 }
+
+# ========= Material Components =========
+-keep class com.google.android.material.** { *; }
+-dontwarn com.google.android.material.**
+
+# ========= Parcelable =========
+-keepclassmembers class * implements android.os.Parcelable {
+    public static final ** CREATOR;
+}
+
+# ========= Native methods =========
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# ========= Сохраняем конструкторы для reflection =========
+-keepclassmembers class * {
+    public <init>(...);
+}
+
+# ========= Optimization =========
+-optimizationpasses 5
+-dontusemixedcaseclassnames
+-verbose
+
+# Не предупреждать о недостающих классах
+-dontwarn javax.annotation.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**

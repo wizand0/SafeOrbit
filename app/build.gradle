@@ -17,14 +17,14 @@ def agoraAppId = localProps.getProperty("AGORA_APP_ID", "")
 
 android {
     namespace 'ru.wizand.safeorbit'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "ru.wizand.safeorbit"
         minSdk 29
         targetSdk 35
-        versionCode 20
-        versionName "1.6.8"
+        versionCode 21
+        versionName "1.7.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -88,12 +88,12 @@ dependencies {
     // Lifecycle
     implementation libs.androidx.lifecycle.viewmodel.ktx
     implementation libs.androidx.lifecycle.livedata.ktx
-    implementation "androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.1"
+    implementation libs.androidx.lifecycle.viewmodel.savedstate
 
     // Hilt
     implementation libs.hilt.android
     kapt libs.hilt.compiler
-    implementation "androidx.hilt:hilt-navigation-fragment:1.0.0" // стабильная
+    implementation libs.androidx.hilt.navigation.fragment // стабильная
     implementation libs.kotlinx.metadata.jvm // 👈 fix для Kotlin 2.1.x
 
     // Kotlin Coroutines
@@ -121,12 +121,19 @@ dependencies {
     implementation libs.zxing.android.embedded
 
     // Agora
-    implementation "io.agora.rtc:voice-sdk:4.5.0"
+    implementation libs.voice.sdk
 
     // Tests
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.espresso.core
+
+    // Security - EncryptedSharedPreferences
+    implementation libs.androidx.security.crypto
+
+    // Если используете Tink (опционально, для дополнительной безопасности)
+    implementation libs.tink.android
+
 }
 
 apply plugin: 'com.google.gms.google-services'
