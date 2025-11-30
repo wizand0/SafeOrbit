@@ -12,6 +12,7 @@ import android.hardware.SensorManager
 import android.location.Location
 import android.os.*
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -338,7 +339,12 @@ class LocationService : Service(), SensorEventListener {
     private fun startForegroundService() {
         val channelId = "location_service_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "Location Tracking", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(
+                channelId,
+                "Location Tracking",
+                NotificationManager.IMPORTANCE_MIN // Было LOW, ставим MIN
+            )
+            channel.setShowBadge(false) // Убираем точку на иконке приложения
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
         val notification = NotificationCompat.Builder(this, channelId)
@@ -379,6 +385,7 @@ class LocationService : Service(), SensorEventListener {
         Log.d("COMMANDS", "🔔 Подписка на команды server_commands/$serverId")
 
         commandListener = object : ChildEventListener {
+            @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
                 val commandId = snapshot.key ?: return
                 val codeFromClient = snapshot.child("code").getValue(String::class.java)

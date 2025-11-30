@@ -23,7 +23,6 @@ import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.map.PolylineMapObject
 import com.yandex.runtime.image.ImageProvider
-import ru.wizand.safeorbit.BuildConfig
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.databinding.FragmentMapBinding
 import ru.wizand.safeorbit.databinding.ViewMarkerBinding
@@ -53,14 +52,7 @@ class MapFragment : Fragment() {
         android.Manifest.permission.RECORD_AUDIO
     )
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (!mapKitInitialized) {
-            MapKitFactory.setApiKey(BuildConfig.YANDEX_MAPKIT_API_KEY)
-            context?.let { MapKitFactory.initialize(it) }
-            mapKitInitialized = true
-        }
-    }
+    // onCreate удален, так как инициализация перенесена в MainApplication
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -73,8 +65,10 @@ class MapFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        // Эти вызовы обязательны для MapKit, даже если инициализация была в Application
         MapKitFactory.getInstance().onStart()
         binding.mapView.onStart()
+
         checkAndRequestPermissionsIfNeeded()
         observeViewModel()
         binding.loadingLayout.visibility = View.VISIBLE
@@ -86,6 +80,7 @@ class MapFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
+        // Эти вызовы обязательны для MapKit
         binding.mapView.onStop()
         MapKitFactory.getInstance().onStop()
         placemarks.clear()
@@ -158,7 +153,7 @@ class MapFragment : Fragment() {
         viewModel.serverNameMap.observe(viewLifecycleOwner) {
             cachedNames = it
             val ids = it.keys.toList()
-            mapViewModel.observeServerLocations(ids) // ✅ ВАЖНО
+            mapViewModel.observeServerLocations(ids)
             maybeDraw()
         }
 
@@ -305,7 +300,6 @@ class MapFragment : Fragment() {
         return output
     }
 
-
     private fun animateMarkerMove(marker: PlacemarkMapObject, from: Point, to: Point) {
         val duration = 300L
         val steps = 10
@@ -324,7 +318,6 @@ class MapFragment : Fragment() {
     private fun showDetails(serverId: String) {
         val name = viewModel.serverNameMap.value?.get(serverId) ?: "Без имени"
         val iconUri = viewModel.getIconUriForServer(serverId)
-//        val state = viewModel.mapStates.value?.get(serverId)
         val state = mapViewModel.mapStates.value?.get(serverId)
         val point = state?.latestPoint
         val timestamp = state?.timestamp ?: System.currentTimeMillis()
@@ -372,7 +365,5 @@ class MapFragment : Fragment() {
         }
     }
 
-    companion object {
-        private var mapKitInitialized = false
-    }
+    // Companion object удален, так как флаг mapKitInitialized больше не нужен
 }
