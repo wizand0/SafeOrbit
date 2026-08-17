@@ -17,12 +17,8 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
 
-        // ⬇️ Добавь нужные источники для зависимостей
-        maven { url = uri("https://maven.google.com") }
         maven { url = uri("https://jitpack.io") }
-        maven { url = uri("https://webrtc.github.io/webrtc-org/native/android/") }
         maven { url = uri("https://maven.yandex.ru/repo") }
-        maven { url 'https://jitpack.io' }
     }
 }
 
