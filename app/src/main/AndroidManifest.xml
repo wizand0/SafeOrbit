@@ -13,12 +13,7 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\r?\n    <uses-permission android:name="android.permission.CAMERA" />\r?\n\r?\n    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -63,28 +58,8 @@
         android:theme="@style/Theme.SafeOrbit"
         tools:targetApi="31">
         <activity
-            android:name=".presentation.server.audio.AudioStarterActivity"
-            android:theme="@style/Theme.SafeOrbit.Transparent"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:launchMode="singleTop"
-            android:showOnLockScreen="true" />
-        <activity
             android:name=".presentation.client.QrScanActivity"
             android:exported="false" />
-        <activity
-            android:name=".presentation.server.audio.AudioLaunchActivity"
-            android:exported="false" />
-        <activity
-            android:name=".presentation.server.audio.SilentAudioLaunchActivity"
-            android:theme="@style/TransparentActivity"
-            android:excludeFromRecents="true"
-            android:showOnLockScreen="true"
-            android:turnScreenOn="true"
-            android:taskAffinity=""
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:screenOrientation="portrait"/>
         <activity
             android:name=".presentation.security.PinGateActivity"
             android:exported="false" />
@@ -105,20 +80,6 @@
             android:name=".presentation.server.LocationService"
             android:exported="false"
             android:foregroundServiceType="location" />
-        <service
-            android:name=".presentation.server.audio.AudioBroadcastService"
-            android:exported="false"
-            android:foregroundServiceType="microphone" /> <!-- <service -->
-        <!-- android:name=".presentation.server.audio.AudioBroadcastServiceLiveKit" -->
-        <!-- android:exported="false" -->
-        <!-- android:foregroundServiceType="microphone" /> -->
-        <service
-            android:name=".presentation.client.audio.AudioStreamPlayerService"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" /> <!-- <service -->
-        <!-- android:name=".presentation.client.audio.AudioStreamPlayerServiceLiveKit" -->
-        <!-- android:exported="false" -->
-        <!-- android:foregroundServiceType="mediaPlayback" /> -->
         <activity
             android:name=".presentation.server.ServerMainActivity"
             android:exported="false" />
@@ -138,9 +99,6 @@
         <meta-data
             android:name="YANDEX_MAPKIT_API_KEY"
             android:value="${YANDEX_MAPKIT_API_KEY}" />
-        <meta-data
-            android:name="AGORA_APP_ID"
-            android:value="${AGORA_APP_ID}" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
