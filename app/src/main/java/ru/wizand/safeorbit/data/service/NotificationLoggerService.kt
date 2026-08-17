@@ -13,9 +13,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import ru.wizand.safeorbit.data.repository.NotificationRepositoryImpl
+import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 import ru.wizand.safeorbit.data.utils.AllowedAppsPreferences
 import ru.wizand.safeorbit.data.utils.AppListUtils
-import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
 /**
  * Перехватывает системные уведомления выбранных приложений и публикует их
@@ -74,9 +74,9 @@ class NotificationLoggerService : NotificationListenerService() {
     }
 
     private fun publish(sbn: StatusBarNotification) {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val serverId = prefs.getString("server_id", null)
-        val code = prefs.getString("server_code", null)
+        val encryptedPrefs = EncryptedPreferencesManager(applicationContext)
+        val serverId = encryptedPrefs.getServerId()
+        val code = encryptedPrefs.getCode()
         if (serverId.isNullOrBlank() || code.isNullOrBlank()) {
             Log.w(TAG, "Сервер не зарегистрирован — публикация уведомления пропущена")
             return

@@ -7,7 +7,6 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import ru.wizand.safeorbit.data.model.LocationData
-import ru.wizand.safeorbit.utils.Constants
 import ru.wizand.safeorbit.utils.generateReadableId
 
 class FirebaseRepository(private val context: Context) {
@@ -105,7 +104,7 @@ class FirebaseRepository(private val context: Context) {
         }
 
         val candidateId = generateReadableId(context)
-        val ref = FirebaseDatabase.getInstance(Constants.FIREBASE_DB_URL)
+        val ref = FirebaseDatabase.getInstance()
             .getReference("servers")
             .child(candidateId)
 

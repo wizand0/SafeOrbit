@@ -15,11 +15,11 @@ import kotlinx.coroutines.withContext
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.model.AppInfo
 import ru.wizand.safeorbit.data.repository.NotificationRepositoryImpl
+import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 import ru.wizand.safeorbit.data.service.NotificationLoggerService
 import ru.wizand.safeorbit.data.utils.AllowedAppsPreferences
 import ru.wizand.safeorbit.data.utils.AppListUtils
 import ru.wizand.safeorbit.databinding.ActivityNotificationSourcesBinding
-import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
 /**
  * Экран настройки источников уведомлений на сервере.
@@ -88,9 +88,9 @@ class NotificationSourcesActivity : AppCompatActivity() {
 
     /** Публикует тестовое уведомление напрямую в Firebase. */
     private fun sendTestNotification() {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val serverId = prefs.getString("server_id", null)
-        val code = prefs.getString("server_code", null)
+        val encryptedPrefs = EncryptedPreferencesManager(applicationContext)
+        val serverId = encryptedPrefs.getServerId()
+        val code = encryptedPrefs.getCode()
 
         if (serverId.isNullOrBlank() || code.isNullOrBlank()) {
             Toast.makeText(this, getString(R.string.server_not_registered), Toast.LENGTH_SHORT).show()

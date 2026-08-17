@@ -30,6 +30,7 @@ import ru.wizand.safeorbit.data.*
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.data.model.UserRole
+import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 import ru.wizand.safeorbit.presentation.server.worker.IdleLocationWorker
 import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 import java.text.SimpleDateFormat
@@ -39,6 +40,7 @@ import java.util.concurrent.TimeUnit
 class LocationService : Service(), SensorEventListener {
 
     private lateinit var prefs: SharedPreferences
+    private lateinit var encryptedPrefs: EncryptedPreferencesManager
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var sensorManager: SensorManager
@@ -64,8 +66,9 @@ class LocationService : Service(), SensorEventListener {
     override fun onCreate() {
         super.onCreate()
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        encryptedPrefs = EncryptedPreferencesManager(applicationContext)
 
-        val role = prefs.getString("user_role", null)
+        val role = encryptedPrefs.getUserRole()
         if (role != UserRole.SERVER.name) {
             Log.w("LocationService", "❌ Неверная роль: $role. Сервис не запущен.")
             stopSelf()
@@ -100,7 +103,7 @@ class LocationService : Service(), SensorEventListener {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         serverId = intent?.getStringExtra("server_id") ?: ""
-        val code = prefs.getString("server_code", "")
+        val code = encryptedPrefs.getCode() ?: ""
         Log.d("COMMANDS", "📦 Сервис запущен. serverId=$serverId, code=$code")
 
         if (!hasLocationPermission()) {
@@ -386,7 +389,7 @@ class LocationService : Service(), SensorEventListener {
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
                 val commandId = snapshot.key ?: return
                 val codeFromClient = snapshot.child("code").getValue(String::class.java)
-                val localCode = prefs.getString("server_code", "")
+                val localCode = encryptedPrefs.getCode() ?: ""
 
                 Log.d("COMMANDS", "📥 Команда $commandId: ${snapshot.value}")
                 Log.d("COMMANDS", "🔐 Проверка кода: client=$codeFromClient, local=$localCode")
@@ -474,7 +477,7 @@ class LocationService : Service(), SensorEventListener {
             Log.d("COMMANDS", "📥 Получена команда: ${snapshot.value}")
 
             val codeFromClient = snapshot.child("code").getValue(String::class.java)
-            val localCode = prefs.getString("server_code", "")
+            val localCode = encryptedPrefs.getCode() ?: ""
             Log.d("COMMANDS", "🔐 Проверка кода: client=$codeFromClient, local=$localCode")
 
             if (codeFromClient != localCode) {

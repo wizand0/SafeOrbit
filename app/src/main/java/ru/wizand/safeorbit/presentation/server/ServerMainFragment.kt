@@ -14,6 +14,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.model.UserRole
+import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 import ru.wizand.safeorbit.databinding.FragmentServerMainBinding
 import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
@@ -145,13 +146,7 @@ class ServerMainFragment : Fragment() {
     }
 
     private fun startLocationService(serverId: String) {
-        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val role = prefs.getString("user_role", null)
-
-//        if (role != "server") {
-//            Log.w("SERVER_FRAGMENT", "⛔ Попытка запустить LocationService при роли: $role")
-//            return
-//        }
+        val role = EncryptedPreferencesManager(requireContext()).getUserRole()
 
         if (role != UserRole.SERVER.name) {
             Log.w("SERVER_FRAGMENT", "⛔ Попытка запустить LocationService при роли: $role")

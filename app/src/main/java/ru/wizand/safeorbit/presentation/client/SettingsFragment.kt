@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.*
 import androidx.fragment.app.Fragment
+import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 import ru.wizand.safeorbit.databinding.FragmentSettingsBinding
 import ru.wizand.safeorbit.presentation.role.RoleSelectionActivity
 import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
@@ -26,7 +27,8 @@ class SettingsFragment : Fragment() {
 
         binding.btnResetRole.setOnClickListener {
             val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            prefs.edit().remove("user_role").remove("permissions_intro_shown").apply()
+            prefs.edit().remove("permissions_intro_shown").apply()
+            EncryptedPreferencesManager(requireContext().applicationContext).clearAll()
             startActivity(Intent(requireContext(), RoleSelectionActivity::class.java))
             requireActivity().finish()
         }

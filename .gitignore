@@ -18,3 +18,6 @@ google-services.json
 local.properties
 /.kotlin/errors/errors-1747383181433.log
 /.kotlin/errors/errors-1747392127968.log
+
+check_strings5.py
+hs_err_pid*.log

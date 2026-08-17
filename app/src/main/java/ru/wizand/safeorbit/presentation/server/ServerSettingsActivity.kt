@@ -1,7 +1,6 @@
 package ru.wizand.safeorbit.presentation.server
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.admin.DevicePolicyManager
 import android.content.*
 import android.os.Bundle
@@ -9,8 +8,10 @@ import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 import ru.wizand.safeorbit.databinding.ActivityServerSettingsBinding
 import ru.wizand.safeorbit.device.MyDeviceAdminReceiver
 import ru.wizand.safeorbit.presentation.role.RoleSelectionActivity
@@ -21,6 +22,7 @@ class ServerSettingsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityServerSettingsBinding
     private lateinit var devicePolicyManager: DevicePolicyManager
     private lateinit var adminComponent: ComponentName
+    private lateinit var encryptedPrefs: EncryptedPreferencesManager
     private val REQUEST_CODE_ENABLE_ADMIN = 1001
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,6 +30,7 @@ class ServerSettingsActivity : AppCompatActivity() {
         binding = ActivityServerSettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        encryptedPrefs = EncryptedPreferencesManager(this)
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         setupActiveSpinner(prefs)
@@ -76,7 +79,11 @@ class ServerSettingsActivity : AppCompatActivity() {
             startActivity(Intent(this, NotificationSourcesActivity::class.java))
         }
 
-        var savedPin = prefs.getString("server_pin", null)
+        binding.btnConnectionInfo.setOnClickListener {
+            showConnectionInfoDialog()
+        }
+
+        var savedPin = encryptedPrefs.getPin()
 
         binding.btnCheckPin.setOnClickListener {
             val enteredPin = binding.etPin.text.toString()
@@ -86,7 +93,7 @@ class ServerSettingsActivity : AppCompatActivity() {
             }
 
             if (savedPin == null) {
-                prefs.edit().putString("server_pin", enteredPin).apply()
+                encryptedPrefs.savePin(enteredPin)
                 savedPin = enteredPin
                 Toast.makeText(this, getString(R.string.pin_istalled), Toast.LENGTH_SHORT).show()
                 showSettings()
@@ -102,10 +109,8 @@ class ServerSettingsActivity : AppCompatActivity() {
         binding.btnResetRole.setOnClickListener {
             stopService(Intent(this, LocationService::class.java))
 
+            encryptedPrefs.clearAll()
             prefs.edit()
-                .remove("user_role")
-                .remove("pin_verified")
-                .remove("server_pin")
                 .remove("permissions_intro_shown")
                 .apply()
 
@@ -171,9 +176,9 @@ class ServerSettingsActivity : AppCompatActivity() {
     }
 
 
-    private fun showConnectionInfoDialog(prefs: SharedPreferences) {
-        val serverId = prefs.getString("server_id", null)
-        val code = prefs.getString("server_code", null)
+    private fun showConnectionInfoDialog() {
+        val serverId = encryptedPrefs.getServerId()
+        val code = encryptedPrefs.getCode()
 
         if (serverId.isNullOrBlank() || code.isNullOrBlank()) {
             Toast.makeText(this, getString(R.string.server_not_registered), Toast.LENGTH_SHORT).show()
@@ -187,7 +192,7 @@ class ServerSettingsActivity : AppCompatActivity() {
         val matrix = com.google.zxing.MultiFormatWriter().encode(data, com.google.zxing.BarcodeFormat.QR_CODE, 400, 400)
         dialogBinding.ivConnectionQr.setImageBitmap(com.journeyapps.barcodescanner.BarcodeEncoder().createBitmap(matrix))
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.connection_info_title))
             .setView(dialogBinding.root)
             .setPositiveButton(getString(R.string.button_continue), null)
@@ -195,12 +200,11 @@ class ServerSettingsActivity : AppCompatActivity() {
     }
 
     private fun showChangePinDialog() {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val currentPin = prefs.getString("server_pin", null)
+        val currentPin = encryptedPrefs.getPin()
 
         val dialogBinding = ru.wizand.safeorbit.databinding.DialogChangePinBinding.inflate(layoutInflater)
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.Changing_pin))
             .setView(dialogBinding.root)
             .setPositiveButton("Сохранить") { _, _ ->
@@ -208,7 +212,7 @@ class ServerSettingsActivity : AppCompatActivity() {
                 val newPinInput = dialogBinding.etNewPin.text.toString()
 
                 if (oldPinInput == currentPin && newPinInput.length >= 4) {
-                    prefs.edit().putString("server_pin", newPinInput).apply()
+                    encryptedPrefs.savePin(newPinInput)
                     Toast.makeText(this, getString(R.string.pin_renewed), Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this,

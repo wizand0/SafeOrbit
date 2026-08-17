@@ -13,16 +13,16 @@ import kotlinx.coroutines.tasks.await
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.data.model.UserRole
-import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
+import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 
 class IdleLocationWorker(appContext: Context, workerParams: WorkerParameters)
     : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val serverId = prefs.getString("server_id", null) ?: return Result.failure()
+        val encryptedPrefs = EncryptedPreferencesManager(applicationContext)
+        val serverId = encryptedPrefs.getServerId() ?: return Result.failure()
 
-        val role = prefs.getString("user_role", null)
+        val role = encryptedPrefs.getUserRole()
         if (role != UserRole.SERVER.name) {
             Log.w("IdleLocationWorker", "⛔ Не режим сервера, отмена")
             return Result.failure()

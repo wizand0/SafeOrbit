@@ -70,9 +70,6 @@
             android:name=".presentation.security.PinGateActivity"
             android:exported="false" />
         <activity
-            android:name=".presentation.security.PinVerificationActivity"
-            android:exported="false" />
-        <activity
             android:name=".presentation.server.ServerSettingsActivity"
             android:exported="false" />
         <activity

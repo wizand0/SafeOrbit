@@ -1,7 +1,6 @@
 package ru.wizand.safeorbit.presentation.role
 
 import android.Manifest
-import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -257,7 +256,6 @@ class RoleSelectionActivity : AppCompatActivity() {
                 Перед началом работы в роли сервера нужно выдать разрешения:
 
                 • Геолокация — для определения положения.
-                • Микрофон — для аудиотрансляции.
                 • Камера — для установки иконки.
                 • Распознавание активности — для экономии энергии.
                 • Фоновый доступ — чтобы работать при выключенном экране.
@@ -344,7 +342,6 @@ class RoleSelectionActivity : AppCompatActivity() {
 
         // Сохраняем роль в зашифрованном виде
         viewModel.saveUserRole(UserRole.SERVER)
-        encryptedPrefs.saveUserRole(UserRole.SERVER.name)
         saveUserRoleToDatabase("server")
 
         val pin = encryptedPrefs.getPin()
@@ -373,7 +370,6 @@ class RoleSelectionActivity : AppCompatActivity() {
         FirebaseAuth.getInstance().signInAnonymously()
             .addOnSuccessListener {
                 viewModel.saveUserRole(UserRole.CLIENT)
-                encryptedPrefs.saveUserRole(UserRole.CLIENT.name)
                 saveUserRoleToDatabase("client")
 
                 binding.progressAuth.visibility = View.GONE
@@ -391,18 +387,11 @@ class RoleSelectionActivity : AppCompatActivity() {
      * Диалог запроса разрешений для Клиента
      */
     private fun showClientPermissionDialog() {
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("Доступ к геопозиции")
             .setMessage("Разрешение на определение местоположения необходимо для отображения серверов на карте.")
             .setPositiveButton("Продолжить") { _, _ ->
-                AlertDialog.Builder(this)
-                    .setTitle("Доступ к микрофону")
-                    .setMessage("Разрешение на микрофон нужно для функции прослушивания сервера.")
-                    .setPositiveButton("Разрешить") { _, _ ->
-                        clientPermissionLauncher.launch(clientPermissionsToRequest)
-                    }
-                    .setNegativeButton("Отмена", null)
-                    .show()
+                clientPermissionLauncher.launch(clientPermissionsToRequest)
             }
             .setNegativeButton("Отмена", null)
             .show()

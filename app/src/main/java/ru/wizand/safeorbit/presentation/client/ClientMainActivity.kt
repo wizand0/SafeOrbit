@@ -1,6 +1,5 @@
 package ru.wizand.safeorbit.presentation.client
 
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.viewModels
@@ -8,8 +7,8 @@ import androidx.appcompat.app.AppCompatActivity
 import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.model.UserRole
+import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 import ru.wizand.safeorbit.databinding.ActivityClientMainBinding
-import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
 @AndroidEntryPoint
 class ClientMainActivity : AppCompatActivity() {
@@ -22,8 +21,7 @@ class ClientMainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         // Проверка роли
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val currentRole = prefs.getString("user_role", null)
+        val currentRole = EncryptedPreferencesManager(this).getUserRole()
         if (currentRole != UserRole.CLIENT.name) {
             Log.d("DEBUG", "ClientMainActivity role mismatch, finishing")
             finish()
