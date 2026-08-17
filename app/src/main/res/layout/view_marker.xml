@@ -17,7 +17,7 @@
         android:textColor="@android:color/white"
         android:textSize="14sp"
         android:fontFamily="@font/montserrat"
-        android:background="#CC000000"
+        android:background="@color/scrim_marker_label"
         android:padding="2dp" />
 
     <ImageView

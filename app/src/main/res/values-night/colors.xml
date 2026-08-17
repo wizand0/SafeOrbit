@@ -40,4 +40,8 @@
 
     <!-- Подпись на карточке роли (поверх изображения) -->
     <color name="role_label_scrim">#B317181D</color>
+
+    <!-- Затемнения поверх карты (не зависят от темы) -->
+    <color name="scrim_loading">#66000000</color>
+    <color name="scrim_marker_label">#CC000000</color>
 </resources>
