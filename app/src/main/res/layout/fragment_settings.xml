@@ -4,20 +4,52 @@
     android:orientation="vertical"
     android:padding="24dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/role_screen_background1"
-    android:gravity="center">
+    android:layout_height="match_parent">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnResetRole"
+    <com.google.android.material.textview.MaterialTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/preferences"
+        android:textAppearance="?attr/textAppearanceHeadlineSmall"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Опасная зона -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/button_reset_role"
-        android:contentDescription="Сбросить роль и вернуться к выбору"
-        style="@style/ButtonFilledMaterial"
-        app:icon="@drawable/ic_reset"
-        app:iconGravity="textStart"
-        app:iconPadding="8dp"
-        app:iconTint="?attr/colorOnPrimary"
-        android:importantForAccessibility="yes" />
+        style="?attr/materialCardViewOutlinedStyle"
+        app:cardCornerRadius="16dp"
+        app:strokeColor="?attr/colorErrorContainer"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/danger_zone"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:textColor="?attr/colorError"
+                android:layout_marginBottom="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnResetRole"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/button_reset_role"
+                android:textAllCaps="false"
+                android:textColor="?attr/colorError"
+                android:contentDescription="@string/button_reset_role"
+                app:icon="@drawable/ic_reset"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp"
+                app:iconTint="?attr/colorError"
+                app:strokeColor="?attr/colorError" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 </LinearLayout>

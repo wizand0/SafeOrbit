@@ -157,4 +157,8 @@
     <string name="connection_code_label">Connection code</string>
     <string name="connection_qr_desc">QR code for client connection</string>
     <string name="connection_qr_hint">The client can connect by scanning this QR code or by entering the code manually.</string>
+    <string name="security_section">Security</string>
+    <string name="intervals_section">Update intervals</string>
+    <string name="connection_section">Connection &amp; notifications</string>
+    <string name="danger_zone">Danger zone</string>
 </resources>

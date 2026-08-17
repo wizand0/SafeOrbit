@@ -1,16 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Base.Theme.SafeOrbit" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Тёмная тема -->
-        <item name="colorSurfaceVariant">@color/surfaceVariantDark</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
     </style>
-
-    <style name="Theme.SafeOrbit.Transparent" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:backgroundDimEnabled">false</item>
-    </style>
-
-
-    <style name="Theme.SafeOrbit" parent="Base.Theme.SafeOrbit" />
 </resources>

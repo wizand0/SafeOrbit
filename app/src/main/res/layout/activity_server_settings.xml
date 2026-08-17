@@ -4,126 +4,233 @@
     android:id="@+id/scrollView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/role_screen_background1"
-    android:padding="24dp"
     android:fillViewport="true">
 
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        app:strokeColor="?attr/colorPrimary"
-        app:strokeWidth="1dp">
+        android:orientation="vertical"
+        android:padding="24dp">
 
-        <LinearLayout
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/nav_settings_title"
+            android:textAppearance="?attr/textAppearanceHeadlineSmall"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Защита: PIN -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            style="?attr/materialCardViewOutlinedStyle"
+            app:cardCornerRadius="16dp">
 
-            <!-- PIN ввод -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/hint_enter_pin">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPin"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberPassword" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCheckPin"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                style="@style/ButtonFilledMaterial"
-                android:layout_marginTop="12dp"
-                android:text="@string/button_continue" />
-
-            <!-- Настройки, скрытые до ввода PIN -->
             <LinearLayout
-                android:id="@+id/settingsContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:visibility="gone"
-                android:layout_marginTop="24dp">
+                android:padding="16dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnResetRole"
-                    android:layout_width="match_parent"
+                <com.google.android.material.textview.MaterialTextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    style="@style/ButtonFilledMaterial"
-                    android:text="@string/button_reset_role" />
+                    android:text="@string/security_section"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:textColor="?attr/colorPrimary"
+                    android:layout_marginBottom="12dp" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnChangePin"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    style="@style/ButtonFilledMaterial"
-                    android:text="@string/button_change_pin" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnConnectionInfo"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    style="@style/ButtonFilledMaterial"
-                    android:text="@string/button_connection_info" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnNotificationSources"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    style="@style/ButtonFilledMaterial"
-                    android:text="@string/button_notification_sources" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnEnableAdmin"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    style="@style/ButtonFilledMaterial"
-                    android:text="@string/button_enable_admin" />
-
-                <!-- Период бездействия -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="@string/hint_inactivity_period">
+                    android:hint="@string/hint_enter_pin"
+                    app:startIconDrawable="@drawable/ic_lock"
+                    app:startIconTint="?attr/colorOnSurfaceVariant">
 
-                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                        android:id="@+id/spinnerInactivity"
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPin"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="none"
-                        android:cursorVisible="false"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"
-                        android:importantForAccessibility="yes" />
+                        android:inputType="numberPassword" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Интервал активности -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="@string/hint_active_interval">
-
-                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                        android:id="@+id/spinnerActive"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="none"
-                        android:cursorVisible="false"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"
-                        android:importantForAccessibility="yes" />
-
-                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCheckPin"
+                    style="@style/ButtonFilledMaterial"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/button_continue" />
             </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Настройки, скрытые до ввода PIN -->
+        <LinearLayout
+            android:id="@+id/settingsContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="16dp">
+
+            <!-- Интервалы -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="?attr/materialCardViewOutlinedStyle"
+                app:cardCornerRadius="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/intervals_section"
+                        android:textAppearance="?attr/textAppearanceTitleSmall"
+                        android:textColor="?attr/colorPrimary"
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- Период бездействия -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_inactivity_period"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/spinnerInactivity"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:cursorVisible="false"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:importantForAccessibility="yes" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Интервал активности -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/hint_active_interval"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/spinnerActive"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:cursorVisible="false"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:importantForAccessibility="yes" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Подключение и уведомления -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                style="?attr/materialCardViewOutlinedStyle"
+                app:cardCornerRadius="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/connection_section"
+                        android:textAppearance="?attr/textAppearanceTitleSmall"
+                        android:textColor="?attr/colorPrimary"
+                        android:layout_marginBottom="12dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnConnectionInfo"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/button_connection_info"
+                        android:textAllCaps="false"
+                        app:icon="@drawable/ic_info" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnNotificationSources"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/button_notification_sources"
+                        android:textAllCaps="false"
+                        app:icon="@drawable/ic_list" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnEnableAdmin"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/button_enable_admin"
+                        android:textAllCaps="false"
+                        app:icon="@drawable/ic_lock" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Опасная зона -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                style="?attr/materialCardViewOutlinedStyle"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="?attr/colorErrorContainer"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/danger_zone"
+                        android:textAppearance="?attr/textAppearanceTitleSmall"
+                        android:textColor="?attr/colorError"
+                        android:layout_marginBottom="12dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnChangePin"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/button_change_pin"
+                        android:textAllCaps="false"
+                        app:icon="@drawable/ic_lock" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnResetRole"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/button_reset_role"
+                        android:textAllCaps="false"
+                        android:textColor="?attr/colorError"
+                        app:icon="@drawable/ic_reset"
+                        app:iconTint="?attr/colorError"
+                        app:strokeColor="?attr/colorError" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
 </androidx.core.widget.NestedScrollView>

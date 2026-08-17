@@ -1,20 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_500">#6200EE</color>
-    <color name="purple_700">#3700B3</color>
-    <color name="teal_200">#03DAC5</color>
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
-    <color name="dark_gray">#121212</color>
-    <color name="light_gray">#F5F5F5</color>
-    <color name="light_text">#000000</color>
-    <color name="light_text_secondary">#8E8D8D</color>
-    <!-- res/values/colors.xml -->
-    <color name="text_primary">#000000</color>
-    <color name="surfaceVariantLight">#FFF8DC</color> <!-- светло-бежевый (или #FFF9C4 как в M3) -->
-    <color name="surfaceVariantDark">#333333</color> <!-- или любой подходящий светлый вариант -->
-    <color name="red">#D32F2F</color>
 
+    <!-- Material 3 палитра (light) — глубокий синий "orbit" -->
+    <color name="md_primary">#3B5BDB</color>
+    <color name="md_on_primary">#FFFFFF</color>
+    <color name="md_primary_container">#DDE1FF</color>
+    <color name="md_on_primary_container">#001557</color>
 
+    <color name="md_secondary">#5B5D72</color>
+    <color name="md_on_secondary">#FFFFFF</color>
+    <color name="md_secondary_container">#E0E1F9</color>
+    <color name="md_on_secondary_container">#181A2C</color>
 
+    <color name="md_tertiary">#00696E</color>
+    <color name="md_on_tertiary">#FFFFFF</color>
+    <color name="md_tertiary_container">#6FF5FA</color>
+    <color name="md_on_tertiary_container">#002022</color>
+
+    <color name="md_error">#BA1A1A</color>
+    <color name="md_on_error">#FFFFFF</color>
+    <color name="md_error_container">#FFDAD6</color>
+    <color name="md_on_error_container">#410002</color>
+
+    <color name="md_background">#FAF9FD</color>
+    <color name="md_on_background">#1A1B20</color>
+    <color name="md_surface">#FAF9FD</color>
+    <color name="md_on_surface">#1A1B20</color>
+    <color name="md_surface_variant">#E2E1EC</color>
+    <color name="md_on_surface_variant">#45464F</color>
+    <color name="md_outline">#757680</color>
+    <color name="md_outline_variant">#C5C5D0</color>
+
+    <color name="md_surface_container_low">#F4F3F7</color>
+    <color name="md_surface_container">#EEEDEF</color>
+    <color name="md_surface_container_high">#E8E7EC</color>
+
+    <!-- Градиент экрана выбора роли -->
+    <color name="gradient_role_start">#E8ECFF</color>
+    <color name="gradient_role_end">#FAF9FD</color>
+
+    <!-- Подпись на карточке роли (поверх изображения) -->
+    <color name="role_label_scrim">#B3FFFFFF</color>
 </resources>

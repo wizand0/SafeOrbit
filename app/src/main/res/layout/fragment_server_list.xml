@@ -5,8 +5,7 @@
     android:fitsSystemWindows="true"
     android:paddingTop="10dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/role_screen_background1">
+    android:layout_height="match_parent">
 
     <!-- Список серверов -->
     <androidx.recyclerview.widget.RecyclerView

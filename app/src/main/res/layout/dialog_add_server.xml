@@ -4,8 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="@drawable/role_screen_background1">
+    android:padding="16dp">
 
     <!-- Имя сервера -->
     <com.google.android.material.textfield.TextInputLayout

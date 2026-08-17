@@ -5,8 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center_horizontal"
-    android:padding="24dp"
-    android:background="@drawable/role_screen_background1">
+    android:padding="24dp">
 
     <ScrollView
         android:id="@+id/scrollView"

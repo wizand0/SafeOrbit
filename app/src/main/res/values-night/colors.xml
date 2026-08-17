@@ -1,21 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_500">#6200EE</color>
-    <color name="purple_700">#3700B3</color>
-    <color name="teal_200">#03DAC5</color>
-    <color name="black">#000000</color>
-    <color name="white">#FFFFFF</color>
-    <color name="dark_gray">#121212</color>
-    <color name="light_gray">#F5F5F5</color>
-    <color name="light_text">#DADADA</color>
-    <color name="light_text_secondary">#A8A8A8</color>
-    <!-- res/values/colors.xml -->
-<!--    <color name="text_primary">#000000</color>-->
+    <!-- Material 3 палитра (dark) -->
+    <color name="md_primary">#B9C3FF</color>
+    <color name="md_on_primary">#002877</color>
+    <color name="md_primary_container">#24409E</color>
+    <color name="md_on_primary_container">#DDE1FF</color>
 
-    <!-- res/values-night/colors.xml -->
-    <color name="text_primary">#FFFFFF</color>
-    <color name="surfaceVariantDark">#333333</color> <!-- глубокий серый -->
-    <color name="red">#D32F2F</color>
+    <color name="md_secondary">#C4C5DD</color>
+    <color name="md_on_secondary">#2D2F42</color>
+    <color name="md_secondary_container">#434559</color>
+    <color name="md_on_secondary_container">#E0E1F9</color>
 
+    <color name="md_tertiary">#4ED8DE</color>
+    <color name="md_on_tertiary">#00373A</color>
+    <color name="md_tertiary_container">#004F53</color>
+    <color name="md_on_tertiary_container">#6FF5FA</color>
 
+    <color name="md_error">#FFB4AB</color>
+    <color name="md_on_error">#690005</color>
+    <color name="md_error_container">#93000A</color>
+    <color name="md_on_error_container">#FFDAD6</color>
+
+    <color name="md_background">#121318</color>
+    <color name="md_on_background">#E3E2E6</color>
+    <color name="md_surface">#121318</color>
+    <color name="md_on_surface">#E3E2E6</color>
+    <color name="md_surface_variant">#45464F</color>
+    <color name="md_on_surface_variant">#C6C5D0</color>
+    <color name="md_outline">#8F909A</color>
+    <color name="md_outline_variant">#45464F</color>
+
+    <color name="md_surface_container_low">#1A1B21</color>
+    <color name="md_surface_container">#1E1F25</color>
+    <color name="md_surface_container_high">#28292F</color>
+
+    <!-- Градиент экрана выбора роли -->
+    <color name="gradient_role_start">#1B2340</color>
+    <color name="gradient_role_end">#121318</color>
+
+    <!-- Подпись на карточке роли (поверх изображения) -->
+    <color name="role_label_scrim">#B317181D</color>
 </resources>

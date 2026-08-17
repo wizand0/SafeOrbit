@@ -157,4 +157,8 @@
     <string name="connection_code_label">Код подключения</string>
     <string name="connection_qr_desc">QR-код для подключения клиента</string>
     <string name="connection_qr_hint">Клиент может подключиться, отсканировав этот QR-код, или введя код вручную.</string>
+    <string name="security_section">Защита</string>
+    <string name="intervals_section">Интервалы отправки</string>
+    <string name="connection_section">Подключение и уведомления</string>
+    <string name="danger_zone">Опасная зона</string>
 </resources>

@@ -7,7 +7,7 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="24dp"
-    android:background="@drawable/role_screen_background1">
+    android:background="@drawable/bg_gradient_role">
 
     <!-- Прогресс-бар -->
     <com.google.android.material.progressindicator.CircularProgressIndicator
@@ -68,7 +68,7 @@
                     android:text="@string/server"
                     android:textAppearance="?attr/textAppearanceTitleSmall"
                     android:gravity="center"
-                    android:background="#80FFFFFF"
+                    android:background="@color/role_label_scrim"
                     android:layout_gravity="bottom"
                     android:layout_marginBottom="6dp" />
             </FrameLayout>
@@ -103,7 +103,7 @@
                     android:text="@string/client"
                     android:textAppearance="?attr/textAppearanceTitleSmall"
                     android:gravity="center"
-                    android:background="#80FFFFFF"
+                    android:background="@color/role_label_scrim"
                     android:layout_gravity="bottom"
                     android:layout_marginBottom="6dp" />
             </FrameLayout>

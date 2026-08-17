@@ -6,8 +6,7 @@
     android:paddingTop="10dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@drawable/role_screen_background1">
+    android:orientation="vertical">
 
     <!-- Контейнер для фрагментов -->
     <FrameLayout
