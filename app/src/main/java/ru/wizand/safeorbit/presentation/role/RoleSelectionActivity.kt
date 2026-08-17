@@ -18,32 +18,37 @@ import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import ru.wizand.safeorbit.data.model.UserRole
+import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 import ru.wizand.safeorbit.databinding.ActivityRoleSelectionBinding
 import ru.wizand.safeorbit.presentation.client.ClientMainActivity
 import ru.wizand.safeorbit.presentation.security.PinGateActivity
 import ru.wizand.safeorbit.presentation.server.ServerMainActivity
-import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
+/**
+ * Экран выбора роли (Сервер/Клиент).
+ * Обрабатывает запрос разрешений и безопасное хранение роли пользователя.
+ */
 class RoleSelectionActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRoleSelectionBinding
     private val viewModel: RoleSelectionViewModel by viewModels()
-
+    private lateinit var encryptedPrefs: EncryptedPreferencesManager
 
     private lateinit var settingsLauncher: ActivityResultLauncher<Intent>
+    private lateinit var permissionLauncher: ActivityResultLauncher<String>
+    private lateinit var clientPermissionLauncher: ActivityResultLauncher<Array<String>>
 
     private val deniedPermissions = mutableListOf<String>()
     private var currentPermissionIndex = 0
     private var hasPermanentlyDenied = false
 
-    //    private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
-    private lateinit var permissionLauncher: ActivityResultLauncher<String>
-    private lateinit var clientPermissionLauncher: ActivityResultLauncher<Array<String>>
-
+    /**
+     * Список разрешений для режима Сервера
+     */
     private val serverPermissionsToRequest: Array<String> by lazy {
         val perms = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION, // важно, чтобы ACCESS_FINE работал корректно
+            Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.CAMERA,
             Manifest.permission.WAKE_LOCK,
@@ -64,7 +69,9 @@ class RoleSelectionActivity : AppCompatActivity() {
         perms.toTypedArray()
     }
 
-
+    /**
+     * Список разрешений для режима Клиента
+     */
     private val clientPermissionsToRequest: Array<String> by lazy {
         val perms = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
@@ -84,74 +91,16 @@ class RoleSelectionActivity : AppCompatActivity() {
         binding = ActivityRoleSelectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        permissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted ->
-            val permission = serverPermissionsToRequest[currentPermissionIndex]
+        // Инициализация менеджера зашифрованных данных
+        encryptedPrefs = EncryptedPreferencesManager(this)
 
-            if (isGranted) {
-                Log.d("PERMISSION_TEST", "✅ Разрешение $permission выдано")
-            } else {
-                val permanentlyDenied = !shouldShowRequestPermissionRationale(permission)
-                if (permanentlyDenied) {
-                    Log.d("PERMISSION_TEST", "⛔ $permission запрещено навсегда")
-                    hasPermanentlyDenied = true
-                } else {
-                    Log.d("PERMISSION_TEST", "❌ $permission не выдано")
-                }
-                deniedPermissions.add(permission)
-            }
+        setupPermissionLaunchers()
 
-            currentPermissionIndex++
-            requestNextPermission()
-        }
-
-
-        clientPermissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
-        ) { result ->
-            val denied = result.filterValues { !it }
-            if (denied.isEmpty()) {
-                launchClient()
-            } else {
-                Toast.makeText(this, "Не все разрешения выданы", Toast.LENGTH_LONG).show()
-            }
-        }
-
-        // Launcher для открытия настроек
-        settingsLauncher = registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) {
-            Log.d("PERMISSION_TEST", "🔁 Возврат из настроек, повторная проверка")
-            checkAndRequestPermissions()
-        }
-
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val fromReset = intent.getBooleanExtra("fromReset", false)
 
+        // Проверка сохранённой роли (если не из режима сброса)
         if (!fromReset) {
-            viewModel.getUserRole()?.let { role ->
-                when (role) {
-                    UserRole.SERVER -> {
-                        val pin = prefs.getString("server_pin", null)
-                        val verified = prefs.getBoolean("pin_verified", false)
-                        val intent = if (pin != null && !verified) {
-                            Intent(this, PinGateActivity::class.java)
-                        } else {
-                            Intent(this, ServerMainActivity::class.java)
-                        }
-                        startActivity(intent)
-                        finish()
-                        return
-                    }
-
-                    UserRole.CLIENT -> {
-                        startActivity(Intent(this, ClientMainActivity::class.java))
-                        finish()
-                        return
-                    }
-                }
-            }
+            checkSavedRoleAndNavigate()
         }
 
         binding.progressAuth.visibility = View.VISIBLE
@@ -167,13 +116,90 @@ class RoleSelectionActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Настройка launchers для запроса разрешений
+     */
+    private fun setupPermissionLaunchers() {
+        permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            val permission = serverPermissionsToRequest[currentPermissionIndex]
+
+            if (isGranted) {
+                Log.d(TAG, "✅ Разрешение $permission выдано")
+            } else {
+                val permanentlyDenied = !shouldShowRequestPermissionRationale(permission)
+                if (permanentlyDenied) {
+                    Log.d(TAG, "⛔ $permission запрещено навсегда")
+                    hasPermanentlyDenied = true
+                } else {
+                    Log.d(TAG, "❌ $permission не выдано")
+                }
+                deniedPermissions.add(permission)
+            }
+
+            currentPermissionIndex++
+            requestNextPermission()
+        }
+
+        clientPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { result ->
+            val denied = result.filterValues { !it }
+            if (denied.isEmpty()) {
+                launchClient()
+            } else {
+                Toast.makeText(this, "Не все разрешения выданы", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        settingsLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            Log.d(TAG, "🔁 Возврат из настроек, повторная проверка")
+            checkAndRequestPermissions()
+        }
+    }
+
+    /**
+     * Проверка сохранённой роли и автоматический переход
+     */
+    private fun checkSavedRoleAndNavigate() {
+        viewModel.getUserRole()?.let { role ->
+            when (role) {
+                UserRole.SERVER -> {
+                    val pin = encryptedPrefs.getPin()
+                    val verified = encryptedPrefs.isPinVerified()
+
+                    val intent = if (pin != null && !verified) {
+                        Intent(this, PinGateActivity::class.java)
+                    } else {
+                        Intent(this, ServerMainActivity::class.java)
+                    }
+                    startActivity(intent)
+                    finish()
+                    return
+                }
+
+                UserRole.CLIENT -> {
+                    startActivity(Intent(this, ClientMainActivity::class.java))
+                    finish()
+                    return
+                }
+            }
+        }
+    }
+
+    /**
+     * Анонимный вход в Firebase (если не выполнен)
+     */
     private fun signInAnonymouslyIfNeeded() {
         val auth = FirebaseAuth.getInstance()
         if (auth.currentUser == null) {
             auth.signInAnonymously()
                 .addOnSuccessListener {
                     binding.progressAuth.visibility = View.GONE
-                    Log.d("AUTH", "✅ Анонимный вход выполнен")
+                    Log.d(TAG, "✅ Анонимный вход выполнен")
                     checkFirebaseConnection()
                 }
                 .addOnFailureListener {
@@ -186,12 +212,18 @@ class RoleSelectionActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Сохранение роли пользователя в Firebase Database
+     */
     private fun saveUserRoleToDatabase(role: String) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val db = com.google.firebase.database.FirebaseDatabase.getInstance().reference
         db.child("users").child(uid).setValue(mapOf("role" to role))
     }
 
+    /**
+     * Проверка подключения к Firebase
+     */
     private fun checkFirebaseConnection() {
         val db = com.google.firebase.database.FirebaseDatabase.getInstance().reference
         val connectedRef = db.child(".info/connected")
@@ -218,6 +250,9 @@ class RoleSelectionActivity : AppCompatActivity() {
         })
     }
 
+    /**
+     * Показ диалога с объяснением необходимости разрешений для Сервера
+     */
     private fun showPermissionsIntroAndRequest() {
         MaterialAlertDialogBuilder(this)
             .setTitle("Разрешения для сервера")
@@ -233,16 +268,18 @@ class RoleSelectionActivity : AppCompatActivity() {
                 """.trimIndent()
             )
             .setPositiveButton("Продолжить") { _, _ ->
-                Log.d("PERMISSION_TEST", "📋 Пользователь согласился")
+                Log.d(TAG, "📋 Пользователь согласился")
                 binding.root.postDelayed({
                     checkAndRequestPermissions()
-
                 }, 500)
             }
             .setCancelable(false)
             .show()
     }
 
+    /**
+     * Запуск процесса проверки и запроса разрешений
+     */
     private fun checkAndRequestPermissions() {
         deniedPermissions.clear()
         hasPermanentlyDenied = false
@@ -250,15 +287,18 @@ class RoleSelectionActivity : AppCompatActivity() {
         requestNextPermission()
     }
 
+    /**
+     * Рекурсивный запрос следующего разрешения
+     */
     private fun requestNextPermission() {
         if (currentPermissionIndex >= serverPermissionsToRequest.size) {
             if (deniedPermissions.isEmpty()) {
-                Log.d("PERMISSION_TEST", "✅ Все разрешения выданы")
+                Log.d(TAG, "✅ Все разрешения выданы")
                 proceedToServer()
             } else {
-                Log.d("PERMISSION_TEST", "⛔ Не выданы: ${deniedPermissions.joinToString()}")
+                Log.d(TAG, "⛔ Не выданы: ${deniedPermissions.joinToString()}")
                 if (hasPermanentlyDenied) {
-                    Log.d("PERMISSION_TEST", "⚠️ Есть навсегда запрещённые разрешения")
+                    Log.d(TAG, "⚠️ Есть навсегда запрещённые разрешения")
                     showGoToSettingsDialog()
                 } else {
                     Toast.makeText(this, "Не все разрешения выданы", Toast.LENGTH_LONG).show()
@@ -268,21 +308,24 @@ class RoleSelectionActivity : AppCompatActivity() {
         }
 
         val permission = serverPermissionsToRequest[currentPermissionIndex]
-        val granted =
-            ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
-        Log.d("PERMISSION_TEST", "🔎 Проверяем $permission: ${if (granted) "OK" else "НЕ ОК"}")
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
+
+        Log.d(TAG, "🔎 Проверяем $permission: ${if (granted) "OK" else "НЕ ОК"}")
 
         if (granted) {
             currentPermissionIndex++
             requestNextPermission()
         } else {
-            val shouldShow = shouldShowRequestPermissionRationale(permission)
-            Log.d("PERMISSION_TEST", "🔍 $permission: denied=true, showRationale=$shouldShow")
-
             permissionLauncher.launch(permission)
         }
     }
 
+    /**
+     * Диалог для перехода в настройки приложения
+     */
     private fun showGoToSettingsDialog() {
         MaterialAlertDialogBuilder(this)
             .setTitle("Разрешения отключены")
@@ -297,22 +340,27 @@ class RoleSelectionActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * Переход в режим Сервера
+     */
     private fun proceedToServer() {
-        Log.d("PERMISSION_TEST", "➡ Переход в режим сервера")
+        Log.d(TAG, "➡ Переход в режим сервера")
+
+        // Сохраняем роль в зашифрованном виде
         viewModel.saveUserRole(UserRole.SERVER)
+        encryptedPrefs.saveUserRole(UserRole.SERVER.name)
         saveUserRoleToDatabase("server")
 
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val pin = prefs.getString("server_pin", null)
-        val verified = prefs.getBoolean("pin_verified", false)
+        val pin = encryptedPrefs.getPin()
+        val verified = encryptedPrefs.isPinVerified()
 
-        Log.d("PERMISSION_TEST", "🛡 PIN: ${pin != null}, verified=$verified")
+        Log.d(TAG, "🛡 PIN: ${pin != null}, verified=$verified")
 
         val intent = if (pin != null && !verified) {
-            Log.d("PERMISSION_TEST", "🔑 Открываем PinGateActivity")
+            Log.d(TAG, "🔑 Открываем PinGateActivity")
             Intent(this, PinGateActivity::class.java)
         } else {
-            Log.d("PERMISSION_TEST", "🏠 Открываем ServerMainActivity")
+            Log.d(TAG, "🏠 Открываем ServerMainActivity")
             Intent(this, ServerMainActivity::class.java)
         }
 
@@ -320,13 +368,18 @@ class RoleSelectionActivity : AppCompatActivity() {
         finish()
     }
 
+    /**
+     * Запуск режима Клиента
+     */
     private fun launchClient() {
         binding.progressAuth.visibility = View.VISIBLE
 
         FirebaseAuth.getInstance().signInAnonymously()
             .addOnSuccessListener {
                 viewModel.saveUserRole(UserRole.CLIENT)
+                encryptedPrefs.saveUserRole(UserRole.CLIENT.name)
                 saveUserRoleToDatabase("client")
+
                 binding.progressAuth.visibility = View.GONE
                 Toast.makeText(this, "Запуск клиента", Toast.LENGTH_SHORT).show()
                 startActivity(Intent(this, ClientMainActivity::class.java))
@@ -338,7 +391,9 @@ class RoleSelectionActivity : AppCompatActivity() {
             }
     }
 
-
+    /**
+     * Диалог запроса разрешений для Клиента
+     */
     private fun showClientPermissionDialog() {
         AlertDialog.Builder(this)
             .setTitle("Доступ к геопозиции")
@@ -357,5 +412,7 @@ class RoleSelectionActivity : AppCompatActivity() {
             .show()
     }
 
-
+    companion object {
+        private const val TAG = "RoleSelectionActivity"
+    }
 }

@@ -133,4 +133,11 @@
     <string name="preferences">Settings</string>
     <string name="_5f_5f">Coordinates: %.5f, %.5f</string>
     <string name="time_">Time: %1$s</string>
+    <string name="lock_icon">lock</string>
+    <string name="pin_description">Your need to enter pin</string>
+    <string name="enter_pin_hint">enter pin</string>
+    <string name="show_pin">show pin</string>
+    <string name="toggle_pin_visibility">Toggle pin visibility</string>
+    <string name="confirm">Confirm</string>
+    <string name="reset_pin">Reset pin</string>
 </resources>

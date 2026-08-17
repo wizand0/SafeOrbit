@@ -1,165 +1,190 @@
-###############################################
-##  ОБЩИЕ РЕКОМЕНДУЕМЫЕ ПРАВИЛА
-###############################################
+# Add project specific ProGuard rules here.
+# You can control the set of applied configuration files using the
+# proguardFiles setting in build.gradle.
 
-# Сохраняем имена ViewBinding-классов
--keep class **Binding { *; }
+# ========= Общие атрибуты =========
 
-# BuildConfig должен сохраняться (важно для API-ключей)
+# Сохраняем информацию для читабельных stack traces
+-keepattributes SourceFile,LineNumberTable,Signature,*Annotation*,EnclosingMethod,InnerClasses
+
+# ViewBinding (классы генерируются компилятором)
+-keep class **.*Binding { *; }
+
+# BuildConfig
 -keep class **.BuildConfig { *; }
 
-# Kotlin metadata
+# Kotlin metadata (для reflection)
 -keep class kotlin.Metadata { *; }
+-keep class kotlin.reflect.** { *; }
 -dontwarn kotlin.**
 
-# Сохраняем enum (используются Firebase, Room, MapKit)
+# Сохраняем enum-значения
 -keepclassmembers enum * {
     public static **[] values();
     public static ** valueOf(java.lang.String);
 }
 
+# ========= Firebase Models (важно!) =========
+# LocationData должен быть доступен для Firebase serialization
+-keep @com.google.firebase.database.IgnoreExtraProperties class * { *; }
+-keep @androidx.annotation.Keep class * { *; }
 
-###############################################
-##  HILT / Dagger
-###############################################
--keep class dagger.hilt.** { *; }
--keep class javax.inject.** { *; }
--keep class dagger.** { *; }
--dontwarn dagger.hilt.**
-
-# Сохраняем Application (очень важно!)
--keep class ru.wizand.safeorbit.MainApplication { *; }
-
-# Сохраняем DI-модули
--keep class ru.wizand.safeorbit.di.** { *; }
-
-
-###############################################
-##  FIREBASE
-###############################################
-
-# Библиотеки Firebase
--keep class com.google.firebase.** { *; }
--dontwarn com.google.firebase.**
--dontwarn com.google.android.gms.**
-
-# Модели (Firebase Database)
--keepclassmembers class ru.wizand.safeorbit.data.model.** {
+-keep class ru.wizand.safeorbit.data.model.LocationData {
+    <init>();
     <fields>;
     <methods>;
 }
 
-# Сохраняем IgnoreExtraProperties
--keepnames class * {
-    @com.google.firebase.database.IgnoreExtraProperties *;
+# Все Firebase data models
+-keep class ru.wizand.safeorbit.data.model.** {
+    <init>();
+    <fields>;
 }
 
+# ========= Firebase SDK =========
+-keep class com.google.firebase.database.** { *; }
+-keep class com.google.firebase.auth.** { *; }
+-keepclassmembers class com.google.firebase.** {
+    <init>();
+}
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
 
-###############################################
-##  ROOM
-###############################################
+# Firebase GenericTypeIndicator
+-keepclassmembers class * {
+    *** getValue();
+}
+
+# ========= Hilt / Dagger =========
+-keep class dagger.hilt.** { *; }
+-keep class javax.inject.** { *; }
+-keep class dagger.** { *; }
+-keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
+
+# Hilt generated classes
+-keep class **_HiltModules { *; }
+-keep class **_HiltComponents { *; }
+-keep class **_ComponentTreeDeps { *; }
+-keep class **_Factory { *; }
+-keep class **_MembersInjector { *; }
+
+-dontwarn dagger.hilt.**
+-dontwarn javax.inject.**
+
+# Защита от обфускации компонентов для DI
+-keep @dagger.hilt.android.AndroidEntryPoint class * { *; }
+-keep @dagger.hilt.InstallIn class * { *; }
+-keep @dagger.Module class * { *; }
+
+# ========= Room Database =========
 -keep class androidx.room.** { *; }
--keep @androidx.room.Dao class * { *; }
 -keep @androidx.room.Entity class * { *; }
--dontwarn androidx.room.**
+-keep @androidx.room.Database class * { *; }
+-keep @androidx.room.Dao class * { *; }
 
 -keepclassmembers class * {
     @androidx.room.* <methods>;
     @androidx.room.* <fields>;
 }
 
+# Room entities с @Keep защищены дополнительно
+-keep @androidx.annotation.Keep class * {
+    <init>();
+    <fields>;
+    <methods>;
+}
 
-###############################################
-##  ANDROID ARCHITECTURE COMPONENTS
-###############################################
-# ViewModel
--keep class androidx.lifecycle.** { *; }
--keep class ru.wizand.safeorbit.**ViewModel { *; }
+-dontwarn androidx.room.**
 
-# SavedState
--keep class androidx.lifecycle.savedstate.** { *; }
+# ========= EncryptedSharedPreferences =========
+-keep class androidx.security.crypto.** { *; }
+-keepclassmembers class androidx.security.crypto.** {
+    <init>(...);
+    <fields>;
+    <methods>;
+}
 
-# LiveData
--keep class androidx.lifecycle.LiveData { *; }
-
-
-###############################################
-##  NAVIGATION
-###############################################
--keep class androidx.navigation.** { *; }
-
-
-###############################################
-##  WORKMANAGER
-###############################################
--keep class androidx.work.** { *; }
--dontwarn androidx.work.**
-
-
-###############################################
-##  COROUTINES
-###############################################
--dontwarn kotlinx.coroutines.**
-
-
-###############################################
-##  ZXING QR
-###############################################
--keep class com.journeyapps.** { *; }
--dontwarn com.journeyapps.**
--keep class com.google.zxing.** { *; }
--dontwarn com.google.zxing.**
-
-
-###############################################
-##  AGORA SDK
-###############################################
--keep class io.agora.** { *; }
--dontwarn io.agora.**
-
-
-###############################################
-##  YANDEX MAPKIT
-###############################################
-
-# Сохраняем ВСЁ MapKit – эта SDK активно использует JNI
--keep class com.yandex.** { *; }
+# ========= Yandex Maps =========
+-keep class com.yandex.mapkit.** { *; }
+-keep class com.yandex.runtime.** { *; }
+-keep class ru.yandex.** { *; }
 -dontwarn com.yandex.**
 
-# Иногда требуется:
--keep class ru.yandex.** { *; }
+# ========= ZXing (QR Code) =========
+-keep class com.journeyapps.barcodescanner.** { *; }
+-keep class com.google.zxing.** { *; }
+-dontwarn com.journeyapps.**
+-dontwarn com.google.zxing.**
 
+# ========= WorkManager =========
+-keep class androidx.work.** { *; }
+-keep class * extends androidx.work.Worker
+-keep class * extends androidx.work.ListenableWorker
+-keepclassmembers class * extends androidx.work.Worker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-dontwarn androidx.work.**
 
-###############################################
-##  ANDROID SYSTEM
-###############################################
-# Для FileProvider
+# ========= Navigation Component =========
+-keep class androidx.navigation.** { *; }
+-keepnames class androidx.navigation.fragment.NavHostFragment
+
+# ========= LiveData/ViewModel =========
+-keep class androidx.lifecycle.** { *; }
+-keep class * extends androidx.lifecycle.ViewModel {
+    <init>();
+}
+-keep class * extends androidx.lifecycle.AndroidViewModel {
+    <init>(android.app.Application);
+}
+
+# ========= Coroutines =========
+-keepclassmembers class kotlinx.coroutines.** {
+    volatile <fields>;
+}
+-keepclassmembernames class kotlinx.** {
+    volatile <fields>;
+}
+-dontwarn kotlinx.coroutines.**
+
+# ========= Serialization =========
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
+}
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# ========= Material Components =========
+-keep class com.google.android.material.** { *; }
+-dontwarn com.google.android.material.**
+
+# ========= Parcelable =========
+-keepclassmembers class * implements android.os.Parcelable {
+    public static final ** CREATOR;
+}
+
+# ========= Native methods =========
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# ========= Application / системные компоненты =========
+-keep class ru.wizand.safeorbit.MainApplication { *; }
 -keep class androidx.core.content.FileProvider { *; }
 
-# Services / Receivers
--keep class ru.wizand.safeorbit.presentation.server.LocationService { *; }
--keep class ru.wizand.safeorbit.presentation.server.audio.AudioBroadcastService { *; }
--keep class ru.wizand.safeorbit.presentation.client.audio.AudioStreamPlayerService { *; }
-
--keep class ru.wizand.safeorbit.presentation.server.BootReceiver { *; }
--keep class ru.wizand.safeorbit.device.MyDeviceAdminReceiver { *; }
--keep class ru.wizand.safeorbit.presentation.server.ActivityReceiver { *; }
-
-
-###############################################
-##  KEEP REFLECTION-USING CLASSES
-###############################################
-
-# Сохраняем модели, которые создаются через Firebase/JSON
+# ========= Защита классов, используемых через reflection =========
 -keep class ru.wizand.safeorbit.data.** { *; }
-
-# Сохраняем UTILS, которые дергаются рефлексией
 -keep class ru.wizand.safeorbit.utils.** { *; }
 
+# ========= Optimization =========
+-optimizationpasses 5
+-dontusemixedcaseclassnames
 
-###############################################
-##  ОТЛАДКА (если нужно)
-###############################################
-# Для удобства
--keepattributes *Annotation*
--keepattributes SourceFile,LineNumberTable
+-dontwarn javax.annotation.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**
