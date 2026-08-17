@@ -30,7 +30,7 @@ android {
         buildConfigField "String", "YANDEX_MAPKIT_API_KEY", "\"${yandexKey}\""
 
         manifestPlaceholders = [
-                YANDEX_MAPKIT_API_KEY: ***
+                YANDEX_MAPKIT_API_KEY: yandexKey
         ]
     }
 
@@ -123,6 +123,7 @@ dependencies {
     // QR
     implementation libs.core
     implementation libs.zxing.android.embedded
+
 
     // Tests
     testImplementation libs.junit
