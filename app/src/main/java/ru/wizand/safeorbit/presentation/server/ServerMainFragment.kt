@@ -105,22 +105,6 @@ class ServerMainFragment : Fragment() {
                 serviceStarted = true
                 startLocationService(serverId)
             }
-            viewModel.code.value?.let { code ->
-                if (serverId != null) {
-                    generateQrCode(serverId, code)
-                }
-            }
-
-        }
-
-        viewModel.code.observe(viewLifecycleOwner) { code ->
-            val text = getString(R.string.code) + code
-            binding.tvPairCode.text = text
-            viewModel.serverId.value?.let { serverId ->
-                if (code != null) {
-                    generateQrCode(serverId, code)
-                }
-            }
         }
 
         viewModel.lastKnownLatLon.observe(viewLifecycleOwner) { (lat, lon) ->
@@ -184,14 +168,6 @@ class ServerMainFragment : Fragment() {
     private fun formatTimestamp(timestamp: Long): String {
         val sdf = java.text.SimpleDateFormat("HH:mm:ss, dd MMMM", java.util.Locale.getDefault())
         return sdf.format(java.util.Date(timestamp))
-    }
-
-    private fun generateQrCode(serverId: String, code: String) {
-        val data = "$serverId|$code"
-        val writer = com.google.zxing.MultiFormatWriter()
-        val matrix = writer.encode(data, com.google.zxing.BarcodeFormat.QR_CODE, 400, 400)
-        val bitmap = com.journeyapps.barcodescanner.BarcodeEncoder().createBitmap(matrix)
-        binding.ivQrCode.setImageBitmap(bitmap)
     }
 
 }

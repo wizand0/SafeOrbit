@@ -154,4 +154,9 @@
     <string name="address_error">Ошибка геокодинга</string>
     <string name="dialog_intervals_title">Настройка интервалов</string>
     <string name="toast_intervals_sent">Интервалы отправлены</string>
+    <string name="button_connection_info">Подключение клиента (код и QR)</string>
+    <string name="connection_info_title">Подключение клиента</string>
+    <string name="connection_code_label">Код подключения</string>
+    <string name="connection_qr_desc">QR-код для подключения клиента</string>
+    <string name="connection_qr_hint">Клиент может подключиться, отсканировав этот QR-код, или введя код вручную.</string>
 </resources>
