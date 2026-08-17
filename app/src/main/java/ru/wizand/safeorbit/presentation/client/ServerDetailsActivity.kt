@@ -2,23 +2,16 @@ package ru.wizand.safeorbit.presentation.client
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.content.res.ColorStateList
-import android.graphics.drawable.AnimationDrawable
 import android.location.Geocoder
 import android.net.Uri
-import android.os.*
-import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import dagger.hilt.android.AndroidEntryPoint
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.databinding.ActivityServerDetailsBinding
 import ru.wizand.safeorbit.databinding.DialogChangeIntervalsBinding
-import ru.wizand.safeorbit.presentation.client.audio.AudioStreamPlayerService
-import ru.wizand.safeorbit.presentation.client.audio.AudioStreamViewModel
 import ru.wizand.safeorbit.presentation.client.commands.CommandViewModel
 import ru.wizand.safeorbit.presentation.server.ActiveInterval
 import ru.wizand.safeorbit.presentation.server.InactivityTimeout
@@ -32,23 +25,9 @@ class ServerDetailsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityServerDetailsBinding
 
     private val clientViewModel: ClientViewModel by viewModels()
-    private val audioStreamViewModel: AudioStreamViewModel by viewModels()
     private val commandViewModel: CommandViewModel by viewModels()
 
     private lateinit var serverId: String
-    private var defaultButtonTint: ColorStateList? = null
-
-    private var streamStartTime: Long = 0
-    private val streamHandler = Handler(Looper.getMainLooper())
-    private val streamTimerRunnable = object : Runnable {
-        override fun run() {
-            val elapsed = System.currentTimeMillis() - streamStartTime
-            val minutes = (elapsed / 1000) / 60
-            val seconds = (elapsed / 1000) % 60
-            binding.textStreamTimer.text = String.format("%02d:%02d", minutes, seconds)
-            streamHandler.postDelayed(this, 1000)
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,8 +46,6 @@ class ServerDetailsActivity : AppCompatActivity() {
         binding.textCoords.text = getString(R.string._5f_5f).format(lat, lon)
         binding.textTime.text = getString(R.string.time_, formatTimestamp(timestamp))
         binding.textAddress.text = getAddressFromCoords(lat, lon)
-
-        defaultButtonTint = binding.buttonListen.backgroundTintList
 
         // Наблюдение за иконкой
         clientViewModel.iconUriMap.observe(this) { map ->
@@ -99,27 +76,6 @@ class ServerDetailsActivity : AppCompatActivity() {
 
         binding.buttonNavigate.setOnClickListener {
             NavigationUtils.openNavigationChooser(this, lat, lon, name)
-        }
-
-        binding.buttonListen.setOnClickListener {
-            if (audioStreamViewModel.isAudioStreaming.value == true) {
-                audioStreamViewModel.stopAudioStream(serverId)
-            } else {
-                audioStreamViewModel.startAudioStream(serverId) { code ->
-                    // сохраняем, если нужно
-                    ContextCompat.startForegroundService(
-                        this,
-                        Intent(this, AudioStreamPlayerService::class.java)
-                    )
-                }
-                toast("Запрошено прослушивание. Ожидайте")
-            }
-        }
-
-
-        // Наблюдение за состоянием аудиопотока
-        audioStreamViewModel.isAudioStreaming.observe(this) { active ->
-            if (active) startAudioStreamUI() else stopAudioStreamUI()
         }
 
         clientViewModel.refreshIcon(serverId)
@@ -165,32 +121,6 @@ class ServerDetailsActivity : AppCompatActivity() {
             }
             .setNegativeButton("Отмена", null)
             .show()
-    }
-
-    private fun startAudioStreamUI() {
-        binding.buttonListen.text = "Остановить"
-        binding.buttonListen.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.red))
-        binding.textStreamTimer.visibility = View.VISIBLE
-        binding.textAutoOff.visibility = View.VISIBLE
-        binding.imageAudioAnim.apply {
-            visibility = View.VISIBLE
-            setImageResource(R.drawable.audio_wave_anim)
-            (drawable as? AnimationDrawable)?.start()
-        }
-        streamStartTime = System.currentTimeMillis()
-        streamHandler.post(streamTimerRunnable)
-    }
-
-    private fun stopAudioStreamUI() {
-        binding.buttonListen.text = "Послушать"
-        binding.buttonListen.setBackgroundTintList(defaultButtonTint)
-        binding.textStreamTimer.visibility = View.GONE
-        binding.textAutoOff.visibility = View.GONE
-        binding.imageAudioAnim.apply {
-            visibility = View.GONE
-            (drawable as? AnimationDrawable)?.stop()
-        }
-        streamHandler.removeCallbacks(streamTimerRunnable)
     }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()

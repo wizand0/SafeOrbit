@@ -7,7 +7,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
-import ru.wizand.safeorbit.data.model.AudioRequest
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
@@ -20,9 +19,6 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _code = MutableLiveData<String?>()
     val code: LiveData<String?> = _code
-
-    private val _audioRequest = MutableLiveData<AudioRequest>()
-    val audioRequest: LiveData<AudioRequest> = _audioRequest
 
     private val _lastKnownLatLon = MutableLiveData<Pair<Double, Double>>()
     val lastKnownLatLon: LiveData<Pair<Double, Double>> = _lastKnownLatLon
@@ -45,7 +41,6 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
             Log.d("ServerViewModel", "Используем сохранённый serverId и code")
             _serverId.value = savedId
             _code.value = savedCode
-            observeAudioRequest(savedId)
         } else {
             Log.d("ServerViewModel", "Регистрируем новый сервер...")
             registerServer()
@@ -66,7 +61,6 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
 
             _serverId.postValue(id)
             _code.postValue(generatedCode)
-            observeAudioRequest(id)
         }
     }
 
@@ -74,12 +68,6 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.edit().clear().apply()
         _serverId.postValue(null)
         _code.postValue(null)
-    }
-
-    private fun observeAudioRequest(serverId: String) {
-        repository.observeAudioRequest(serverId) {
-            _audioRequest.postValue(it)
-        }
     }
 
     fun sendLocation(location: LocationData) {

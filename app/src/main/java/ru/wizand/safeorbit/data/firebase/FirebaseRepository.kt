@@ -6,7 +6,6 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-import ru.wizand.safeorbit.data.model.AudioRequest
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.utils.Constants
 import ru.wizand.safeorbit.utils.generateReadableId
@@ -27,8 +26,7 @@ class FirebaseRepository(private val context: Context) {
         val code = (100000..999999).random().toString()
         val serverData = mapOf(
             "code" to code,
-            "location" to null,
-            "audio_request" to null
+            "location" to null
         )
         db.child("servers").child(serverId).setValue(serverData)
             .addOnSuccessListener { onComplete(serverId, code) }
@@ -93,23 +91,6 @@ class FirebaseRepository(private val context: Context) {
                 override fun onCancelled(error: DatabaseError) {
                     android.util.Log.e("CLIENT", "❌ Ошибка подписки на координаты $serverId: ${error.message}")
                 }
-            })
-    }
-
-    fun sendAudioRequest(serverId: String) {
-        val clientId = auth.currentUser?.uid ?: return
-        val request = AudioRequest(clientId, System.currentTimeMillis())
-        db.child("servers").child(serverId).child("audio_request").setValue(request)
-    }
-
-    fun observeAudioRequest(serverId: String, onRequest: (AudioRequest) -> Unit) {
-        db.child("servers").child(serverId).child("audio_request")
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    snapshot.getValue(AudioRequest::class.java)?.let(onRequest)
-                }
-
-                override fun onCancelled(error: DatabaseError) {}
             })
     }
 

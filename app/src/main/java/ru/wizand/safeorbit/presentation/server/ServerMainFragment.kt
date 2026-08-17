@@ -123,13 +123,6 @@ class ServerMainFragment : Fragment() {
             }
         }
 
-        viewModel.audioRequest.observe(viewLifecycleOwner) { request ->
-            request?.let {
-                Toast.makeText(requireContext(), "Запрос на запись от клиента", Toast.LENGTH_SHORT).show()
-                AudioRequestHandler(requireContext()).handle(it)
-            }
-        }
-
         viewModel.lastKnownLatLon.observe(viewLifecycleOwner) { (lat, lon) ->
             val text = getString(R.string.coordinates) + lat + ", " + lon
             binding.tvCurrentCoords.text = text

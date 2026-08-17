@@ -48,8 +48,7 @@ class MapFragment : Fragment() {
     private var hasShownConnectionToast = false
 
     private val permissions = arrayOf(
-        android.Manifest.permission.ACCESS_FINE_LOCATION,
-        android.Manifest.permission.RECORD_AUDIO
+        android.Manifest.permission.ACCESS_FINE_LOCATION
     )
 
     // onCreate удален, так как инициализация перенесена в MainApplication
@@ -107,28 +106,11 @@ class MapFragment : Fragment() {
                 .setTitle(getString(R.string.access_to_geo))
                 .setMessage(getString(R.string.location_permission_recuired))
                 .setPositiveButton("Продолжить") { _, _ ->
-                    if (android.Manifest.permission.RECORD_AUDIO in notGranted) {
-                        showAudioPermissionDialog(notGranted)
-                    } else {
-                        permissionRequestLauncher.launch(notGranted.toTypedArray())
-                    }
+                    permissionRequestLauncher.launch(notGranted.toTypedArray())
                 }
                 .setNegativeButton("Отмена", null)
                 .show()
-        } else if (android.Manifest.permission.RECORD_AUDIO in notGranted) {
-            showAudioPermissionDialog(notGranted)
         }
-    }
-
-    private fun showAudioPermissionDialog(notGranted: List<String>) {
-        AlertDialog.Builder(requireContext())
-            .setTitle(getString(R.string.acess_to_microphone))
-            .setMessage(getString(R.string.need_permission_for_audio))
-            .setPositiveButton("Разрешить") { _, _ ->
-                permissionRequestLauncher.launch(notGranted.toTypedArray())
-            }
-            .setNegativeButton((getString(R.string.cancel)), null)
-            .show()
     }
 
     private fun observeViewModel() {
@@ -359,7 +341,7 @@ class MapFragment : Fragment() {
         if (denied.isNotEmpty()) {
             Toast.makeText(
                 requireContext(),
-                getString(R.string.need_permissions_for_map_and_audio),
+                getString(R.string.need_permissions_for_map),
                 Toast.LENGTH_LONG
             ).show()
         }

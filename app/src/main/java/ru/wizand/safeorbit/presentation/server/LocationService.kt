@@ -30,9 +30,6 @@ import ru.wizand.safeorbit.data.*
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.data.model.UserRole
-import ru.wizand.safeorbit.presentation.server.audio.AudioBroadcastService
-import ru.wizand.safeorbit.presentation.server.audio.AudioLaunchActivity
-import ru.wizand.safeorbit.presentation.server.audio.SilentAudioLaunchActivity
 import ru.wizand.safeorbit.presentation.server.worker.IdleLocationWorker
 import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 import java.text.SimpleDateFormat
@@ -443,17 +440,6 @@ class LocationService : Service(), SensorEventListener {
                     }
                 }
 
-                when (snapshot.child("type").getValue(String::class.java)) {
-                    "START_AUDIO_STREAM" -> {
-                        Log.d("COMMANDS", "🎙️ Команда: START_AUDIO_STREAM")
-                        startAudioBroadcastService()
-                    }
-                    "STOP_AUDIO_STREAM" -> {
-                        Log.d("COMMANDS", "🛑 Команда: STOP_AUDIO_STREAM")
-                        stopAudioBroadcastService()
-                    }
-                }
-
                 snapshot.ref.removeValue()
                 Log.d("COMMANDS", "🧹 Команда $commandId удалена после обработки")
             }
@@ -523,111 +509,6 @@ class LocationService : Service(), SensorEventListener {
             Log.e("COMMANDS", "⚠️ Не удалось прочитать команду: ${it.message}")
         }
     }
-
-    // For Agola
-    private fun startAudioBroadcastService() {
-        val intent = Intent(this, AudioBroadcastService::class.java).apply {
-            putExtra("server_id", serverId)
-        }
-
-        // Android 14+ (SDK 34)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            if (!isAppInForeground()) {
-                Log.w("AUDIO_STREAM", "⛔ Приложение в фоне. Запуск через уведомление.")
-//                requestStartViaNotification(intent)
-//                return
-
-
-                val starterIntent = Intent(this, SilentAudioLaunchActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    putExtra("server_id", serverId)
-                }
-                startActivity(starterIntent)
-            }
-        }
-
-        // До Android 14 или приложение в фокусе — обычный запуск
-        ContextCompat.startForegroundService(this, intent)
-    }
-
-
-    fun Context.isAppInForeground(): Boolean {
-        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-        val appProcesses = activityManager?.runningAppProcesses ?: return false
-        val packageName = packageName
-
-        return appProcesses.any {
-            it.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
-                    it.processName == packageName
-        }
-    }
-
-    fun Context.requestStartViaNotification(serviceIntent: Intent) {
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        val channelId = "audio_request_channel"
-
-        if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-            Log.w("AUDIO_STREAM", "❌ Уведомления отключены. Невозможно показать запрос.")
-            return
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Audio Requests",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Запросы на трансляцию микрофона"
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-            }
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        val servicePendingIntent = PendingIntent.getForegroundService(
-            this,
-            0,
-            serviceIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val fullScreenIntent = PendingIntent.getActivity(
-            this,
-            1,
-            Intent(this, AudioLaunchActivity::class.java).apply {
-                putExtra("server_id", serviceIntent.getStringExtra("server_id"))
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_mic)
-            .setContentTitle("Запустить аудиотрансляцию")
-            .setContentText("Нажмите, чтобы разрешить использование микрофона")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_CALL)
-            .setAutoCancel(true)
-            .addAction(
-                NotificationCompat.Action.Builder(
-                    R.drawable.ic_mic,
-                    "Включить",
-                    servicePendingIntent
-                ).build()
-            )
-            .setFullScreenIntent(fullScreenIntent, true)
-            .build()
-
-        notificationManager.notify(42, notification)
-    }
-
-
-// For Agola
-    private fun stopAudioBroadcastService() {
-        val intent = Intent(this, AudioBroadcastService::class.java)
-        stopService(intent)
-        Log.d("COMMANDS", "🛑 AudioBroadcastService остановлен")
-    }
-
-
 
     override fun onDestroy() {
         super.onDestroy()

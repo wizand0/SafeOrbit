@@ -45,34 +45,4 @@ class CommandRepositoryImpl @Inject constructor() : CommandRepository {
             Result.failure(e)
         }
     }
-
-    override suspend fun sendStartAudioCommand(serverId: String, code: String): Result<Unit> {
-        return try {
-            val ref = db.getReference("server_commands/$serverId").push()
-            val command = mapOf(
-                "code" to code,
-                "type" to "START_AUDIO_STREAM",
-                "timestamp" to System.currentTimeMillis()
-            )
-            ref.setValue(command).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    override suspend fun sendStopAudioCommand(serverId: String, code: String): Result<Unit> {
-        return try {
-            val ref = db.getReference("server_commands/$serverId").push()
-            val command = mapOf(
-                "code" to code,
-                "type" to "STOP_AUDIO_STREAM",
-                "timestamp" to System.currentTimeMillis()
-            )
-            ref.setValue(command).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
 }
