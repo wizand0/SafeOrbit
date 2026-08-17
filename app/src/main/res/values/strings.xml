@@ -138,4 +138,20 @@
     <string name="test_notification_sent">Test notification sent</string>
     <string name="test_notification_failed">Failed to send test notification</string>
     <string name="button_notification_sources">Apps for notification forwarding</string>
+    <string name="notifications_title">Notifications from server</string>
+    <string name="notifications_empty">No notifications yet</string>
+    <string name="button_export_notifications">Export notifications (CSV)</string>
+    <string name="button_clear_notifications">Clear notifications</string>
+    <string name="toast_location_requested">Location update requested</string>
+    <string name="clear_notifications_confirm_title">Clear notifications</string>
+    <string name="clear_notifications_confirm_message">Delete all received notifications from this server? This cannot be undone.</string>
+    <string name="yes">Yes</string>
+    <string name="notifications_cleared">Notifications cleared</string>
+    <string name="notifications_clear_failed">Failed to clear notifications</string>
+    <string name="notifications_exported">Notifications exported</string>
+    <string name="notifications_export_failed">Export failed</string>
+    <string name="address_not_found">Address not found</string>
+    <string name="address_error">Geocoding error</string>
+    <string name="dialog_intervals_title">Interval settings</string>
+    <string name="toast_intervals_sent">Intervals sent</string>
 </resources>

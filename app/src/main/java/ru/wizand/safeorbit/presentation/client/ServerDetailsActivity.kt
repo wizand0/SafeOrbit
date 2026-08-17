@@ -7,9 +7,15 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.databinding.ActivityServerDetailsBinding
 import ru.wizand.safeorbit.databinding.DialogChangeIntervalsBinding
@@ -27,8 +33,17 @@ class ServerDetailsActivity : AppCompatActivity() {
 
     private val clientViewModel: ClientViewModel by viewModels()
     private val commandViewModel: CommandViewModel by viewModels()
+    private val notificationViewModel: NotificationViewModel by viewModels()
 
     private lateinit var serverId: String
+    private val notificationsAdapter = NotificationsAdapter(emptyList())
+
+    /** Экспорт CSV через системный диалог сохранения. */
+    private val exportCsvLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri: Uri? ->
+        if (uri != null) writeCsv(uri)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,7 +83,7 @@ class ServerDetailsActivity : AppCompatActivity() {
         // Кнопки действий
         binding.buttonRequestLocation.setOnClickListener {
             commandViewModel.requestLocationUpdate(serverId)
-            toast("Запрошено обновление координат")
+            toast(getString(R.string.toast_location_requested))
         }
 
         binding.buttonChangeIntervals.setOnClickListener {
@@ -79,7 +94,87 @@ class ServerDetailsActivity : AppCompatActivity() {
             NavigationUtils.openNavigationChooser(this, lat, lon, name)
         }
 
+        setupNotifications()
+
         clientViewModel.refreshIcon(serverId)
+    }
+
+    private fun setupNotifications() {
+        binding.rvNotifications.layoutManager = LinearLayoutManager(this)
+        binding.rvNotifications.adapter = notificationsAdapter
+
+        lifecycleScope.launch {
+            notificationViewModel.notifications.collect { items ->
+                notificationsAdapter.update(items)
+                binding.tvNotificationsEmpty.visibility =
+                    if (items.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+            }
+        }
+
+        binding.buttonExportNotifications.setOnClickListener {
+            val fileName = "safeorbit_${serverId}_notifications.csv"
+            exportCsvLauncher.launch(fileName)
+        }
+
+        binding.buttonClearNotifications.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.clear_notifications_confirm_title))
+                .setMessage(getString(R.string.clear_notifications_confirm_message))
+                .setPositiveButton(getString(R.string.yes)) { _, _ -> clearNotifications() }
+                .setNegativeButton(getString(R.string.cancel), null)
+                .show()
+        }
+
+        notificationViewModel.attach(serverId)
+    }
+
+    private fun clearNotifications() {
+        lifecycleScope.launch {
+            val result = notificationViewModel.clearAll()
+            result.onSuccess {
+                toast(getString(R.string.notifications_cleared))
+            }.onFailure {
+                toast(getString(R.string.notifications_clear_failed))
+            }
+        }
+    }
+
+    /** Пишет все видимые уведомления в CSV в формате: время;приложение;заголовок;текст. */
+    private fun writeCsv(uri: Uri) {
+        val items = notificationViewModel.notifications.value
+        if (items.isEmpty()) {
+            toast(getString(R.string.notifications_empty))
+            return
+        }
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    contentResolver.openOutputStream(uri)?.use { out ->
+                        // BOM для корректной кодировки в Excel
+                        out.write(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()))
+                        out.write("time;app;title;text\n".toByteArray(Charsets.UTF_8))
+                        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                        for (n in items) {
+                            val line = listOf(
+                                sdf.format(Date(n.postTime)),
+                                n.appLabel,
+                                n.title,
+                                n.text
+                            ).joinToString(";") { escapeCsv(it) } + "\n"
+                            out.write(line.toByteArray(Charsets.UTF_8))
+                        }
+                    }
+                }
+                toast(getString(R.string.notifications_exported))
+            } catch (e: Exception) {
+                toast(getString(R.string.notifications_export_failed))
+            }
+        }
+    }
+
+    private fun escapeCsv(value: String): String {
+        val needsQuotes = value.contains(';') || value.contains('"') || value.contains('\n')
+        return if (needsQuotes) "\"" + value.replace("\"", "\"\"") + "\"" else value
     }
 
     private fun formatTimestamp(ts: Long): String {
@@ -91,9 +186,9 @@ class ServerDetailsActivity : AppCompatActivity() {
         return try {
             val geocoder = Geocoder(this, Locale.getDefault())
             geocoder.getFromLocation(lat, lon, 1)?.firstOrNull()?.getAddressLine(0)
-                ?: "Адрес не найден"
+                ?: getString(R.string.address_not_found)
         } catch (e: Exception) {
-            "Ошибка геокодинга"
+            getString(R.string.address_error)
         }
     }
 
@@ -110,17 +205,17 @@ class ServerDetailsActivity : AppCompatActivity() {
         dialogBinding.spinnerIdle.setOnTouchListener { v, _ -> v.performClick(); dialogBinding.spinnerIdle.showDropDown(); false }
 
         AlertDialog.Builder(this)
-            .setTitle("Настройка интервалов")
+            .setTitle(getString(R.string.dialog_intervals_title))
             .setView(dialogBinding.root)
-            .setPositiveButton("Сохранить") { _, _ ->
+            .setPositiveButton(getString(R.string.save)) { _, _ ->
                 val active = activeOptions.firstOrNull { it.toString() == dialogBinding.spinnerActive.text.toString() }?.millis
                 val idle = idleOptions.firstOrNull { it.toString() == dialogBinding.spinnerIdle.text.toString() }?.millis
                 if (active != null && idle != null) {
                     commandViewModel.sendServerSettings(serverId, active, idle)
-                    toast("Интервалы отправлены")
+                    toast(getString(R.string.toast_intervals_sent))
                 }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 

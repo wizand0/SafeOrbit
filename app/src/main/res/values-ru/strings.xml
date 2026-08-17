@@ -138,4 +138,20 @@
     <string name="test_notification_sent">Тестовое уведомление отправлено</string>
     <string name="test_notification_failed">Не удалось отправить тестовое уведомление</string>
     <string name="button_notification_sources">Приложения для пересылки уведомлений</string>
+    <string name="notifications_title">Уведомления от сервера</string>
+    <string name="notifications_empty">Уведомлений пока нет</string>
+    <string name="button_export_notifications">Экспорт уведомлений (CSV)</string>
+    <string name="button_clear_notifications">Очистить уведомления</string>
+    <string name="toast_location_requested">Запрошено обновление координат</string>
+    <string name="clear_notifications_confirm_title">Очистка уведомлений</string>
+    <string name="clear_notifications_confirm_message">Удалить все полученные уведомления от этого сервера? Это действие нельзя отменить.</string>
+    <string name="yes">Да</string>
+    <string name="notifications_cleared">Уведомления очищены</string>
+    <string name="notifications_clear_failed">Не удалось очистить уведомления</string>
+    <string name="notifications_exported">Уведомления экспортированы</string>
+    <string name="notifications_export_failed">Ошибка экспорта</string>
+    <string name="address_not_found">Адрес не найден</string>
+    <string name="address_error">Ошибка геокодинга</string>
+    <string name="dialog_intervals_title">Настройка интервалов</string>
+    <string name="toast_intervals_sent">Интервалы отправлены</string>
 </resources>
