@@ -9,8 +9,4 @@ interface CommandRepository {
     ): Result<Unit>
 
     suspend fun sendLocationUpdateCommand(serverId: String, code: String): Result<Unit>
-
-    suspend fun sendStartAudioCommand(serverId: String, code: String): Result<Unit>
-
-    suspend fun sendStopAudioCommand(serverId: String, code: String): Result<Unit>
 }

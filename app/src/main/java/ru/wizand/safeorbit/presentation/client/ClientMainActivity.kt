@@ -59,7 +59,6 @@ class ClientMainActivity : AppCompatActivity() {
         val fragment = when (itemId) {
             R.id.nav_map -> MapFragment()
             R.id.nav_servers -> ServerListFragment()
-            R.id.nav_placeholder -> PlaceholderFragment()
             R.id.nav_settings -> SettingsFragment()
             else -> MapFragment()
         }

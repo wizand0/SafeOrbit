@@ -72,6 +72,10 @@ class ServerSettingsActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnNotificationSources.setOnClickListener {
+            startActivity(Intent(this, NotificationSourcesActivity::class.java))
+        }
+
         var savedPin = prefs.getString("server_pin", null)
 
         binding.btnCheckPin.setOnClickListener {
@@ -166,6 +170,29 @@ class ServerSettingsActivity : AppCompatActivity() {
         }
     }
 
+
+    private fun showConnectionInfoDialog(prefs: SharedPreferences) {
+        val serverId = prefs.getString("server_id", null)
+        val code = prefs.getString("server_code", null)
+
+        if (serverId.isNullOrBlank() || code.isNullOrBlank()) {
+            Toast.makeText(this, getString(R.string.server_not_registered), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val dialogBinding = ru.wizand.safeorbit.databinding.DialogConnectionInfoBinding.inflate(layoutInflater)
+        dialogBinding.tvConnectionCode.text = code
+
+        val data = "$serverId|$code"
+        val matrix = com.google.zxing.MultiFormatWriter().encode(data, com.google.zxing.BarcodeFormat.QR_CODE, 400, 400)
+        dialogBinding.ivConnectionQr.setImageBitmap(com.journeyapps.barcodescanner.BarcodeEncoder().createBitmap(matrix))
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.connection_info_title))
+            .setView(dialogBinding.root)
+            .setPositiveButton(getString(R.string.button_continue), null)
+            .show()
+    }
 
     private fun showChangePinDialog() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)

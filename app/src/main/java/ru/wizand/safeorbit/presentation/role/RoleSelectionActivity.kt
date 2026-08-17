@@ -49,7 +49,6 @@ class RoleSelectionActivity : AppCompatActivity() {
         val perms = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.RECORD_AUDIO,
             Manifest.permission.CAMERA,
             Manifest.permission.WAKE_LOCK,
             Manifest.permission.RECEIVE_BOOT_COMPLETED
@@ -63,8 +62,6 @@ class RoleSelectionActivity : AppCompatActivity() {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             perms += Manifest.permission.FOREGROUND_SERVICE_LOCATION
-            perms += Manifest.permission.FOREGROUND_SERVICE_MICROPHONE
-            perms += Manifest.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK
         }
         perms.toTypedArray()
     }
@@ -75,7 +72,6 @@ class RoleSelectionActivity : AppCompatActivity() {
     private val clientPermissionsToRequest: Array<String> by lazy {
         val perms = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.RECORD_AUDIO,
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             perms += Manifest.permission.POST_NOTIFICATIONS

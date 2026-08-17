@@ -46,36 +46,4 @@ class CommandViewModel @Inject constructor(
             }
         }
     }
-
-    fun startAudioStream(serverId: String, onCodeReady: (String) -> Unit) {
-        viewModelScope.launch {
-            val server = db.serverDao().getByServerId(serverId) ?: return@launch
-            val code = server.code
-            val ref = FirebaseDatabase.getInstance()
-                .getReference("server_commands/$serverId")
-                .push()
-            val data = mapOf(
-                "code" to code,
-                "type" to "START_AUDIO_STREAM",
-                "timestamp" to System.currentTimeMillis()
-            )
-            ref.setValue(data).addOnSuccessListener {
-                onCodeReady(code)
-            }.addOnFailureListener {
-                Log.e("CLIENT_CMD", "❌ Ошибка при старте аудио: ${it.message}")
-            }
-        }
-    }
-
-    fun stopAudioStream(serverId: String, code: String) {
-        val ref = FirebaseDatabase.getInstance()
-            .getReference("server_commands/$serverId")
-            .push()
-        val data = mapOf(
-            "code" to code,
-            "type" to "STOP_AUDIO_STREAM",
-            "timestamp" to System.currentTimeMillis()
-        )
-        ref.setValue(data)
-    }
 }

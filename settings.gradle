@@ -6,18 +6,19 @@ pluginManagement {
     }
 }
 
+plugins {
+    // Автозагрузка/поиск JDK для toolchain (зафиксирован JDK 17)
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
 
-        // ⬇️ Добавь нужные источники для зависимостей
-        maven { url = uri("https://maven.google.com") }
         maven { url = uri("https://jitpack.io") }
-        maven { url = uri("https://webrtc.github.io/webrtc-org/native/android/") }
         maven { url = uri("https://maven.yandex.ru/repo") }
-        maven { url 'https://jitpack.io' }
     }
 }
 

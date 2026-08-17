@@ -2,23 +2,23 @@ package ru.wizand.safeorbit.presentation.client
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.content.res.ColorStateList
-import android.graphics.drawable.AnimationDrawable
 import android.location.Geocoder
 import android.net.Uri
-import android.os.*
-import android.view.View
+import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.databinding.ActivityServerDetailsBinding
 import ru.wizand.safeorbit.databinding.DialogChangeIntervalsBinding
-import ru.wizand.safeorbit.presentation.client.audio.AudioStreamPlayerService
-import ru.wizand.safeorbit.presentation.client.audio.AudioStreamViewModel
 import ru.wizand.safeorbit.presentation.client.commands.CommandViewModel
 import ru.wizand.safeorbit.presentation.server.ActiveInterval
 import ru.wizand.safeorbit.presentation.server.InactivityTimeout
@@ -32,22 +32,17 @@ class ServerDetailsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityServerDetailsBinding
 
     private val clientViewModel: ClientViewModel by viewModels()
-    private val audioStreamViewModel: AudioStreamViewModel by viewModels()
     private val commandViewModel: CommandViewModel by viewModels()
+    private val notificationViewModel: NotificationViewModel by viewModels()
 
     private lateinit var serverId: String
-    private var defaultButtonTint: ColorStateList? = null
+    private val notificationsAdapter = NotificationsAdapter(emptyList())
 
-    private var streamStartTime: Long = 0
-    private val streamHandler = Handler(Looper.getMainLooper())
-    private val streamTimerRunnable = object : Runnable {
-        override fun run() {
-            val elapsed = System.currentTimeMillis() - streamStartTime
-            val minutes = (elapsed / 1000) / 60
-            val seconds = (elapsed / 1000) % 60
-            binding.textStreamTimer.text = String.format("%02d:%02d", minutes, seconds)
-            streamHandler.postDelayed(this, 1000)
-        }
+    /** Экспорт CSV через системный диалог сохранения. */
+    private val exportCsvLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri: Uri? ->
+        if (uri != null) writeCsv(uri)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,8 +62,6 @@ class ServerDetailsActivity : AppCompatActivity() {
         binding.textCoords.text = getString(R.string._5f_5f).format(lat, lon)
         binding.textTime.text = getString(R.string.time_, formatTimestamp(timestamp))
         binding.textAddress.text = getAddressFromCoords(lat, lon)
-
-        defaultButtonTint = binding.buttonListen.backgroundTintList
 
         // Наблюдение за иконкой
         clientViewModel.iconUriMap.observe(this) { map ->
@@ -90,7 +83,7 @@ class ServerDetailsActivity : AppCompatActivity() {
         // Кнопки действий
         binding.buttonRequestLocation.setOnClickListener {
             commandViewModel.requestLocationUpdate(serverId)
-            toast("Запрошено обновление координат")
+            toast(getString(R.string.toast_location_requested))
         }
 
         binding.buttonChangeIntervals.setOnClickListener {
@@ -101,28 +94,87 @@ class ServerDetailsActivity : AppCompatActivity() {
             NavigationUtils.openNavigationChooser(this, lat, lon, name)
         }
 
-        binding.buttonListen.setOnClickListener {
-            if (audioStreamViewModel.isAudioStreaming.value == true) {
-                audioStreamViewModel.stopAudioStream(serverId)
-            } else {
-                audioStreamViewModel.startAudioStream(serverId) { code ->
-                    // сохраняем, если нужно
-                    ContextCompat.startForegroundService(
-                        this,
-                        Intent(this, AudioStreamPlayerService::class.java)
-                    )
-                }
-                toast("Запрошено прослушивание. Ожидайте")
+        setupNotifications()
+
+        clientViewModel.refreshIcon(serverId)
+    }
+
+    private fun setupNotifications() {
+        binding.rvNotifications.layoutManager = LinearLayoutManager(this)
+        binding.rvNotifications.adapter = notificationsAdapter
+
+        lifecycleScope.launch {
+            notificationViewModel.notifications.collect { items ->
+                notificationsAdapter.update(items)
+                binding.tvNotificationsEmpty.visibility =
+                    if (items.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
             }
         }
 
-
-        // Наблюдение за состоянием аудиопотока
-        audioStreamViewModel.isAudioStreaming.observe(this) { active ->
-            if (active) startAudioStreamUI() else stopAudioStreamUI()
+        binding.buttonExportNotifications.setOnClickListener {
+            val fileName = "safeorbit_${serverId}_notifications.csv"
+            exportCsvLauncher.launch(fileName)
         }
 
-        clientViewModel.refreshIcon(serverId)
+        binding.buttonClearNotifications.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.clear_notifications_confirm_title))
+                .setMessage(getString(R.string.clear_notifications_confirm_message))
+                .setPositiveButton(getString(R.string.yes)) { _, _ -> clearNotifications() }
+                .setNegativeButton(getString(R.string.cancel), null)
+                .show()
+        }
+
+        notificationViewModel.attach(serverId)
+    }
+
+    private fun clearNotifications() {
+        lifecycleScope.launch {
+            val result = notificationViewModel.clearAll()
+            result.onSuccess {
+                toast(getString(R.string.notifications_cleared))
+            }.onFailure {
+                toast(getString(R.string.notifications_clear_failed))
+            }
+        }
+    }
+
+    /** Пишет все видимые уведомления в CSV в формате: время;приложение;заголовок;текст. */
+    private fun writeCsv(uri: Uri) {
+        val items = notificationViewModel.notifications.value
+        if (items.isEmpty()) {
+            toast(getString(R.string.notifications_empty))
+            return
+        }
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    contentResolver.openOutputStream(uri)?.use { out ->
+                        // BOM для корректной кодировки в Excel
+                        out.write(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()))
+                        out.write("time;app;title;text\n".toByteArray(Charsets.UTF_8))
+                        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                        for (n in items) {
+                            val line = listOf(
+                                sdf.format(Date(n.postTime)),
+                                n.appLabel,
+                                n.title,
+                                n.text
+                            ).joinToString(";") { escapeCsv(it) } + "\n"
+                            out.write(line.toByteArray(Charsets.UTF_8))
+                        }
+                    }
+                }
+                toast(getString(R.string.notifications_exported))
+            } catch (e: Exception) {
+                toast(getString(R.string.notifications_export_failed))
+            }
+        }
+    }
+
+    private fun escapeCsv(value: String): String {
+        val needsQuotes = value.contains(';') || value.contains('"') || value.contains('\n')
+        return if (needsQuotes) "\"" + value.replace("\"", "\"\"") + "\"" else value
     }
 
     private fun formatTimestamp(ts: Long): String {
@@ -134,9 +186,9 @@ class ServerDetailsActivity : AppCompatActivity() {
         return try {
             val geocoder = Geocoder(this, Locale.getDefault())
             geocoder.getFromLocation(lat, lon, 1)?.firstOrNull()?.getAddressLine(0)
-                ?: "Адрес не найден"
+                ?: getString(R.string.address_not_found)
         } catch (e: Exception) {
-            "Ошибка геокодинга"
+            getString(R.string.address_error)
         }
     }
 
@@ -153,44 +205,18 @@ class ServerDetailsActivity : AppCompatActivity() {
         dialogBinding.spinnerIdle.setOnTouchListener { v, _ -> v.performClick(); dialogBinding.spinnerIdle.showDropDown(); false }
 
         AlertDialog.Builder(this)
-            .setTitle("Настройка интервалов")
+            .setTitle(getString(R.string.dialog_intervals_title))
             .setView(dialogBinding.root)
-            .setPositiveButton("Сохранить") { _, _ ->
+            .setPositiveButton(getString(R.string.save)) { _, _ ->
                 val active = activeOptions.firstOrNull { it.toString() == dialogBinding.spinnerActive.text.toString() }?.millis
                 val idle = idleOptions.firstOrNull { it.toString() == dialogBinding.spinnerIdle.text.toString() }?.millis
                 if (active != null && idle != null) {
                     commandViewModel.sendServerSettings(serverId, active, idle)
-                    toast("Интервалы отправлены")
+                    toast(getString(R.string.toast_intervals_sent))
                 }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
-    }
-
-    private fun startAudioStreamUI() {
-        binding.buttonListen.text = "Остановить"
-        binding.buttonListen.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.red))
-        binding.textStreamTimer.visibility = View.VISIBLE
-        binding.textAutoOff.visibility = View.VISIBLE
-        binding.imageAudioAnim.apply {
-            visibility = View.VISIBLE
-            setImageResource(R.drawable.audio_wave_anim)
-            (drawable as? AnimationDrawable)?.start()
-        }
-        streamStartTime = System.currentTimeMillis()
-        streamHandler.post(streamTimerRunnable)
-    }
-
-    private fun stopAudioStreamUI() {
-        binding.buttonListen.text = "Послушать"
-        binding.buttonListen.setBackgroundTintList(defaultButtonTint)
-        binding.textStreamTimer.visibility = View.GONE
-        binding.textAutoOff.visibility = View.GONE
-        binding.imageAudioAnim.apply {
-            visibility = View.GONE
-            (drawable as? AnimationDrawable)?.stop()
-        }
-        streamHandler.removeCallbacks(streamTimerRunnable)
     }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()

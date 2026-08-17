@@ -13,7 +13,6 @@ if (localPropsFile.exists()) {
     localProps.load(new FileInputStream(localPropsFile))
 }
 def yandexKey = localProps.getProperty("YANDEX_MAPKIT_API_KEY", "")
-def agoraAppId = localProps.getProperty("AGORA_APP_ID", "")
 
 android {
     namespace 'ru.wizand.safeorbit'
@@ -31,8 +30,7 @@ android {
         buildConfigField "String", "YANDEX_MAPKIT_API_KEY", "\"${yandexKey}\""
 
         manifestPlaceholders = [
-                YANDEX_MAPKIT_API_KEY: yandexKey,
-                AGORA_APP_ID         : agoraAppId
+                YANDEX_MAPKIT_API_KEY: yandexKey
         ]
     }
 
@@ -66,6 +64,12 @@ android {
             universalApk true
         }
     }
+}
+
+// Фиксированный JDK для компиляции: Gradle сам найдёт/скачает JDK 17,
+// сборка не зависит от JAVA_HOME и системного java (в т.ч. JBR 25)
+kotlin {
+    jvmToolchain(17)
 }
 
 dependencies {
@@ -120,9 +124,6 @@ dependencies {
     implementation libs.core
     implementation libs.zxing.android.embedded
 
-    // Agora
-    implementation libs.voice.sdk
-
     // Tests
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit
@@ -135,5 +136,3 @@ dependencies {
     implementation libs.tink.android
 
 }
-
-apply plugin: 'com.google.gms.google-services'

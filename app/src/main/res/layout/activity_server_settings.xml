@@ -67,6 +67,20 @@
                     android:text="@string/button_change_pin" />
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnConnectionInfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/ButtonFilledMaterial"
+                    android:text="@string/button_connection_info" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnNotificationSources"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/ButtonFilledMaterial"
+                    android:text="@string/button_notification_sources" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnEnableAdmin"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

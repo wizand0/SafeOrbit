@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.presentation.server
+﻿package ru.wizand.safeorbit.presentation.server
 
 import android.app.Application
 import android.util.Log
@@ -6,13 +6,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
-import ru.wizand.safeorbit.data.model.AudioRequest
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 
 /**
- * ViewModel для управления состоянием сервера.
- * Использует EncryptedPreferencesManager для безопасного хранения данных.
+ * ViewModel ╨┤╨╗╤П ╤Г╨┐╤А╨░╨▓╨╗╨╡╨╜╨╕╤П ╤Б╨╛╤Б╤В╨╛╤П╨╜╨╕╨╡╨╝ ╤Б╨╡╤А╨▓╨╡╤А╨░.
+ * ╨Ш╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╡╤В EncryptedPreferencesManager ╨┤╨╗╤П ╨▒╨╡╨╖╨╛╨┐╨░╤Б╨╜╨╛╨│╨╛ ╤Е╤А╨░╨╜╨╡╨╜╨╕╤П ╨┤╨░╨╜╨╜╤Л╤Е.
  */
 class ServerViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -25,8 +24,6 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
     private val _code = MutableLiveData<String?>()
     val code: LiveData<String?> = _code
 
-    private val _audioRequest = MutableLiveData<AudioRequest>()
-    val audioRequest: LiveData<AudioRequest> = _audioRequest
 
     private val _lastKnownLatLon = MutableLiveData<Pair<Double, Double>>()
     val lastKnownLatLon: LiveData<Pair<Double, Double>> = _lastKnownLatLon
@@ -42,79 +39,68 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /**
-     * Проверяет наличие сохранённых данных сервера или регистрирует новый
+     * ╨Я╤А╨╛╨▓╨╡╤А╤П╨╡╤В ╨╜╨░╨╗╨╕╤З╨╕╨╡ ╤Б╨╛╤Е╤А╨░╨╜╤С╨╜╨╜╤Л╤Е ╨┤╨░╨╜╨╜╤Л╤Е ╤Б╨╡╤А╨▓╨╡╤А╨░ ╨╕╨╗╨╕ ╤А╨╡╨│╨╕╤Б╤В╤А╨╕╤А╤Г╨╡╤В ╨╜╨╛╨▓╤Л╨╣
      */
     private fun checkOrRegisterServer() {
         val savedId = encryptedPrefs.getServerId()
         val savedCode = encryptedPrefs.getCode()
 
         if (savedId != null && savedCode != null) {
-            Log.d(TAG, "Используем сохранённый serverId и code")
+            Log.d(TAG, "╨Ш╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╡╨╝ ╤Б╨╛╤Е╤А╨░╨╜╤С╨╜╨╜╤Л╨╣ serverId ╨╕ code")
             _serverId.value = savedId
             _code.value = savedCode
-            observeAudioRequest(savedId)
         } else {
-            Log.d(TAG, "Регистрируем новый сервер...")
+            Log.d(TAG, "╨а╨╡╨│╨╕╤Б╤В╤А╨╕╤А╤Г╨╡╨╝ ╨╜╨╛╨▓╤Л╨╣ ╤Б╨╡╤А╨▓╨╡╤А...")
             registerServer()
         }
     }
 
     /**
-     * Регистрация нового сервера в Firebase
-     * @param forceNew - принудительная регистрация нового сервера
+     * ╨а╨╡╨│╨╕╤Б╤В╤А╨░╤Ж╨╕╤П ╨╜╨╛╨▓╨╛╨│╨╛ ╤Б╨╡╤А╨▓╨╡╤А╨░ ╨▓ Firebase
+     * @param forceNew - ╨┐╤А╨╕╨╜╤Г╨┤╨╕╤В╨╡╨╗╤М╨╜╨░╤П ╤А╨╡╨│╨╕╤Б╤В╤А╨░╤Ж╨╕╤П ╨╜╨╛╨▓╨╛╨│╨╛ ╤Б╨╡╤А╨▓╨╡╤А╨░
      */
     fun registerServer(forceNew: Boolean = false) {
         if (!forceNew && encryptedPrefs.isServerRegistered()) {
-            Log.d(TAG, "Сервер уже зарегистрирован, пропускаем.")
+            Log.d(TAG, "╨б╨╡╤А╨▓╨╡╤А ╤Г╨╢╨╡ ╨╖╨░╤А╨╡╨│╨╕╤Б╤В╤А╨╕╤А╨╛╨▓╨░╨╜, ╨┐╤А╨╛╨┐╤Г╤Б╨║╨░╨╡╨╝.")
             return
         }
 
         repository.registerServer { id, generatedCode ->
-            // Сохраняем в зашифрованном хранилище
+            // ╨б╨╛╤Е╤А╨░╨╜╤П╨╡╨╝ ╨▓ ╨╖╨░╤И╨╕╤Д╤А╨╛╨▓╨░╨╜╨╜╨╛╨╝ ╤Е╤А╨░╨╜╨╕╨╗╨╕╤Й╨╡
             encryptedPrefs.saveServerId(id)
             encryptedPrefs.saveCode(generatedCode)
 
             _serverId.postValue(id)
             _code.postValue(generatedCode)
-            observeAudioRequest(id)
 
-            Log.i(TAG, "Сервер зарегистрирован с ID: $id")
+            Log.i(TAG, "╨б╨╡╤А╨▓╨╡╤А ╨╖╨░╤А╨╡╨│╨╕╤Б╤В╤А╨╕╤А╨╛╨▓╨░╨╜ ╤Б ID: $id")
         }
     }
 
     /**
-     * Сброс всех данных сервера
+     * ╨б╨▒╤А╨╛╤Б ╨▓╤Б╨╡╤Е ╨┤╨░╨╜╨╜╤Л╤Е ╤Б╨╡╤А╨▓╨╡╤А╨░
      */
     fun reset() {
         encryptedPrefs.clearAll()
         _serverId.postValue(null)
         _code.postValue(null)
-        Log.i(TAG, "Данные сервера сброшены")
+        Log.i(TAG, "╨Ф╨░╨╜╨╜╤Л╨╡ ╤Б╨╡╤А╨▓╨╡╤А╨░ ╤Б╨▒╤А╨╛╤И╨╡╨╜╤Л")
     }
 
     /**
-     * Подписка на запросы аудио от клиентов
-     */
-    private fun observeAudioRequest(serverId: String) {
-        repository.observeAudioRequest(serverId) { request ->
-            _audioRequest.postValue(request)
-        }
-    }
-
-    /**
-     * Отправка данных о местоположении в Firebase
+     * ╨Ю╤В╨┐╤А╨░╨▓╨║╨░ ╨┤╨░╨╜╨╜╤Л╤Е ╨╛ ╨╝╨╡╤Б╤В╨╛╨┐╨╛╨╗╨╛╨╢╨╡╨╜╨╕╨╕ ╨▓ Firebase
      */
     fun sendLocation(location: LocationData) {
         val id = _serverId.value
         if (id != null) {
             repository.sendLocation(id, location)
         } else {
-            Log.w(TAG, "serverId не задан — координаты не отправлены")
+            Log.w(TAG, "serverId ╨╜╨╡ ╨╖╨░╨┤╨░╨╜ тАФ ╨║╨╛╨╛╤А╨┤╨╕╨╜╨░╤В╤Л ╨╜╨╡ ╨╛╤В╨┐╤А╨░╨▓╨╗╨╡╨╜╤Л")
         }
     }
 
     /**
-     * Обновление последних известных координат
+     * ╨Ю╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨╕╨╡ ╨┐╨╛╤Б╨╗╨╡╨┤╨╜╨╕╤Е ╨╕╨╖╨▓╨╡╤Б╤В╨╜╤Л╤Е ╨║╨╛╨╛╤А╨┤╨╕╨╜╨░╤В
      */
     fun updateLastLocation(lat: Double, lon: Double, timestamp: Long) {
         _lastKnownLatLon.postValue(lat to lon)
@@ -122,7 +108,7 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /**
-     * Обновление режима работы сервера
+     * ╨Ю╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨╕╨╡ ╤А╨╡╨╢╨╕╨╝╨░ ╤А╨░╨▒╨╛╤В╤Л ╤Б╨╡╤А╨▓╨╡╤А╨░
      */
     fun updateMode(mode: String) {
         _mode.postValue(mode)
