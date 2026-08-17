@@ -92,48 +92,6 @@
                 android:textColor="?attr/colorOnSecondaryContainer"
                 android:layout_marginTop="12dp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/buttonListen"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/button_listen"
-                app:backgroundTint="?attr/colorSecondaryContainer"
-                android:textColor="?attr/colorOnSecondaryContainer"
-                android:layout_marginTop="12dp" />
-
-            <!-- Автоотключение -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/textAutoOff"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/auto_off"
-                android:textAppearance="?attr/textAppearanceBodySmall"
-                android:visibility="gone"
-                android:layout_marginTop="8dp"
-                android:gravity="center" />
-
-            <!-- Таймер -->
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/textStreamTimer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/timer_placeholder"
-                android:textAppearance="?attr/textAppearanceBodySmall"
-                android:visibility="gone"
-                android:layout_marginTop="4dp"
-                android:gravity="center" />
-
-            <!-- Анимация -->
-            <ImageView
-                android:id="@+id/imageAudioAnim"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_audio_wave_1"
-                android:layout_gravity="center"
-                android:visibility="gone"
-                android:layout_marginTop="4dp"
-                android:contentDescription="@string/audio_animation" />
-
         </LinearLayout>
     </ScrollView>
 </com.google.android.material.card.MaterialCardView>
