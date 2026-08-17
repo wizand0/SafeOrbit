@@ -68,6 +68,12 @@ android {
     }
 }
 
+// Фиксированный JDK для компиляции: Gradle сам найдёт/скачает JDK 17,
+// сборка не зависит от JAVA_HOME и системного java (в т.ч. JBR 25)
+kotlin {
+    jvmToolchain(17)
+}
+
 dependencies {
     // Core
     implementation libs.androidx.core.ktx
