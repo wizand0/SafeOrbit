@@ -11,11 +11,6 @@
         android:icon="@drawable/ic_servers" />
 
     <item
-        android:id="@+id/nav_placeholder"
-        android:title="@string/nav_function_title"
-        android:icon="@drawable/ic_placeholder" />
-
-    <item
         android:id="@+id/nav_settings"
         android:title="@string/preferences"
         android:icon="@drawable/ic_settings" />

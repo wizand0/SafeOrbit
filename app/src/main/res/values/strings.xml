@@ -9,10 +9,6 @@
     <string name="server_info_panel_desc">Information about the selected server</string>
     <string name="nav_home_title">Home</string>
     <string name="nav_home_desc">Go to main screen</string>
-    <string name="nav_history_title">History</string>
-    <string name="nav_history_desc">View activity history</string>
-    <string name="nav_function_title">Function</string>
-    <string name="help">Help</string>
     <string name="nav_settings_title">Settings</string>
     <string name="nav_settings_desc">Open settings</string>
     <string name="toast_app_is_admin">SafeOrbit is now device administrator</string>
@@ -100,8 +96,6 @@
     <string name="client_mode_support_title">Support and feedback:</string>
     <string name="button_send_email">📧 Send Email</string>
     <string name="button_open_github">🌐 Open GitHub</string>
-    <string name="hoose_date">Select Date</string>
-    <string name="activities_history">Activity History List</string>
     <string name="scan_qr">Scan QR</string>
     <string name="label_server_id">Server ID: …</string>
     <string name="label_pair_code">Code: …</string>
@@ -118,9 +112,6 @@
     <string name="server_mode_security_title">Device protection tips:</string>
     <string name="server_mode_security_tips">• Set up SafeOrbit as a device administrator (via DevicePolicyManager) for auto-start and configuration lock\n• Use a PIN code and keep it private\n• Do not force stop the app — it runs in the background</string>
     <string name="support_title">Support and Feedback</string>
-    <string name="label_date">Date</string>
-    <string name="label_steps">Steps</string>
-    <string name="label_distance">Distance</string>
     <string name="map">Map</string>
     <string name="all_servers">All Servers</string>
     <string name="preferences">Settings</string>

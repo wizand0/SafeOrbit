@@ -9,10 +9,6 @@
     <string name="server_info_panel_desc">Информация о выбранном сервере</string>
     <string name="nav_home_title">Главная</string>
     <string name="nav_home_desc">Переход на главный экран</string>
-    <string name="nav_history_title">История</string>
-    <string name="nav_history_desc">Просмотр истории активности</string>
-    <string name="nav_function_title">Функция</string>
-    <string name="help">Помощь</string>
     <string name="nav_settings_title">Настройки</string>
     <string name="nav_settings_desc">Открыть настройки</string>
     <string name="toast_app_is_admin">SafeOrbit теперь администратор устройства</string>
@@ -100,8 +96,6 @@
     <string name="client_mode_support_title">Поддержка и обратная связь:</string>
     <string name="button_send_email">📧 Написать письмо</string>
     <string name="button_open_github">🌐 Открыть GitHub</string>
-    <string name="hoose_date">Выбрать дату</string>
-    <string name="activities_history">Список истории активности</string>
     <string name="scan_qr">Сканировать QR</string>
     <string name="label_server_id">ID сервера: …</string>
     <string name="label_pair_code">Код: …</string>
@@ -118,9 +112,6 @@
     <string name="server_mode_security_title">Советы по защите устройства:</string>
     <string name="server_mode_security_tips">• Настройте SafeOrbit как администрируемое приложение (через DevicePolicyManager) для автозапуска и блокировки изменений.\n• Используйте PIN-код и не сообщайте его никому.\n• Не закрывайте приложение принудительно — оно продолжает работать в фоне.</string>
     <string name="support_title">Поддержка и предложения:</string>
-    <string name="label_date">Дата</string>
-    <string name="label_steps">Шагов</string>
-    <string name="label_distance">Расстояние</string>
     <string name="map">Карта</string>
     <string name="all_servers">Все сервера</string>
     <string name="preferences">Настройки</string>

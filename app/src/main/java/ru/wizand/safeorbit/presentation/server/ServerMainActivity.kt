@@ -42,8 +42,6 @@ class ServerMainActivity : AppCompatActivity() {
     private fun showFragmentById(itemId: Int) {
         val fragment = when (itemId) {
             R.id.nav_home -> ServerMainFragment()
-            R.id.navigation_history -> ServerHistoryFragment()
-            R.id.nav_placeholder -> ServerPlaceholderFragment()
             R.id.nav_settings -> {
                 startActivity(Intent(this, ServerSettingsActivity::class.java))
                 return
