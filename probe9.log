@@ -1,0 +1,20 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+A problem occurred configuring project ':app'.
+> Failed to notify project evaluation listener.
+   > com.android.builder.errors.EvalIssueException:                     defaultConfig contains custom BuildConfig fields, but the feature is disabled.
+                         To enable the feature, add the following to your module-level build.gradle:
+     `android.buildFeatures.buildConfig true`
+   > The Hilt Android Gradle plugin is applied but no com.google.dagger:hilt-android dependency was found.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 12s
