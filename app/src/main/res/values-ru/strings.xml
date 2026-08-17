@@ -115,7 +115,7 @@
     <string name="map">Карта</string>
     <string name="all_servers">Все сервера</string>
     <string name="preferences">Настройки</string>
-    <string name="_5f_5f">Координаты: %.5f, %.5f</string>
+    <string name="_5f_5f">Координаты: %1$.5f, %2$.5f</string>
     <string name="time_">Время: %1$s</string>
     <string name="lock_icon">lock</string>
     <string name="pin_description">Your need to enter pin</string>
