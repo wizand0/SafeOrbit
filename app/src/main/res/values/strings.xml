@@ -126,4 +126,16 @@
     <string name="preferences">Settings</string>
     <string name="_5f_5f">Coordinates: %.5f, %.5f</string>
     <string name="time_">Time: %1$s</string>
+    <string name="cd_app_icon">App icon</string>
+    <string name="notification_sources_title">Notification sources</string>
+    <string name="open_notification_access_settings">Grant access to notifications</string>
+    <string name="notification_access_granted">✅ Access to notifications granted</string>
+    <string name="notification_access_not_granted">⚠️ Access to notifications not granted — tap the button below</string>
+    <string name="server_not_registered">Server is not registered yet</string>
+    <string name="send_test_notification">Send test notification</string>
+    <string name="test_notification_title">Test notification</string>
+    <string name="test_notification_text">This is a test notification from the SafeOrbit server</string>
+    <string name="test_notification_sent">Test notification sent</string>
+    <string name="test_notification_failed">Failed to send test notification</string>
+    <string name="button_notification_sources">Apps for notification forwarding</string>
 </resources>

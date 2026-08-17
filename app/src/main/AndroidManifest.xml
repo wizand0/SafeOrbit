@@ -13,10 +13,16 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\r?\n    <uses-permission android:name="android.permission.CAMERA" />\r?\n\r?\n    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
 
     <queries>
         <intent>
@@ -70,6 +76,9 @@
             android:name=".presentation.server.ServerSettingsActivity"
             android:exported="false" />
         <activity
+            android:name=".presentation.server.NotificationSourcesActivity"
+            android:exported="false" />
+        <activity
             android:name=".presentation.client.ChangeIconActivity"
             android:exported="false" />
         <activity
@@ -80,6 +89,15 @@
             android:name=".presentation.server.LocationService"
             android:exported="false"
             android:foregroundServiceType="location" />
+        <service
+            android:name=".data.service.NotificationLoggerService"
+            android:exported="true"
+            android:label="SafeOrbit Notification Logger"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <activity
             android:name=".presentation.server.ServerMainActivity"
             android:exported="false" />

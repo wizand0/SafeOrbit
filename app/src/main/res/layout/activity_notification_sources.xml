@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/role_screen_background1"
+    android:padding="16dp">
+
+    <com.google.android.material.textview.MaterialTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/notification_sources_title"
+        android:textAppearance="?attr/textAppearanceTitleLarge" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/tvListenerStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnOpenListenerSettings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        style="@style/ButtonFilledMaterial"
+        android:layout_marginTop="8dp"
+        android:text="@string/open_notification_access_settings" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnTestNotification"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        style="@style/ButtonFilledMaterial"
+        android:layout_marginTop="8dp"
+        android:text="@string/send_test_notification" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvApps"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="12dp"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp" />
+</LinearLayout>

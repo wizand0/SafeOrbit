@@ -126,4 +126,16 @@
     <string name="preferences">Настройки</string>
     <string name="_5f_5f">Координаты: %.5f, %.5f</string>
     <string name="time_">Время: %1$s</string>
+    <string name="cd_app_icon">Иконка приложения</string>
+    <string name="notification_sources_title">Источники уведомлений</string>
+    <string name="open_notification_access_settings">Выдать доступ к уведомлениям</string>
+    <string name="notification_access_granted">✅ Доступ к уведомлениям выдан</string>
+    <string name="notification_access_not_granted">⚠️ Доступ к уведомлениям не выдан — нажмите кнопку ниже</string>
+    <string name="server_not_registered">Сервер ещё не зарегистрирован</string>
+    <string name="send_test_notification">Отправить тестовое уведомление</string>
+    <string name="test_notification_title">Тестовое уведомление</string>
+    <string name="test_notification_text">Это тестовое уведомление от сервера SafeOrbit</string>
+    <string name="test_notification_sent">Тестовое уведомление отправлено</string>
+    <string name="test_notification_failed">Не удалось отправить тестовое уведомление</string>
+    <string name="button_notification_sources">Приложения для пересылки уведомлений</string>
 </resources>

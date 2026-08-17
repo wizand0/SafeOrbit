@@ -72,6 +72,10 @@ class ServerSettingsActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnNotificationSources.setOnClickListener {
+            startActivity(Intent(this, NotificationSourcesActivity::class.java))
+        }
+
         var savedPin = prefs.getString("server_pin", null)
 
         binding.btnCheckPin.setOnClickListener {
