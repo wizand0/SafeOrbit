@@ -13,7 +13,6 @@ if (localPropsFile.exists()) {
     localProps.load(new FileInputStream(localPropsFile))
 }
 def yandexKey = localProps.getProperty("YANDEX_MAPKIT_API_KEY", "")
-def agoraAppId = localProps.getProperty("AGORA_APP_ID", "")
 
 android {
     namespace 'ru.wizand.safeorbit'
@@ -31,8 +30,7 @@ android {
         buildConfigField "String", "YANDEX_MAPKIT_API_KEY", "\"${yandexKey}\""
 
         manifestPlaceholders = [
-                YANDEX_MAPKIT_API_KEY: yandexKey,
-                AGORA_APP_ID         : agoraAppId
+                YANDEX_MAPKIT_API_KEY: ***
         ]
     }
 
@@ -125,9 +123,6 @@ dependencies {
     // QR
     implementation libs.core
     implementation libs.zxing.android.embedded
-
-    // Agora
-    implementation "io.agora.rtc:voice-sdk:4.5.0"
 
     // Tests
     testImplementation libs.junit
