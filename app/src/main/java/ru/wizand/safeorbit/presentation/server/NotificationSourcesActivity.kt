@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.presentation.server
+﻿package ru.wizand.safeorbit.presentation.server
 
 import android.content.ComponentName
 import android.content.Intent
@@ -88,7 +88,7 @@ class NotificationSourcesActivity : AppCompatActivity() {
 
     /** Публикует тестовое уведомление напрямую в Firebase. */
     private fun sendTestNotification() {
-        val encryptedPrefs = EncryptedPreferencesManager(applicationContext)
+        val encryptedPrefs = EncryptedPreferencesManager.getInstance(applicationContext)
         val serverId = encryptedPrefs.getServerId()
         val code = encryptedPrefs.getCode()
 

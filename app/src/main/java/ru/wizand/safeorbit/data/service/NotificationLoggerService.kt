@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.data.service
+﻿package ru.wizand.safeorbit.data.service
 
 import android.app.Notification
 import android.os.Handler
@@ -74,7 +74,7 @@ class NotificationLoggerService : NotificationListenerService() {
     }
 
     private fun publish(sbn: StatusBarNotification) {
-        val encryptedPrefs = EncryptedPreferencesManager(applicationContext)
+        val encryptedPrefs = EncryptedPreferencesManager.getInstance(applicationContext)
         val serverId = encryptedPrefs.getServerId()
         val code = encryptedPrefs.getCode()
         if (serverId.isNullOrBlank() || code.isNullOrBlank()) {

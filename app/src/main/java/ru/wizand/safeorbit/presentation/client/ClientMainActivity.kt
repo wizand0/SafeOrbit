@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.presentation.client
+﻿package ru.wizand.safeorbit.presentation.client
 
 import android.os.Bundle
 import android.util.Log
@@ -21,7 +21,7 @@ class ClientMainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         // Проверка роли
-        val currentRole = EncryptedPreferencesManager(this).getUserRole()
+        val currentRole = EncryptedPreferencesManager.getInstance(this).getUserRole()
         if (currentRole != UserRole.CLIENT.name) {
             Log.d("DEBUG", "ClientMainActivity role mismatch, finishing")
             finish()

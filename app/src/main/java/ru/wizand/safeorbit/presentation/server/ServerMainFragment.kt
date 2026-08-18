@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.presentation.server
+﻿package ru.wizand.safeorbit.presentation.server
 
 import android.content.*
 import android.os.Bundle
@@ -146,7 +146,7 @@ class ServerMainFragment : Fragment() {
     }
 
     private fun startLocationService(serverId: String) {
-        val role = EncryptedPreferencesManager(requireContext()).getUserRole()
+        val role = EncryptedPreferencesManager.getInstance(requireContext()).getUserRole()
 
         if (role != UserRole.SERVER.name) {
             Log.w("SERVER_FRAGMENT", "⛔ Попытка запустить LocationService при роли: $role")

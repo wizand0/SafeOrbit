@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.presentation.client
+﻿package ru.wizand.safeorbit.presentation.client
 
 import android.content.Context
 import android.content.Intent
@@ -28,7 +28,7 @@ class SettingsFragment : Fragment() {
         binding.btnResetRole.setOnClickListener {
             val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             prefs.edit().remove("permissions_intro_shown").apply()
-            EncryptedPreferencesManager(requireContext().applicationContext).clearAll()
+            EncryptedPreferencesManager.getInstance(requireContext().applicationContext).clearAll()
             startActivity(Intent(requireContext(), RoleSelectionActivity::class.java))
             requireActivity().finish()
         }

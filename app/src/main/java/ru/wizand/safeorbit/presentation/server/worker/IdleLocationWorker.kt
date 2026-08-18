@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.presentation.server.worker
+﻿package ru.wizand.safeorbit.presentation.server.worker
 
 import android.Manifest
 import android.content.Context
@@ -19,7 +19,7 @@ class IdleLocationWorker(appContext: Context, workerParams: WorkerParameters)
     : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val encryptedPrefs = EncryptedPreferencesManager(applicationContext)
+        val encryptedPrefs = EncryptedPreferencesManager.getInstance(applicationContext)
         val serverId = encryptedPrefs.getServerId() ?: return Result.failure()
 
         val role = encryptedPrefs.getUserRole()

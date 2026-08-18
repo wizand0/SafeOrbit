@@ -16,7 +16,7 @@ import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 class ServerViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = FirebaseRepository(application.applicationContext)
-    private val encryptedPrefs = EncryptedPreferencesManager(application.applicationContext)
+    private val encryptedPrefs = EncryptedPreferencesManager.getInstance(application.applicationContext)
 
     private val _serverId = MutableLiveData<String?>()
     val serverId: LiveData<String?> = _serverId

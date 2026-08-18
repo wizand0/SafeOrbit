@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.presentation.server
+﻿package ru.wizand.safeorbit.presentation.server
 
 import android.app.Activity
 import android.app.admin.DevicePolicyManager
@@ -30,7 +30,7 @@ class ServerSettingsActivity : AppCompatActivity() {
         binding = ActivityServerSettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        encryptedPrefs = EncryptedPreferencesManager(this)
+        encryptedPrefs = EncryptedPreferencesManager.getInstance(this)
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         setupActiveSpinner(prefs)
