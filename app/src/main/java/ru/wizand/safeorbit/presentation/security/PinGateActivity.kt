@@ -1,9 +1,10 @@
-package ru.wizand.safeorbit.presentation.security
+﻿package ru.wizand.safeorbit.presentation.security
 
 import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import ru.wizand.safeorbit.R
@@ -39,13 +40,30 @@ class PinGateActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         // Инициализация менеджера зашифрованных данных
-        encryptedPrefs = EncryptedPreferencesManager(this)
+        encryptedPrefs = EncryptedPreferencesManager.getInstance(this)
 
         // Получаем сохранённый PIN из защищённого хранилища
         savedPin = encryptedPrefs.getPin()
 
         setupUI()
         setupPinVisibilityToggle()
+
+        // Блокировка кнопки "Назад" для предотвращения обхода проверки PIN.
+        // Используется OnBackPressedDispatcher вместо deprecated onBackPressed:
+        // при android:enableOnBackInvokedCallback="true" старый переопределённый
+        // метод не вызывается на Android 13+.
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                MaterialAlertDialogBuilder(this@PinGateActivity)
+                    .setTitle("Выход")
+                    .setMessage("Для доступа к функциям сервера необходимо ввести PIN-код. Выйти из приложения?")
+                    .setPositiveButton("Да") { _, _ ->
+                        finishAffinity() // Полностью закрыть приложение
+                    }
+                    .setNegativeButton("Отмена", null)
+                    .show()
+            }
+        })
     }
 
     /**
@@ -289,21 +307,5 @@ class PinGateActivity : AppCompatActivity() {
     private fun navigateToServerMain() {
         startActivity(Intent(this, ServerMainActivity::class.java))
         finish()
-    }
-
-    /**
-     * Блокировка кнопки "Назад" для предотвращения обхода проверки PIN
-     */
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        super.onBackPressed()
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Выход")
-            .setMessage("Для доступа к функциям сервера необходимо ввести PIN-код. Выйти из приложения?")
-            .setPositiveButton("Да") { _, _ ->
-                finishAffinity() // Полностью закрыть приложение
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
     }
 }
