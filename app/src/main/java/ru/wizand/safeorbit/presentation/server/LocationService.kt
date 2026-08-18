@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.presentation.server
+﻿package ru.wizand.safeorbit.presentation.server
 
 import android.Manifest
 import android.app.*
@@ -66,7 +66,7 @@ class LocationService : Service(), SensorEventListener {
     override fun onCreate() {
         super.onCreate()
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        encryptedPrefs = EncryptedPreferencesManager(applicationContext)
+        encryptedPrefs = EncryptedPreferencesManager.getInstance(applicationContext)
 
         val role = encryptedPrefs.getUserRole()
         if (role != UserRole.SERVER.name) {
