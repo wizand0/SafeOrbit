@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.data.security
+﻿package ru.wizand.safeorbit.data.security
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -16,7 +16,7 @@ import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
  *
  * Автоматически мигрирует данные из незащищённых prefs при первом запуске.
  */
-class EncryptedPreferencesManager(private val context: Context) {
+class EncryptedPreferencesManager private constructor(private val context: Context) {
 
     companion object {
         private const val TAG = "EncryptedPrefsManager"
@@ -31,6 +31,39 @@ class EncryptedPreferencesManager(private val context: Context) {
 
         // Migration flag
         private const val KEY_MIGRATION_DONE = "migration_done_v1"
+
+        @Volatile
+        private var instance: EncryptedPreferencesManager? = null
+
+        /**
+         * Единственный экземпляр на процесс.
+         *
+         * Создание EncryptedSharedPreferences (Tink keyset) — дорогая синхронная операция
+         * (сотни мс), поэтому экземпляр создаётся один раз и переиспользуется всеми
+         * Activity/Service вместо повторного создания в каждом onCreate.
+         */
+        fun getInstance(context: Context): EncryptedPreferencesManager {
+            return instance ?: synchronized(this) {
+                instance ?: EncryptedPreferencesManager(context.applicationContext).also {
+                    instance = it
+                }
+            }
+        }
+
+        /**
+         * Предварительная инициализация в фоновом потоке (вызывать из Application.onCreate),
+         * чтобы к моменту первого Activity обращение к prefs было почти мгновенным.
+         */
+        fun warmUp(context: Context) {
+            Thread({
+                try {
+                    getInstance(context).getUserRole()
+                    Log.d(TAG, "Фоновый прогрев EncryptedPreferences завершён")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Фоновый прогрев EncryptedPreferences не удался: ${e.message}")
+                }
+            }, "encrypted-prefs-warmup").start()
+        }
     }
 
     private val securePrefs: SharedPreferences by lazy {
