@@ -23,6 +23,7 @@ import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.map.PolylineMapObject
 import com.yandex.runtime.image.ImageProvider
+import ru.wizand.safeorbit.MainApplication
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.databinding.FragmentMapBinding
 import ru.wizand.safeorbit.databinding.ViewMarkerBinding
@@ -58,6 +59,8 @@ class MapFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        // Ленивая инициализация MapKit перед первым использованием карты.
+        MainApplication.ensureMapKitInitialized(requireContext().applicationContext)
         _binding = FragmentMapBinding.inflate(inflater, container, false)
         return binding.root
     }

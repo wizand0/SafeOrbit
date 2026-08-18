@@ -2,9 +2,9 @@ package ru.wizand.safeorbit.presentation.client
 
 import android.graphics.Color
 import androidx.lifecycle.*
+import com.google.firebase.database.ValueEventListener
 import com.yandex.mapkit.geometry.Point
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
 import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.model.LocationData
 import javax.inject.Inject
@@ -26,6 +26,14 @@ class ServerMapViewModel @Inject constructor(
     private val _mapStates = MutableLiveData<Map<String, ServerMapState>>()
     val mapStates: LiveData<Map<String, ServerMapState>> = _mapStates
 
+    /**
+     * Активные Firebase-подписки по serverId. Гарантирует ровно одну подписку
+     * на узел координат при любом числе вызовов observeServerLocations
+     * (ранее каждый вызов из onResume/эмитов LiveData добавлял новый
+     * ValueEventListener, и одна координата обрабатывалась N раз).
+     */
+    private val locationListeners = mutableMapOf<String, ValueEventListener>()
+
     private val pointHistories = mutableMapOf<String, MutableList<Point>>()
     private val hasCentered = mutableSetOf<String>()
     private val lineColors = mutableMapOf<String, Int>()
@@ -34,12 +42,34 @@ class ServerMapViewModel @Inject constructor(
     var lastKnownCenter: Point? = null
         private set
 
+    /**
+     * Идемпотентная подписка на координаты: для уже подписанных serverId
+     * повторная регистрация не выполняется; подписки на удалённые серверы снимаются.
+     */
     fun observeServerLocations(serverIds: List<String>) {
+        // Снять подписки на серверы, которых больше нет
+        val stale = locationListeners.keys - serverIds.toSet()
+        stale.forEach { serverId ->
+            locationListeners.remove(serverId)?.let { repository.stopObservingServerLocation(serverId, it) }
+            pointHistories.remove(serverId)
+            hasCentered.remove(serverId)
+        }
+
         serverIds.forEach { serverId ->
-            repository.observeServerLocation(serverId) { location ->
+            if (locationListeners.containsKey(serverId)) return@forEach
+            val listener = repository.observeServerLocation(serverId) { location ->
                 updateLocation(serverId, location)
             }
+            locationListeners[serverId] = listener
         }
+    }
+
+    override fun onCleared() {
+        locationListeners.forEach { (serverId, listener) ->
+            repository.stopObservingServerLocation(serverId, listener)
+        }
+        locationListeners.clear()
+        super.onCleared()
     }
 
     private fun updateLocation(serverId: String, location: LocationData) {

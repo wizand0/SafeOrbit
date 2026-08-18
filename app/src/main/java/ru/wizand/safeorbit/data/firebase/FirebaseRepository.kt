@@ -74,23 +74,48 @@ class FirebaseRepository(private val context: Context) {
     }
 
 
-    fun observeServerLocation(serverId: String, onUpdate: (LocationData) -> Unit) {
-        db.child("servers").child(serverId).child("location")
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val location = snapshot.getValue(LocationData::class.java)
-                    if (location != null) {
-                        android.util.Log.d("CLIENT", "📍 Получена координата $serverId -> $location")
-                        onUpdate(location)
-                    } else {
-                        android.util.Log.w("CLIENT", "📭 Нет координат в БД для $serverId (value: ${snapshot.value})")
+    /**
+     * Подписка на координаты сервера.
+     *
+     * ВАЖНО: возвращает ValueEventListener, чтобы вызывающий код мог снять подписку.
+     * Повторный вызов для того же serverId без снятия предыдущего listener приводит
+     * к дублированию обработки координат (10 обработок одной точки в логах).
+     * Управление активными подписками — в ServerMapViewModel.
+     *
+     * Внутри выполняется dedup по содержимому: координата с теми же
+     * latitude/longitude/timestamp не пропускается повторно (аналог distinctUntilChanged).
+     */
+    fun observeServerLocation(serverId: String, onUpdate: (LocationData) -> Unit): ValueEventListener {
+        var lastSeen: LocationData? = null
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val location = snapshot.getValue(LocationData::class.java)
+                if (location != null) {
+                    if (lastSeen == location) {
+                        android.util.Log.d("CLIENT", "⏭ Дубликат координаты $serverId пропущен")
+                        return
                     }
+                    lastSeen = location
+                    android.util.Log.d("CLIENT", "📍 Получена координата $serverId -> $location")
+                    onUpdate(location)
+                } else {
+                    android.util.Log.w("CLIENT", "📭 Нет координат в БД для $serverId (value: ${snapshot.value})")
                 }
+            }
 
-                override fun onCancelled(error: DatabaseError) {
-                    android.util.Log.e("CLIENT", "❌ Ошибка подписки на координаты $serverId: ${error.message}")
-                }
-            })
+            override fun onCancelled(error: DatabaseError) {
+                android.util.Log.e("CLIENT", "❌ Ошибка подписки на координаты $serverId: ${error.message}")
+            }
+        }
+        db.child("servers").child(serverId).child("location").addValueEventListener(listener)
+        return listener
+    }
+
+    /**
+     * Снять подписку на координаты сервера.
+     */
+    fun stopObservingServerLocation(serverId: String, listener: ValueEventListener) {
+        db.child("servers").child(serverId).child("location").removeEventListener(listener)
     }
 
     fun generateUniqueServerId(
