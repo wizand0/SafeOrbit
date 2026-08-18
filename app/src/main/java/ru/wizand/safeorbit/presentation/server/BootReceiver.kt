@@ -5,16 +5,17 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import android.os.Build
-import android.widget.Toast
 import androidx.core.content.ContextCompat
 
 class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED) {
-            Log.d("ru.wizand.safeorbit.presentation.server.BootReceiver", "📱 Устройство перезагрузилось. Запускаем сервис")
+            Log.d("BootReceiver", "📱 Устройство перезагрузилось. Запускаем сервис")
 
-            // Пример: запуск LocationService после загрузки
+            // Фоновый статус: Toast не показываем — только тихий лог.
+            // Пользователь видит состояние через foreground-уведомление сервиса
+            // в канале location_service_channel.
             val serviceIntent = Intent(context, LocationService::class.java)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -22,8 +23,6 @@ class BootReceiver : BroadcastReceiver() {
             } else {
                 context.startService(serviceIntent)
             }
-
-            Toast.makeText(context, "SafeOrbit: Сервис запущен после перезагрузки", Toast.LENGTH_SHORT).show()
         }
     }
 }

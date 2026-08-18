@@ -1,4 +1,4 @@
-package ru.wizand.safeorbit.presentation.role
+﻿package ru.wizand.safeorbit.presentation.role
 
 import android.Manifest
 import android.content.Intent
@@ -36,6 +36,13 @@ class RoleSelectionActivity : AppCompatActivity() {
     private lateinit var settingsLauncher: ActivityResultLauncher<Intent>
     private lateinit var permissionLauncher: ActivityResultLauncher<String>
     private lateinit var clientPermissionLauncher: ActivityResultLauncher<Array<String>>
+
+    /**
+     * Единственный слушатель статуса подключения Firebase.
+     * Повторная регистрация не требуется — ValueEventListener живёт вместе с подключением,
+     * повторный addValueEventListener приводил к дублированию обработчиков.
+     */
+    private var connectionListener: com.google.firebase.database.ValueEventListener? = null
 
     private val deniedPermissions = mutableListOf<String>()
     private var currentPermissionIndex = 0
@@ -87,7 +94,7 @@ class RoleSelectionActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         // Инициализация менеджера зашифрованных данных
-        encryptedPrefs = EncryptedPreferencesManager(this)
+        encryptedPrefs = EncryptedPreferencesManager.getInstance(this)
 
         setupPermissionLaunchers()
 
@@ -217,32 +224,33 @@ class RoleSelectionActivity : AppCompatActivity() {
     }
 
     /**
-     * Проверка подключения к Firebase
+     * Проверка подключения к Firebase.
+     *
+     * Фоновый статус подключения не показывается пользователю через Toast:
+     * только тихий лог и индикатор progressAuth. Слушатель регистрируется
+     * ровно один раз (ранее onCreate + колбэк signInAnonymouslyIfNeeded давали
+     * два слушателя на ".info/connected").
      */
     private fun checkFirebaseConnection() {
+        if (connectionListener != null) return
         val db = com.google.firebase.database.FirebaseDatabase.getInstance().reference
         val connectedRef = db.child(".info/connected")
-        connectedRef.addValueEventListener(object :
-            com.google.firebase.database.ValueEventListener {
+        connectionListener = object : com.google.firebase.database.ValueEventListener {
             override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
                 val connected = snapshot.getValue(Boolean::class.java) ?: false
                 if (!connected) {
-                    Toast.makeText(
-                        this@RoleSelectionActivity,
-                        "Идет подключение к серверу",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    Log.d(TAG, "⏳ Идет подключение к Firebase")
+                    binding.progressAuth.visibility = View.VISIBLE
+                } else {
+                    Log.d(TAG, "✅ Подключение к Firebase установлено")
+                    binding.progressAuth.visibility = View.GONE
                 }
             }
 
             override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
-                Toast.makeText(
-                    this@RoleSelectionActivity,
-                    "Ошибка подключения: ${error.message}",
-                    Toast.LENGTH_LONG
-                ).show()
+                Log.e(TAG, "❌ Ошибка подключения к Firebase: ${error.message}")
             }
-        })
+        }.also { connectedRef.addValueEventListener(it) }
     }
 
     /**
@@ -395,6 +403,16 @@ class RoleSelectionActivity : AppCompatActivity() {
             }
             .setNegativeButton("Отмена", null)
             .show()
+    }
+
+    override fun onDestroy() {
+        connectionListener?.let {
+            com.google.firebase.database.FirebaseDatabase.getInstance().reference
+                .child(".info/connected")
+                .removeEventListener(it)
+            connectionListener = null
+        }
+        super.onDestroy()
     }
 
     companion object {
