@@ -107,7 +107,6 @@ class ServerSettingsActivity : AppCompatActivity() {
 
     private fun setupInactivitySpinner(prefs: SharedPreferences) {
         val timeoutOptions = InactivityTimeout.values()
-        Log.d("SPINNER_DEBUG", "Active options: ${timeoutOptions.joinToString()}")
         val adapter = ArrayAdapter(this, R.layout.dropdown_menu_popup_item, timeoutOptions)
         binding.spinnerInactivity.setAdapter(adapter)
 
@@ -125,7 +124,6 @@ class ServerSettingsActivity : AppCompatActivity() {
 
     private fun setupActiveSpinner(prefs: SharedPreferences) {
         val activeOptions = ActiveInterval.values() // вместо entries
-        Log.d("SPINNER_DEBUG", "Active options: ${activeOptions.joinToString()}")
         val adapter = ArrayAdapter(this, R.layout.dropdown_menu_popup_item, activeOptions)
         binding.spinnerActive.setAdapter(adapter)
 

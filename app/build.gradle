@@ -134,5 +134,8 @@ dependencies {
 
     // Если используете Tink (опционально, для дополнительной безопасности)
     implementation libs.tink.android
+}
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/src/main/assets/schemas")
 }

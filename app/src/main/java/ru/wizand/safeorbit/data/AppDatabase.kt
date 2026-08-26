@@ -8,7 +8,7 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [ServerEntity::class, ActivityLogEntity::class],
     version = 1,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun serverDao(): ServerDao

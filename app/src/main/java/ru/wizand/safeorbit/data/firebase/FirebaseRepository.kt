@@ -124,7 +124,7 @@ class FirebaseRepository @Inject constructor(
                         return
                     }
                     lastSeen = location
-                    android.util.Log.d("CLIENT", "📍 Получена координата $serverId -> $location")
+                    android.util.Log.d("CLIENT", "📍 Получена координата $serverId (данные скрыты)")
                     onUpdate(location)
                 } else {
                     android.util.Log.w("CLIENT", "📭 Нет координат в БД для $serverId (value: ${snapshot.value})")
