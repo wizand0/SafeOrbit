@@ -1,0 +1,122 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    
+    "servers": {
+      "$serverId": {
+        ".read": "auth != null && (root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid || root.child('clients/' + auth.uid + '/linked_servers/' + $serverId).val() === true)",
+        
+        ".write": "auth != null && root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid",
+        
+        "ownerUid": {
+          ".read": "auth != null && root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid",
+          ".write": "!data.exists()"  // только при создании
+        },
+        
+        "pairing": {
+          ".read": "auth != null && root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid",  // только владелец может читать pairing данные
+          
+          ".write": "auth != null && root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid && !newData.child('tokenHash').exists()",  // нельзя изменить токен после создания
+          
+          "tokenHash": {
+            ".read": "auth != null && root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid",
+            ".write": "!data.exists()"  // только при создании
+          },
+          
+          "expiresAt": {
+            ".read": "auth != null && root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid",
+            ".write": "!data.exists()"  // только при создании
+          },
+          
+          "consumed": {
+            ".read": "auth != null && root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid",
+            ".write": "auth != null && root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid && (!data.exists() || data.val() == false) && newData.val() == true"  // только однократное изменение на true
+          }
+        },
+        
+        "location": {
+          ".read": "auth != null && (root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid || root.child('clients/' + auth.uid + '/linked_servers/' + $serverId).val() === true)",
+          ".write": "auth != null && root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid"
+        },
+        
+        "app_notifications": {
+          ".read": "auth != null && (root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid || root.child('clients/' + auth.uid + '/linked_servers/' + $serverId).val() === true)",
+          ".write": "auth != null && root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid",
+          
+          "$notificationId": {
+            ".validate": "newData.hasChildren(['enc_pkg', 'enc_label', 'enc_title', 'enc_text', 'post_time'])",
+            
+            "enc_pkg": {
+              ".validate": "newData.isString() && newData.val().length() > 0"
+            },
+            
+            "enc_label": {
+              ".validate": "newData.isString() && newData.val().length() > 0"
+            },
+            
+            "enc_title": {
+              ".validate": "newData.isString() && newData.val().length() > 0"
+            },
+            
+            "enc_text": {
+              ".validate": "newData.isString() && newData.val().length() > 0"
+            },
+            
+            "post_time": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            }
+          }
+        }
+      }
+    },
+    
+    "server_commands": {
+      "$serverId": {
+        ".read": "auth != null && root.child('servers/' + $serverId + '/ownerUid').val() === auth.uid",
+        ".write": "auth != null && root.child('clients/' + auth.uid + '/linked_servers/' + $serverId).val() === true",
+        
+        "$commandId": {
+          ".validate": "newData.hasChildren(['type', 'created_at']) && (newData.child('type').val() == 'request_location_update' || newData.child('type').val() == 'update_settings')",
+          
+          "type": {
+            ".validate": "newData.val() == 'request_location_update' || newData.val() == 'update_settings'"
+          },
+          
+          "created_at": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          
+          "request_location_update": {
+            ".validate": "newData.val() == true"
+          },
+          
+          "update_settings": {
+            ".validate": "newData.hasChildren(['active_interval', 'inactivity_timeout'])",
+            
+            "active_interval": {
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 3600000"  // максимум 1 час
+            },
+            
+            "inactivity_timeout": {
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 86400000"  // максимум 24 часа
+            }
+          }
+        }
+      }
+    },
+    
+    "clients": {
+      "$clientId": {
+        ".read": "auth != null && auth.uid === $clientId",
+        ".write": "auth != null && auth.uid === $clientId",
+        
+        "linked_servers": {
+          "$serverId": {
+            ".validate": "newData.val() === true"
+          }
+        }
+      }
+    }
+  }
+}
