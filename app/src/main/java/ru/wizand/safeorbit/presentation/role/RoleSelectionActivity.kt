@@ -170,10 +170,10 @@ class RoleSelectionActivity : AppCompatActivity() {
         viewModel.getUserRole()?.let { role ->
             when (role) {
                 UserRole.SERVER -> {
-                    val pin = encryptedPrefs.getPin()
+                    val pin = encryptedPrefs.hasPin()
                     val verified = encryptedPrefs.isPinVerified()
 
-                    val intent = if (pin != null && !verified) {
+                    val intent = if (pin && !verified) {
                         Intent(this, PinGateActivity::class.java)
                     } else {
                         Intent(this, ServerMainActivity::class.java)
@@ -352,12 +352,12 @@ class RoleSelectionActivity : AppCompatActivity() {
         viewModel.saveUserRole(UserRole.SERVER)
         saveUserRoleToDatabase("server")
 
-        val pin = encryptedPrefs.getPin()
+        val pin = encryptedPrefs.hasPin()
         val verified = encryptedPrefs.isPinVerified()
 
-        Log.d(TAG, "🛡 PIN: ${pin != null}, verified=$verified")
+        Log.d(TAG, "🛡 PIN установлен: $pin, verified=$verified")
 
-        val intent = if (pin != null && !verified) {
+        val intent = if (pin && !verified) {
             Log.d(TAG, "🔑 Открываем PinGateActivity")
             Intent(this, PinGateActivity::class.java)
         } else {

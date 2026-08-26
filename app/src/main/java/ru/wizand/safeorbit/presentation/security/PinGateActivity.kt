@@ -21,7 +21,9 @@ class PinGateActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPinGateBinding
     private lateinit var encryptedPrefs: EncryptedPreferencesManager
 
-    private var savedPin: String? = null
+    private var hasSavedPin = false
+    // 1.7 (аудит): счётчик попыток и блокировка хранятся в EncryptedSharedPreferences,
+    // а не в памяти активности — перезапуск экрана не сбрасывает лимит.
     private var failedAttempts = 0
     private var isPinVisible = false
 
@@ -43,7 +45,8 @@ class PinGateActivity : AppCompatActivity() {
         encryptedPrefs = EncryptedPreferencesManager.getInstance(this)
 
         // Получаем сохранённый PIN из защищённого хранилища
-        savedPin = encryptedPrefs.getPin()
+        // 1.7 (аудит): сам хэш наружу не отдаётся — только факт наличия PIN
+        hasSavedPin = encryptedPrefs.hasPin()
 
         setupUI()
         setupPinVisibilityToggle()
@@ -70,7 +73,7 @@ class PinGateActivity : AppCompatActivity() {
      * Настройка интерфейса в зависимости от наличия PIN
      */
     private fun setupUI() {
-        if (savedPin == null) {
+        if (!hasSavedPin) {
             // Режим создания нового PIN
             binding.tvPinTitle.text = "Создайте PIN-код"
             binding.tvPinDescription.text = "Введите 4-6 цифр для защиты доступа к серверу"
@@ -89,7 +92,7 @@ class PinGateActivity : AppCompatActivity() {
         }
 
         // Кнопка сброса PIN (только если PIN уже установлен)
-        if (savedPin != null) {
+        if (hasSavedPin) {
             binding.btnResetPin?.setOnClickListener {
                 showResetPinDialog()
             }
@@ -140,7 +143,7 @@ class PinGateActivity : AppCompatActivity() {
             return
         }
 
-        if (savedPin == null) {
+        if (!hasSavedPin) {
             // Создание нового PIN
             handleNewPinCreation(input)
         } else {
@@ -200,16 +203,26 @@ class PinGateActivity : AppCompatActivity() {
      * Проверка существующего PIN
      */
     private fun handlePinVerification(input: String) {
-        if (input == savedPin) {
-            // PIN верен
+        // 1.7 (аудит): блокировка по времени после превышения лимита
+        val lockoutUntil = encryptedPrefs.getPinLockoutUntil()
+        val now = System.currentTimeMillis()
+        if (lockoutUntil > now) {
+            val secondsLeft = ((lockoutUntil - now) / 1000) + 1
+            Toast.makeText(this, "Слишком много попыток. Повторите через $secondsLeft сек.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (encryptedPrefs.verifyPin(input)) {
             encryptedPrefs.setPinVerified(true)
+            encryptedPrefs.setPinFailedAttempts(0)
+            encryptedPrefs.setPinLockoutUntil(0L)
             failedAttempts = 0
 
             Toast.makeText(this, "✅ Доступ разрешён", Toast.LENGTH_SHORT).show()
             navigateToServerMain()
         } else {
-            // PIN неверен
-            failedAttempts++
+            failedAttempts = encryptedPrefs.getPinFailedAttempts() + 1
+            encryptedPrefs.setPinFailedAttempts(failedAttempts)
 
             val attemptsLeft = MAX_ATTEMPTS - failedAttempts
 
@@ -221,7 +234,6 @@ class PinGateActivity : AppCompatActivity() {
                     Toast.LENGTH_LONG
                 ).show()
 
-                // Тряска поля ввода для визуального feedback
                 binding.etPinVerify.animate()
                     .translationX(-10f)
                     .setDuration(50)
@@ -239,16 +251,14 @@ class PinGateActivity : AppCompatActivity() {
                     }
                     .start()
             } else {
-                // Превышен лимит попыток
+                // 1.7: после 5 неудачных попыток — блокировка на 60 секунд
+                encryptedPrefs.setPinLockoutUntil(now + 60_000L)
                 showMaxAttemptsDialog()
             }
         }
     }
 
-    /**
-     * Диалог при превышении лимита попыток
-     */
-    private fun showMaxAttemptsDialog() {
+        private fun showMaxAttemptsDialog() {
         MaterialAlertDialogBuilder(this)
             .setTitle("Превышен лимит попыток")
             .setMessage("Вы ввели неверный PIN $MAX_ATTEMPTS раз. Необходимо сбросить PIN через настройки.")

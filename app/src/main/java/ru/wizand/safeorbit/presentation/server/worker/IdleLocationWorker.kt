@@ -1,4 +1,4 @@
-﻿package ru.wizand.safeorbit.presentation.server.worker
+package ru.wizand.safeorbit.presentation.server.worker
 
 import android.Manifest
 import android.content.Context
@@ -37,17 +37,23 @@ class IdleLocationWorker(appContext: Context, workerParams: WorkerParameters)
         var location: Location? = null
 
         try {
+            // 2.2 (аудит): в режиме ЭКОНОМ высокоточный GPS-фикс не нужен.
+            // BALANCED_POWER_ACCURACY даёт точность ~50 м (сеть/вышки),
+            // энергопотребление снижается в разы; для контроля присутствия достаточно.
+            // Активный режим по-прежнему использует PRIORITY_HIGH_ACCURACY
+            // в LocationService.startLocationUpdates().
             location = locationClient.getCurrentLocation(
-                Priority.PRIORITY_HIGH_ACCURACY,
+                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
                 null
             ).await()
-            // Использовать location
         } catch (e: SecurityException) {
             Log.e("LOCATION", "❌ Нет разрешения на получение локации: ${e.message}")
         }
 
         if (location != null) {
-            Log.d("IdleLocationWorker", "📤 Отправка координат: ${location.latitude}, ${location.longitude}")
+            Log.d("IdleLocationWorker", "📤 Отправка координат")
+            // Примечание: перевод на DI-синглтон (п.4.1 плана) отложен —
+            // пока создаётся экземпляр напрямую, поведение идентично.
             FirebaseRepository(applicationContext).sendLocation(
                 serverId,
                 LocationData(location.latitude, location.longitude, System.currentTimeMillis())

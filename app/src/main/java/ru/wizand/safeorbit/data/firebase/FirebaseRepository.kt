@@ -1,15 +1,32 @@
-package ru.wizand.safeorbit.data.firebase
+﻿package ru.wizand.safeorbit.data.firebase
 
 import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.MutableData
+import com.google.firebase.database.Transaction
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import dagger.hilt.android.qualifiers.ApplicationContext
 import ru.wizand.safeorbit.data.model.LocationData
 import ru.wizand.safeorbit.utils.generateReadableId
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class FirebaseRepository(private val context: Context) {
+/**
+ * 1.6: @Inject constructor + @Singleton — Hilt создаёт и переиспользует ОДИН
+ * экземпляр на весь процесс, вместо `FirebaseRepository(applicationContext)`
+ * на каждый вызов из LocationService/IdleLocationWorker.
+ *
+ * Если в проекте уже есть FirebaseModule.provideFirebaseRepository(), можно
+ * оставить любой из двух вариантов, но не оба — иначе Hilt выдаст ошибку
+ * дублирующегося биндинга при сборке графа.
+ */
+@Singleton
+class FirebaseRepository @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
     private val db = FirebaseDatabase.getInstance().reference
     private val auth = FirebaseAuth.getInstance()
@@ -20,30 +37,54 @@ class FirebaseRepository(private val context: Context) {
         }
     }
 
-    fun registerServer(onComplete: (serverId: String, code: String) -> Unit) {
-        val serverId = generateReadableId(context) // вместо UUID.randomUUID().toString()
-        val code = (100000..999999).random().toString()
+    fun registerServer(onComplete: (serverId: String, pairingToken: String) -> Unit) {
+        val serverId = generateReadableId(context)
+        val tokenBytes = ByteArray(32).also { java.security.SecureRandom().nextBytes(it) }
+        val pairingToken = android.util.Base64.encodeToString(tokenBytes, android.util.Base64.NO_WRAP or android.util.Base64.URL_SAFE)
+        
         val serverData = mapOf(
-            "code" to code,
+            "ownerUid" to (auth.currentUser?.uid ?: ""),
+            "pairing" to mapOf(
+                "tokenHash" to ru.wizand.safeorbit.utils.CryptoUtils.sha256Hex(pairingToken),
+                "expiresAt" to (System.currentTimeMillis() + 10 * 60 * 1000L), // 10 минут
+                "consumed" to false
+            ),
             "location" to null
         )
+        
         db.child("servers").child(serverId).setValue(serverData)
-            .addOnSuccessListener { onComplete(serverId, code) }
+            .addOnSuccessListener { onComplete(serverId, pairingToken) }
     }
 
-    fun pairClientToServer(serverId: String, code: String, onResult: (Boolean) -> Unit) {
-        db.child("servers").child(serverId).child("code").get()
-            .addOnSuccessListener {
-                val match = it.getValue(String::class.java) == code
-                if (match) {
-                    val clientId = auth.currentUser?.uid ?: return@addOnSuccessListener
-                    db.child("clients").child(clientId).child("linked_servers").child(serverId)
-                        .setValue(true)
-                        .addOnSuccessListener { onResult(true) }
-                } else {
+    fun pairClientToServer(serverId: String, token: String, onResult: (Boolean) -> Unit) {
+        val serverRef = db.child("servers").child(serverId)
+        serverRef.runTransaction(object : Transaction.Handler {
+            override fun doTransaction(currentData: MutableData): Transaction.Result {
+                val hash = currentData.child("pairing/tokenHash").getValue(String::class.java)
+                val expiresAt = currentData.child("pairing/expiresAt").getValue(Long::class.java) ?: 0L
+                val consumed = currentData.child("pairing/consumed").getValue(Boolean::class.java) ?: true
+                if (hash != ru.wizand.safeorbit.utils.CryptoUtils.sha256Hex(token) ||
+                    consumed || expiresAt <= System.currentTimeMillis()
+                ) return Transaction.abort()
+                currentData.child("pairing/consumed").value = true
+                return Transaction.success(currentData)
+            }
+
+            override fun onComplete(error: DatabaseError?, committed: Boolean, snapshot: DataSnapshot?) {
+                if (error != null || !committed) {
                     onResult(false)
+                    return
                 }
-            }.addOnFailureListener { onResult(false) }
+                val clientId = auth.currentUser?.uid
+                if (clientId.isNullOrBlank()) {
+                    onResult(false)
+                    return
+                }
+                db.child("clients").child(clientId).child("linked_servers").child(serverId)
+                    .setValue(true)
+                    .addOnCompleteListener { onResult(it.isSuccessful) }
+            }
+        })
     }
 
     fun sendLocation(serverId: String, location: LocationData) {
@@ -62,7 +103,6 @@ class FirebaseRepository(private val context: Context) {
             }
     }
 
-
     fun verifyServerExists(serverId: String, code: String, callback: (Boolean) -> Unit) {
         val ref = FirebaseDatabase.getInstance().getReference("servers").child(serverId).child("code")
         ref.get().addOnSuccessListener {
@@ -73,14 +113,12 @@ class FirebaseRepository(private val context: Context) {
         }
     }
 
-
     /**
      * Подписка на координаты сервера.
      *
      * ВАЖНО: возвращает ValueEventListener, чтобы вызывающий код мог снять подписку.
      * Повторный вызов для того же serverId без снятия предыдущего listener приводит
-     * к дублированию обработки координат (10 обработок одной точки в логах).
-     * Управление активными подписками — в ServerMapViewModel.
+     * к дублированию обработки координат. Управление активными подписками — в ServerMapViewModel.
      *
      * Внутри выполняется dedup по содержимому: координата с теми же
      * latitude/longitude/timestamp не пропускается повторно (аналог distinctUntilChanged).
@@ -124,7 +162,6 @@ class FirebaseRepository(private val context: Context) {
         maxRetries: Int = 10
     ) {
         if (retryCount >= maxRetries) {
-            // Слишком много попыток
             return onReady("ERROR")
         }
 
@@ -135,14 +172,11 @@ class FirebaseRepository(private val context: Context) {
 
         ref.get().addOnSuccessListener { snapshot ->
             if (snapshot.exists()) {
-                // Уже занят — пробуем снова
                 generateUniqueServerId(onReady, retryCount + 1, maxRetries)
             } else {
-                // Уникален — используем его
                 onReady(candidateId)
             }
         }.addOnFailureListener {
-            // В случае ошибки — пробуем снова
             generateUniqueServerId(onReady, retryCount + 1, maxRetries)
         }
     }

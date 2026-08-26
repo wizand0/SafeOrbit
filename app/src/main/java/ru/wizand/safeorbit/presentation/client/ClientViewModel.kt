@@ -1,7 +1,10 @@
 package ru.wizand.safeorbit.presentation.client
 
 import androidx.lifecycle.*
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import ru.wizand.safeorbit.data.AppDatabase
@@ -24,22 +27,26 @@ class ClientViewModel @Inject constructor(
     private val _isConnected = MutableLiveData<Boolean>()
     val isConnected: LiveData<Boolean> = _isConnected
 
+    // 1.5: держим ссылку на конкретный узел БД, к которому подписывались,
+    // чтобы снять подписку с ТОГО ЖЕ узла и ТЕМ ЖЕ объектом-листенером.
+    private val connectionRef = FirebaseDatabase.getInstance().reference.child(".info/connected")
+
+    private val connectionListener = object : ValueEventListener {
+        override fun onDataChange(snapshot: DataSnapshot) {
+            _isConnected.postValue(snapshot.getValue(Boolean::class.java) ?: false)
+        }
+
+        override fun onCancelled(error: DatabaseError) {
+            _isConnected.postValue(false)
+        }
+    }
+
     init {
         observeConnection()
     }
 
     private fun observeConnection() {
-        FirebaseDatabase.getInstance().reference
-            .child(".info/connected")
-            .addValueEventListener(object : com.google.firebase.database.ValueEventListener {
-                override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
-                    _isConnected.postValue(snapshot.getValue(Boolean::class.java) ?: false)
-                }
-
-                override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
-                    _isConnected.postValue(false)
-                }
-            })
+        connectionRef.addValueEventListener(connectionListener)
     }
 
     fun loadAndObserveServers() {
@@ -65,6 +72,23 @@ class ClientViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Переименование сервера на стороне клиента.
+     * Пишет ТОЛЬКО в локальную Room БД клиента (поле displayName),
+     * не трогая узел servers/{serverId} в Firebase — там у клиента
+     * по текущим Firebase Rules нет прав на запись, а сам сервер
+     * этот rename не должен видеть/чувствовать (см. п.4 плана).
+     */
+    fun renameServer(serverId: String, newName: String) {
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty()) return
+
+        viewModelScope.launch {
+            db.serverDao().updateName(serverId, trimmed)
+            loadAndObserveServers()
+        }
+    }
+
     fun refreshIcon(serverId: String) {
         viewModelScope.launch {
             val server = db.serverDao().getByServerId(serverId)
@@ -76,4 +100,10 @@ class ClientViewModel @Inject constructor(
 
     fun getIconUriForServer(serverId: String): String? =
         _iconUriMap.value?.get(serverId)
+
+    // 1.5: снимаем подписку тем же объектом-листенером с того же узла при уничтожении VM
+    override fun onCleared() {
+        super.onCleared()
+        connectionRef.removeEventListener(connectionListener)
+    }
 }

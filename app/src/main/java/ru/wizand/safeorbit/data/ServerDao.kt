@@ -22,4 +22,7 @@ interface ServerDao {
 
     @Query("SELECT * FROM servers WHERE serverId = :serverId LIMIT 1")
     suspend fun getByServerId(serverId: String): ServerEntity?
+	
+	@Query("UPDATE servers SET name = :newName WHERE serverId = :serverId")
+	suspend fun updateName(serverId: String, newName: String)
 }

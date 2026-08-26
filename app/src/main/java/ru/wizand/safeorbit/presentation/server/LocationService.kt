@@ -15,15 +15,16 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import androidx.room.Room
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.google.android.gms.location.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.*
@@ -36,8 +37,25 @@ import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
+/**
+ * ФИКСЫ (см. аудит):
+ * 1.1 — именованный prefsListener вместо анонимных лямбд в register/unregister
+ * 1.2 — Room DB больше не создаётся вручную, инжектится Hilt-синглтон
+ * 1.3 — serviceScope с SupervisorJob вместо CoroutineScope(Dispatchers.IO) на каждый вызов
+ * 1.4 — убран дублирующийся безусловный postStart(); WorkManager unique work вместо enqueue()
+ * 1.6 — FirebaseRepository инжектится как синглтон, а не создаётся на каждый вызов
+ */
+@AndroidEntryPoint
 class LocationService : Service(), SensorEventListener {
+
+    // --- 1.2 / 1.6: инжектируем синглтоны через Hilt вместо ручного создания ---
+    @Inject
+    lateinit var db: AppDatabase
+
+    @Inject
+    lateinit var firebaseRepository: FirebaseRepository
 
     private lateinit var prefs: SharedPreferences
     private lateinit var encryptedPrefs: EncryptedPreferencesManager
@@ -45,7 +63,6 @@ class LocationService : Service(), SensorEventListener {
     private lateinit var locationCallback: LocationCallback
     private lateinit var sensorManager: SensorManager
 
-    private lateinit var db: AppDatabase
     private lateinit var logDao: ActivityLogDao
 
     private var serverId: String = ""
@@ -58,10 +75,26 @@ class LocationService : Service(), SensorEventListener {
     private var lastStepCount = 0f
     private var lastStepEventTime = 0L
 
+    // 2.2 (аудит): гистерезис активности — в активный режим переходим только после
+    // двух подряд "активных" фиксов, чтобы единичный скачок координат (дрейф GPS)
+    // не будил GPS-трекинг из эконом-режима.
+    private var consecutiveActiveFixes = 0
+
     private var commandListener: ChildEventListener? = null
 
     private var activeInterval = 30_000L
     private var inactivityTimeout = 5 * 60 * 1000L
+
+    // --- 1.3: единый scope сервиса, отменяется целиком в onDestroy ---
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // --- 1.1: именованный листенер, чтобы register/unregister ссылались на один и тот же объект ---
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "inactivity_timeout") {
+            inactivityTimeout = prefs.getLong(key, inactivityTimeout)
+            if (!isInActiveMode) switchToIdleMode()
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -82,16 +115,11 @@ class LocationService : Service(), SensorEventListener {
         }
 
         inactivityTimeout = prefs.getLong("inactivity_timeout", inactivityTimeout)
-        prefs.registerOnSharedPreferenceChangeListener { _, key ->
-            if (key == "inactivity_timeout") {
-                inactivityTimeout = prefs.getLong(key, inactivityTimeout)
-                if (!isInActiveMode) switchToIdleMode()
-            }
-        }
+        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
 
         activeInterval = prefs.getLong("active_interval", activeInterval)
 
-        db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "safeorbit-db").build()
+        // 1.2: db приходит уже готовым от Hilt (тот же синглтон, что и везде в приложении)
         logDao = db.activityLogDao()
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -102,21 +130,19 @@ class LocationService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        serverId = intent?.getStringExtra("server_id") ?: ""
-        val code = encryptedPrefs.getCode() ?: ""
-        Log.d("COMMANDS", "📦 Сервис запущен. serverId=$serverId, code=$code")
+        // Фикс (аудит): после перезагрузки BootReceiver стартует сервис без extra —
+        // ранее serverId оставался пустым и сервис подписывался на server_commands/"".
+        serverId = intent?.getStringExtra("server_id")?.takeIf { it.isNotBlank() }
+            ?: encryptedPrefs.getServerId().orEmpty()
+        Log.d("COMMANDS", "📦 Сервис запущен. serverId=$serverId")
 
         if (!hasLocationPermission()) {
             stopSelf()
             return START_NOT_STICKY
         }
 
-        // 🔐 Слушаем команды независимо от авторизации
-//        listenForClientCommands()
-//        switchToIdleMode()
-        postStart()
-
-        // 🔐 Гарантируем авторизацию Firebase перед продолжением
+        // 1.4: убран безусловный postStart() перед проверкой авторизации —
+        // теперь postStart() вызывается РОВНО один раз, в зависимости от состояния auth.
         val auth = FirebaseAuth.getInstance()
         if (auth.currentUser == null) {
             auth.signInAnonymously()
@@ -128,18 +154,39 @@ class LocationService : Service(), SensorEventListener {
                     Log.e("COMMANDS", "❌ Ошибка Firebase Auth: ${it.message}")
                     stopSelf()
                 }
+        } else {
+            postStart()
         }
-//        else {
-//            postStart()
-//        }
 
         return START_STICKY
     }
 
     private fun postStart() {
         Log.d("COMMANDS", "🚀 postStart вызван, активируем listener")
+        ensureOwnerField()
         listenForClientCommands()
         switchToIdleMode()
+    }
+
+    /**
+     * Миграция для новых правил Firebase (п.3 аудита): старые серверы зарегистрированы
+     * без поля owner. Дописываем owner = текущий uid, пока действуют старые правила,
+     * чтобы после публикации новых правил запись в узел сервера осталась только у владельца.
+     */
+    private fun ensureOwnerField() {
+        if (serverId.isBlank()) return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val ownerRef = FirebaseDatabase.getInstance()
+            .getReference("servers").child(serverId).child("owner")
+        ownerRef.get().addOnSuccessListener { snap ->
+            if (!snap.exists()) {
+                ownerRef.setValue(uid)
+                    .addOnSuccessListener { Log.d("COMMANDS", "✅ owner записан в узел сервера") }
+                    .addOnFailureListener { Log.w("COMMANDS", "⚠️ Не удалось записать owner: ${it.message}") }
+            }
+        }.addOnFailureListener {
+            Log.w("COMMANDS", "⚠️ Не удалось прочитать owner: ${it.message}")
+        }
     }
 
     private fun setupStepSensor() {
@@ -149,8 +196,12 @@ class LocationService : Service(), SensorEventListener {
     }
 
     private fun startLocationUpdates(interval: Long) {
+        // 2.2 (аудит): минимальная дистанция 10 м отсекает пустые колбэки при стоянке;
+        // waitForAccurateLocation=false — не ждём идеального фикса, берём что есть.
         val request = LocationRequest.Builder(interval)
             .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+            .setMinUpdateDistanceMeters(10f)
+            .setWaitForAccurateLocation(false)
             .build()
 
         locationCallback = object : LocationCallback() {
@@ -168,7 +219,6 @@ class LocationService : Service(), SensorEventListener {
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-
                 return
             }
             fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
@@ -199,37 +249,22 @@ class LocationService : Service(), SensorEventListener {
             saveActivityLog(if (isActive) "Активность" else "ЭКОНОМ")
         }
 
-        if (isActive && !isInActiveMode) switchToActiveMode()
+        // 2.2 (аудит): гистерезис — считаем подряд идущие активные фиксы
+        if (isActive) consecutiveActiveFixes++ else consecutiveActiveFixes = 0
+
+        if (consecutiveActiveFixes >= 2 && !isInActiveMode) switchToActiveMode()
         else if (!stepRecently && isInActiveMode && timeSinceLast > inactivityTimeout) switchToIdleMode()
     }
 
     private fun sendToFirebase(location: Location) {
-        Log.d("COMMANDS", "📤 Отправка координат: ${location.latitude}, ${location.longitude}")
-        FirebaseRepository(applicationContext).sendLocation(
+        // 2.3 (аудит): координаты не печатаются в logcat
+        Log.d("COMMANDS", "📤 Отправка координат")
+        // 1.6: используем инжектированный синглтон вместо FirebaseRepository(applicationContext)
+        firebaseRepository.sendLocation(
             serverId,
             LocationData(location.latitude, location.longitude, System.currentTimeMillis())
         )
     }
-
-//    Если заменить requestLocationUpdates() на WorkManager.getCurrentLocation() даже в активном
-//    режиме с интервалом ≥ 30 сек, то:
-//    🔋 Энергоэффективность увеличится в 5–6 раз
-//    🔻 Потребление снизится с ~30 мАч до ~5 мАч в час (на GPS).
-
-    // В новой версии был переход к гибридной версии сервиса
-//    private fun switchToIdleMode() {
-//        isInActiveMode = false
-//        stopLocationUpdates()
-//        startLocationUpdates(inactivityTimeout)
-//        broadcastMode()
-//    }
-
-//    private fun switchToActiveMode() {
-//        isInActiveMode = true
-//        stopLocationUpdates()
-//        startLocationUpdates(activeInterval)
-//        broadcastMode()
-//    }
 
     private fun switchToActiveMode() {
         isInActiveMode = true
@@ -244,31 +279,40 @@ class LocationService : Service(), SensorEventListener {
         broadcastMode()
     }
 
-
-
     private fun switchToIdleMode() {
         isInActiveMode = false
+        consecutiveActiveFixes = 0 // 2.2: сброс гистерезиса при уходе в эконом-режим
         stopLocationUpdates()
         Log.d("COMMANDS", "📆 switchToIdleMode")
-        scheduleOneTimeLocationFetch(inactivityTimeout) // Новый метод через WorkManager
+        scheduleOneTimeLocationFetch(inactivityTimeout)
         broadcastMode()
     }
 
-    private fun scheduleOneTimeLocationFetch(Interval: Long) {
-        Log.d("COMMANDS", "📆 scheduleOneTimeLocationFetch Интервал: $Interval мс")
+    // 1.4: unique work + REPLACE вместо enqueue() — старые ожидающие запросы отменяются,
+    // а не накапливаются в очереди WorkManager.
+    private fun scheduleOneTimeLocationFetch(interval: Long) {
+        Log.d("COMMANDS", "📆 scheduleOneTimeLocationFetch Интервал: $interval мс")
+        // 2.2 (аудит): не будим устройство при почти разряженной батарее —
+        // воркер подождёт, пока заряд поднимется выше системного порога.
         val workRequest = OneTimeWorkRequestBuilder<IdleLocationWorker>()
-            .setInitialDelay(Interval, TimeUnit.MILLISECONDS)
+            .setInitialDelay(interval, TimeUnit.MILLISECONDS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+            )
             .build()
-        WorkManager.getInstance(this).enqueue(workRequest)
 
+        WorkManager.getInstance(this)
+            .beginUniqueWork(
+                "idle_location_fetch",
+                ExistingWorkPolicy.REPLACE,
+                workRequest
+            )
+            .enqueue()
 
-
-
-
-        Log.d("COMMANDS", "📆 IdleLocationWorker запланирован через ${inactivityTimeout}мс")
+        Log.d("COMMANDS", "📆 IdleLocationWorker запланирован через ${interval}мс (unique='idle_location_fetch')")
     }
-
-
 
     private fun broadcastLocation(location: Location) {
         Intent("LOCATION_UPDATE").apply {
@@ -331,7 +375,9 @@ class LocationService : Service(), SensorEventListener {
             distanceMeters = distance
         )
 
-        CoroutineScope(Dispatchers.IO).launch {
+        // 1.3: единый serviceScope с SupervisorJob, отменяется в onDestroy —
+        // не остаётся "висящих" корутин после смерти сервиса.
+        serviceScope.launch {
             logDao.insert(log)
         }
     }
@@ -342,15 +388,22 @@ class LocationService : Service(), SensorEventListener {
             val channel = NotificationChannel(
                 channelId,
                 "Location Tracking",
-                NotificationManager.IMPORTANCE_MIN // Было LOW, ставим MIN
+                NotificationManager.IMPORTANCE_MIN
             )
-            channel.setShowBadge(false) // Убираем точку на иконке приложения
+            channel.setShowBadge(false)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
+        // 2.3 (аудит): текст уведомления обязан раскрывать мониторинг (политика Play
+        // User Trust / Spyware) — "Отслеживание местоположения включено" этому соответствует.
+        // setOngoing + setOnlyAlertOnce: одна постоянная тихая нотификация без повторных алертов.
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("SafeOrbit")
             .setContentText("Отслеживание местоположения включено")
             .setSmallIcon(R.drawable.ic_location)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
@@ -368,7 +421,6 @@ class LocationService : Service(), SensorEventListener {
     }
 
     private fun listenForClientCommands() {
-        // Удалить предыдущий listener, если есть
         commandListener?.let {
             FirebaseDatabase.getInstance()
                 .getReference("server_commands")
@@ -381,23 +433,13 @@ class LocationService : Service(), SensorEventListener {
             .getReference("server_commands")
             .child(serverId)
 
-        Log.d("COMMANDS", "📛 Firebase UID: ${FirebaseAuth.getInstance().currentUser?.uid}, serverId: $serverId")
         Log.d("COMMANDS", "🔔 Подписка на команды server_commands/$serverId")
 
         commandListener = object : ChildEventListener {
             @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
                 val commandId = snapshot.key ?: return
-                val codeFromClient = snapshot.child("code").getValue(String::class.java)
-                val localCode = encryptedPrefs.getCode() ?: ""
-
-                Log.d("COMMANDS", "📥 Команда $commandId: ${snapshot.value}")
-                Log.d("COMMANDS", "🔐 Проверка кода: client=$codeFromClient, local=$localCode")
-
-                if (codeFromClient != localCode) {
-                    Log.w("COMMANDS", "❌ Код не совпадает — игнор")
-                    return
-                }
+                Log.d("COMMANDS", "📥 Команда получена: $commandId")
 
                 val active = snapshot.child("update_settings/active_interval").getValue(Long::class.java)
                 val idle = snapshot.child("update_settings/inactivity_timeout").getValue(Long::class.java)
@@ -430,7 +472,7 @@ class LocationService : Service(), SensorEventListener {
                                     sendToFirebase(location)
                                     broadcastLocation(location)
                                     saveActivityLog("Принудительно")
-                                    Log.d("COMMANDS", "📤 Координаты отправлены: ${location.latitude}, ${location.longitude}")
+                                    Log.d("COMMANDS", "📤 Координаты отправлены")
                                 } else {
                                     Log.w("COMMANDS", "⚠️ Не удалось получить локацию")
                                 }
@@ -453,7 +495,6 @@ class LocationService : Service(), SensorEventListener {
 
             override fun onCancelled(error: DatabaseError) {
                 Log.e("COMMANDS", "🔥 Ошибка подписки на команды: ${error.message}")
-                // Повторная попытка через 5 сек
                 Handler(Looper.getMainLooper()).postDelayed({
                     Log.d("COMMANDS", "🔄 Повторная попытка подписки после onCancelled")
                     listenForClientCommands()
@@ -469,58 +510,15 @@ class LocationService : Service(), SensorEventListener {
         }
     }
 
-
-    private fun processCommandSnapshot(snapshot: DataSnapshot) {
-        val parentRef = snapshot.ref.parent ?: return
-
-        parentRef.get().addOnSuccessListener { snapshot ->
-            Log.d("COMMANDS", "📥 Получена команда: ${snapshot.value}")
-
-            val codeFromClient = snapshot.child("code").getValue(String::class.java)
-            val localCode = encryptedPrefs.getCode() ?: ""
-            Log.d("COMMANDS", "🔐 Проверка кода: client=$codeFromClient, local=$localCode")
-
-            if (codeFromClient != localCode) {
-                Log.w("COMMANDS", "❌ Код не совпадает — игнорируем")
-                return@addOnSuccessListener
-            }
-
-            val active = snapshot.child("update_settings/active_interval").getValue(Long::class.java)
-            val idle = snapshot.child("update_settings/inactivity_timeout").getValue(Long::class.java)
-            val requestNow = snapshot.child("request_location_update").getValue(Boolean::class.java) ?: false
-
-            if (active != null) {
-                Log.d("COMMANDS", "⚙️ Установка activeInterval = $active")
-                activeInterval = active
-                if (isInActiveMode) switchToActiveMode()
-            }
-
-            if (idle != null) {
-                Log.d("COMMANDS", "⚙️ Установка inactivityTimeout = $idle")
-                inactivityTimeout = idle
-                if (!isInActiveMode) switchToIdleMode()
-            }
-
-            if (requestNow) {
-                Log.d("COMMANDS", "📡 Принудительная отправка координат")
-                lastSentLocation?.let { sendToFirebase(it) }
-            }
-
-            parentRef.removeValue()
-            Log.d("COMMANDS", "🧹 Команда обработана и удалена")
-        }.addOnFailureListener {
-            Log.e("COMMANDS", "⚠️ Не удалось прочитать команду: ${it.message}")
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         stopLocationUpdates()
         if (::sensorManager.isInitialized) {
             sensorManager.unregisterListener(this)
         }
-//        sensorManager.unregisterListener(this)
-        prefs.unregisterOnSharedPreferenceChangeListener { _, _ -> }
+
+        // 1.1: отписываем ТОТ ЖЕ объект-листенер, что регистрировали в onCreate
+        prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
 
         commandListener?.let {
             FirebaseDatabase.getInstance()
@@ -530,6 +528,12 @@ class LocationService : Service(), SensorEventListener {
             Log.d("COMMANDS", "🧹 Listener команд удалён")
             commandListener = null
         }
+
+        // 1.3: отменяем все незавершённые корутины сервиса разом
+        serviceScope.cancel()
+
+        // 1.2: db больше не создавалась вручную здесь — закрывать нечего,
+        // это Hilt-синглтон, которым продолжает пользоваться остальное приложение.
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

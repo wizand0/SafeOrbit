@@ -16,6 +16,6 @@ class SendServerSettingsUseCase @Inject constructor(
         val server = db.serverDao().getByServerId(serverId)
             ?: return Result.failure(IllegalArgumentException("Server not found"))
 
-        return commandRepository.sendUpdateSettingsCommand(serverId, server.code, activeMs, idleMs)
+        return commandRepository.sendUpdateSettingsCommand(serverId, activeMs, idleMs)
     }
 }

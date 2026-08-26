@@ -16,24 +16,26 @@ class CommandViewModel @Inject constructor(
 
     fun requestLocationUpdate(serverId: String) {
         viewModelScope.launch {
-            val server = db.serverDao().getByServerId(serverId) ?: return@launch
             val ref = FirebaseDatabase.getInstance()
                 .getReference("server_commands/$serverId")
                 .push()
-            val data = mapOf("code" to server.code, "request_location_update" to true)
+            val data = mapOf(
+                "type" to "request_location_update",
+                "created_at" to System.currentTimeMillis(),
+                "request_location_update" to true
+            )
             ref.setValue(data)
         }
     }
 
     fun sendServerSettings(serverId: String, activeMs: Long, idleMs: Long) {
         viewModelScope.launch {
-            val server = db.serverDao().getByServerId(serverId) ?: return@launch
-            val code = server.code
             val ref = FirebaseDatabase.getInstance()
                 .getReference("server_commands/$serverId")
                 .push()
             val data = mapOf(
-                "code" to code,
+                "type" to "update_settings",
+                "created_at" to System.currentTimeMillis(),
                 "update_settings" to mapOf(
                     "active_interval" to activeMs,
                     "inactivity_timeout" to idleMs

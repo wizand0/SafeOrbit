@@ -1,7 +1,5 @@
 ﻿package ru.wizand.safeorbit.presentation.server
 
-import android.app.Activity
-import android.app.admin.DevicePolicyManager
 import android.content.*
 import android.os.Bundle
 import android.util.Log
@@ -13,17 +11,13 @@ import com.google.android.material.snackbar.Snackbar
 import ru.wizand.safeorbit.R
 import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 import ru.wizand.safeorbit.databinding.ActivityServerSettingsBinding
-import ru.wizand.safeorbit.device.MyDeviceAdminReceiver
 import ru.wizand.safeorbit.presentation.role.RoleSelectionActivity
 import ru.wizand.safeorbit.utils.Constants.PREFS_NAME
 
 class ServerSettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityServerSettingsBinding
-    private lateinit var devicePolicyManager: DevicePolicyManager
-    private lateinit var adminComponent: ComponentName
     private lateinit var encryptedPrefs: EncryptedPreferencesManager
-    private val REQUEST_CODE_ENABLE_ADMIN = 1001
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,22 +52,6 @@ class ServerSettingsActivity : AppCompatActivity() {
 
 
 
-        // Init Device Policy
-        devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        adminComponent = ComponentName(this, MyDeviceAdminReceiver::class.java)
-
-        binding.btnEnableAdmin.setOnClickListener {
-            if (!devicePolicyManager.isAdminActive(adminComponent)) {
-                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-                    putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
-                    putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                        getString(R.string.need_for_save_app_from_deleting))
-                }
-                startActivityForResult(intent, REQUEST_CODE_ENABLE_ADMIN)
-            } else {
-                Toast.makeText(this, getString(R.string.app_is_admin), Toast.LENGTH_SHORT).show()
-            }
-        }
 
         binding.btnNotificationSources.setOnClickListener {
             startActivity(Intent(this, NotificationSourcesActivity::class.java))
@@ -83,7 +61,7 @@ class ServerSettingsActivity : AppCompatActivity() {
             showConnectionInfoDialog()
         }
 
-        var savedPin = encryptedPrefs.getPin()
+        var savedPin = encryptedPrefs.hasPin()
 
         binding.btnCheckPin.setOnClickListener {
             val enteredPin = binding.etPin.text.toString()
@@ -92,12 +70,12 @@ class ServerSettingsActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            if (savedPin == null) {
+            if (!savedPin) {
                 encryptedPrefs.savePin(enteredPin)
-                savedPin = enteredPin
+                savedPin = true
                 Toast.makeText(this, getString(R.string.pin_istalled), Toast.LENGTH_SHORT).show()
                 showSettings()
-            } else if (enteredPin == savedPin) {
+            } else if (encryptedPrefs.verifyPin(enteredPin)) {
                 showSettings()
             } else {
                 Toast.makeText(this, getString(R.string.wrong_pin), Toast.LENGTH_SHORT).show()
@@ -118,18 +96,6 @@ class ServerSettingsActivity : AppCompatActivity() {
                 putExtra("fromReset", true)
             })
             finishAffinity()
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CODE_ENABLE_ADMIN) {
-            val message = if (resultCode == Activity.RESULT_OK) {
-                getString(R.string.admin_permission_set)
-            } else {
-                getString(R.string.admin_permission_not_set)
-            }
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -200,7 +166,7 @@ class ServerSettingsActivity : AppCompatActivity() {
     }
 
     private fun showChangePinDialog() {
-        val currentPin = encryptedPrefs.getPin()
+        // 1.7 (аудит): сравнение через verifyPin, plaintext наружу не отдаётся
 
         val dialogBinding = ru.wizand.safeorbit.databinding.DialogChangePinBinding.inflate(layoutInflater)
 
@@ -211,7 +177,7 @@ class ServerSettingsActivity : AppCompatActivity() {
                 val oldPinInput = dialogBinding.etOldPin.text.toString()
                 val newPinInput = dialogBinding.etNewPin.text.toString()
 
-                if (oldPinInput == currentPin && newPinInput.length >= 4) {
+                if (encryptedPrefs.verifyPin(oldPinInput) && newPinInput.length >= 4) {
                     encryptedPrefs.savePin(newPinInput)
                     Toast.makeText(this, getString(R.string.pin_renewed), Toast.LENGTH_SHORT).show()
                 } else {
@@ -224,3 +190,4 @@ class ServerSettingsActivity : AppCompatActivity() {
     }
 
 }
+

@@ -11,6 +11,6 @@ class RequestServerLocationUseCase @Inject constructor(
     suspend operator fun invoke(serverId: String): Result<Unit> {
         val server = db.serverDao().getByServerId(serverId)
             ?: return Result.failure(IllegalArgumentException("Server not found"))
-        return repo.sendLocationUpdateCommand(serverId, server.code)
+        return repo.sendLocationUpdateCommand(serverId)
     }
 }

@@ -6,6 +6,7 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
+import java.security.MessageDigest
 import java.util.Base64
 
 /**
@@ -23,6 +24,10 @@ object CryptoUtils {
     private const val GCM_IV_LENGTH = 12
     private const val KEY_BITS = 256
     private const val PBKDF2_ITERATIONS = 60_000
+
+    fun sha256Hex(value: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(Charsets.UTF_8))
+        .joinToString("") { "%02x".format(it) }
 
     fun deriveKey(serverId: String, code: String): SecretKey {
         val salt = ("SafeOrbit:" + serverId).toByteArray(Charsets.UTF_8)

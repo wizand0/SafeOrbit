@@ -1,4 +1,4 @@
-# Add project specific ProGuard rules here.
+﻿# Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
 
@@ -188,3 +188,11 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
+
+# ========= 2.3 (audit): strip debug/info logs in release =========
+# d/v/i calls are removed from release bytecode; keep w/e for diagnostics.
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+    public static int i(...);
+}

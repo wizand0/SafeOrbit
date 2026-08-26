@@ -171,16 +171,6 @@
                         android:text="@string/button_notification_sources"
                         android:textAllCaps="false"
                         app:icon="@drawable/ic_list" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnEnableAdmin"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/button_enable_admin"
-                        android:textAllCaps="false"
-                        app:icon="@drawable/ic_lock" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
