@@ -11,27 +11,27 @@
         
         "ownerUid": {
           ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
-          ".write": "!data.child('ownerUid').exists()"  // только при создании
+          ".write": "(data.val() == null)"  // только при создании
         },
         
         "pairing": {
           ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",  // только владелец может читать pairing данные
           
-          ".write": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid && !data.child('tokenHash').exists()",  // нельзя изменить токен после создания
+          ".write": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid && (data.child('tokenHash').val() == null)",  // нельзя изменить токен после создания
           
           "tokenHash": {
             ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
-            ".write": "!data.child('tokenHash').exists()"  // только при создании
+            ".write": "(data.val() == null)"  // только при создании
           },
           
           "expiresAt": {
             ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
-            ".write": "!data.child('expiresAt').exists()"  // только при создании
+            ".write": "(data.val() == null)"  // только при создании
           },
           
           "consumed": {
             ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
-            ".write": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid && (!data.exists() || data.val() == false) && newData.val() == true"  // только однократное изменение на true
+            ".write": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid && (data.val() == false || data.val() == null) && newData.val() == true"  // только однократное изменение на true
           }
         },
         
@@ -48,19 +48,19 @@
             ".validate": "newData.hasChildren(['enc_pkg', 'enc_label', 'enc_title', 'enc_text', 'post_time'])",
             
             "enc_pkg": {
-              ".validate": "newData.isString() && newData.val().length() > 0"
+              ".validate": "newData.isString() && newData.val() != ''"
             },
             
             "enc_label": {
-              ".validate": "newData.isString() && newData.val().length() > 0"
+              ".validate": "newData.isString() && newData.val() != ''"
             },
             
             "enc_title": {
-              ".validate": "newData.isString() && newData.val().length() > 0"
+              ".validate": "newData.isString() && newData.val() != ''"
             },
             
             "enc_text": {
-              ".validate": "newData.isString() && newData.val().length() > 0"
+              ".validate": "newData.isString() && newData.val() != ''"
             },
             
             "post_time": {
