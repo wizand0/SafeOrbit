@@ -51,22 +51,22 @@
         
         "ownerUid": {
           ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
-          ".write": "!data.exists()"  // только при создании
+          ".write": "!data.child('ownerUid').exists()"  // только при создании
         },
         
         "pairing": {
           ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",  // только владелец может читать pairing данные
           
-          ".write": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid && !newData.child('tokenHash').exists()",  // нельзя изменить токен после создания
+          ".write": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid && !data.child('tokenHash').exists()",  // нельзя изменить токен после создания
           
           "tokenHash": {
             ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
-            ".write": "!data.exists()"  // только при создании
+            ".write": "!data.child('tokenHash').exists()"  // только при создании
           },
           
           "expiresAt": {
             ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
-            ".write": "!data.exists()"  // только при создании
+            ".write": "!data.child('expiresAt').exists()"  // только при создании
           },
           
           "consumed": {
