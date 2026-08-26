@@ -103,16 +103,6 @@ class FirebaseRepository @Inject constructor(
             }
     }
 
-    fun verifyServerExists(serverId: String, code: String, callback: (Boolean) -> Unit) {
-        val ref = FirebaseDatabase.getInstance().getReference("servers").child(serverId).child("code")
-        ref.get().addOnSuccessListener {
-            val actualCode = it.getValue(String::class.java)
-            callback(actualCode == code)
-        }.addOnFailureListener {
-            callback(false)
-        }
-    }
-
     /**
      * Подписка на координаты сервера.
      *
