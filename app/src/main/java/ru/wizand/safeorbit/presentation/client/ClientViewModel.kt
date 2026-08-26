@@ -57,9 +57,9 @@ class ClientViewModel @Inject constructor(
         }
     }
 
-    fun addServer(serverId: String, code: String, name: String, iconUri: String? = null) {
+    fun addServer(serverId: String, pairingToken: String, name: String, iconUri: String? = null) {
         viewModelScope.launch {
-            val server = Server(serverId, code, name, iconUri)
+            val server = Server(serverId, pairingToken, name, iconUri)  // используем pairingToken вместо кода
             addServerUseCase(server)
             loadAndObserveServers()
         }

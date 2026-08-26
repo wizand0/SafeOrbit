@@ -44,7 +44,7 @@ class NotificationViewModel @Inject constructor(
                 Log.w("NotifVM", "Сервер $serverId не найден в локальной БД")
                 return@launch
             }
-            target.value = serverId to server.code
+            target.value = serverId to server.pairingToken  // используем pairingToken вместо кода
         }
     }
 
@@ -54,9 +54,9 @@ class NotificationViewModel @Inject constructor(
         return repository.clear(pair.first, pair.second)
     }
 
-    /** Код подключения активного сервера (для экспорта в CSV). */
-    suspend fun getServerCode(): String? {
+    /** Pairing токен активного сервера (для экспорта в CSV). */
+    suspend fun getServerCode(): String? {  // название оставлено для совместимости, хотя это pairingToken
         val serverId = activeServerId ?: return null
-        return db.serverDao().getByServerId(serverId)?.code
+        return db.serverDao().getByServerId(serverId)?.pairingToken  // используем pairingToken вместо кода
     }
 }

@@ -90,9 +90,9 @@ class NotificationSourcesActivity : AppCompatActivity() {
     private fun sendTestNotification() {
         val encryptedPrefs = EncryptedPreferencesManager.getInstance(applicationContext)
         val serverId = encryptedPrefs.getServerId()
-        val code = encryptedPrefs.getCode()
+        val pairingToken = encryptedPrefs.getPairingToken()  // используем pairingToken вместо кода
 
-        if (serverId.isNullOrBlank() || code.isNullOrBlank()) {
+        if (serverId.isNullOrBlank() || pairingToken.isNullOrBlank()) {
             Toast.makeText(this, getString(R.string.server_not_registered), Toast.LENGTH_SHORT).show()
             return
         }
@@ -100,7 +100,7 @@ class NotificationSourcesActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val result = repository.publish(
                 serverId = serverId,
-                code = code,
+                pairingToken = pairingToken,  // используем pairingToken вместо кода
                 packageName = packageName,
                 appLabel = getString(R.string.app_name),
                 title = getString(R.string.test_notification_title),

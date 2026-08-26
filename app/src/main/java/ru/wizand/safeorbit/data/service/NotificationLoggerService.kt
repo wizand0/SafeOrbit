@@ -76,8 +76,8 @@ class NotificationLoggerService : NotificationListenerService() {
     private fun publish(sbn: StatusBarNotification) {
         val encryptedPrefs = EncryptedPreferencesManager.getInstance(applicationContext)
         val serverId = encryptedPrefs.getServerId()
-        val code = encryptedPrefs.getCode()
-        if (serverId.isNullOrBlank() || code.isNullOrBlank()) {
+        val pairingToken = encryptedPrefs.getPairingToken()  // используем pairingToken вместо кода
+        if (serverId.isNullOrBlank() || pairingToken.isNullOrBlank()) {
             Log.w(TAG, "Сервер не зарегистрирован — публикация уведомления пропущена")
             return
         }
@@ -90,7 +90,7 @@ class NotificationLoggerService : NotificationListenerService() {
         scope.launch {
             repository.publish(
                 serverId = serverId,
-                code = code,
+                pairingToken = pairingToken,  // используем pairingToken вместо кода
                 packageName = sbn.packageName,
                 appLabel = appLabel,
                 title = title,

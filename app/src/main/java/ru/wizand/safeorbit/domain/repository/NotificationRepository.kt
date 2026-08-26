@@ -6,8 +6,8 @@ import ru.wizand.safeorbit.data.model.AppNotification
  * Транспорт уведомлений, перехваченных сервером.
  *
  * Хранение: Firebase RTDB, узел `servers/{serverId}/app_notifications/{pushId}`.
- * Содержимое шифруется AES-256-GCM ключом, деривированным из кода пары,
- * поэтому прочитать уведомления может только клиент, знающий код подключения.
+ * Содержимое шифруется AES-256-GCM ключом, деривированным из pairing токена,
+ * поэтому прочитать уведомления может только клиент, знающий токен пары.
  */
 interface NotificationRepository {
 
@@ -30,7 +30,7 @@ interface NotificationRepository {
      */
     suspend fun publish(
         serverId: String,
-        code: String,
+        pairingToken: String,  // используем pairingToken вместо кода
         packageName: String,
         appLabel: String,
         title: String,
@@ -40,12 +40,12 @@ interface NotificationRepository {
 
     /**
      * Подписка на уведомления сервера (сторона клиента).
-     * Записи расшифровываются; с неверным кодом возвращает пустой результат без ошибок.
+     * Записи расшифровываются; с неверным токеном возвращает пустой результат без ошибок.
      *
      * @return Flow со списком последних [VISIBLE_LIMIT] уведомлений (новые сверху).
      */
-    fun observe(serverId: String, code: String): kotlinx.coroutines.flow.Flow<List<AppNotification>>
+    fun observe(serverId: String, pairingToken: String): kotlinx.coroutines.flow.Flow<List<AppNotification>>  // используем pairingToken вместо кода
 
-    /** Полная очистка узла уведомлений (может выполнить любая сторона, знающая код). */
-    suspend fun clear(serverId: String, code: String): Result<Unit>
+    /** Полная очистка узла уведомлений (может выполнить любая сторона, знающая токен). */
+    suspend fun clear(serverId: String, pairingToken: String): Result<Unit>  // используем pairingToken вместо кода
 }

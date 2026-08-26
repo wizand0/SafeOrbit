@@ -13,7 +13,7 @@ class ServerRepositoryImpl(
         val entity = ServerEntity(
             id = 0,
             serverId = server.serverId,
-            code = server.code,
+            pairingToken = server.pairingToken,  // используем pairingToken вместо кода
             name = server.name,
             serverIconUri = server.iconUri
         )
@@ -22,7 +22,7 @@ class ServerRepositoryImpl(
 
     override suspend fun getServers(): List<Server> {
         return db.serverDao().getAll().map {
-            Server(it.serverId, it.code, it.name, it.serverIconUri)
+            Server(it.serverId, it.pairingToken, it.name, it.serverIconUri)  // используем pairingToken вместо кода
         }
     }
 }

@@ -328,19 +328,23 @@ class EncryptedPreferencesManager private constructor(private val context: Conte
         return securePrefs.getString(KEY_SERVER_ID, null)
     }
 
-    // ========= Server Code управление =========
+    // ========= Server Code (LEGACY) управление =========
 
     /**
-     * Сохранить код сервера
+     * Сохранить код сервера (LEGACY)
+     * @deprecated Использовать savePairingToken вместо этого метода
      */
+    @Deprecated("Использовать savePairingToken вместо этого метода")
     fun saveCode(code: String) {
         securePrefs.edit().putString(KEY_SERVER_CODE, code).apply()
-        Log.d(TAG, "Server code сохранён")
+        Log.d(TAG, "Server code (LEGACY) сохранён")
     }
 
     /**
-     * Получить код сервера
+     * Получить код сервера (LEGACY)
+     * @deprecated Использовать getPairingToken вместо этого метода
      */
+    @Deprecated("Использовать getPairingToken вместо этого метода")
     fun getCode(): String? {
         return securePrefs.getString(KEY_SERVER_CODE, null)
     }
@@ -376,6 +380,6 @@ class EncryptedPreferencesManager private constructor(private val context: Conte
      * Проверка, зарегистрирован ли сервер
      */
     fun isServerRegistered(): Boolean {
-        return getServerId() != null && getCode() != null
+        return getServerId() != null && getPairingToken() != null  // используем pairingToken вместо кода
     }
 }

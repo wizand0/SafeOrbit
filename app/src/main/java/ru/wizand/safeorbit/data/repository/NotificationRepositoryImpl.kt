@@ -27,14 +27,14 @@ class NotificationRepositoryImpl @Inject constructor() : NotificationRepository 
 
     override suspend fun publish(
         serverId: String,
-        code: String,
+        pairingToken: String,  // используем pairingToken вместо кода
         packageName: String,
         appLabel: String,
         title: String,
         text: String,
         postTime: Long
     ): Result<Unit> = runCatching {
-        val key = CryptoUtils.deriveKey(serverId, code)
+        val key = CryptoUtils.deriveKey(serverId, pairingToken)  // используем pairingToken вместо кода
         val payload = mapOf(
             "enc_pkg" to CryptoUtils.encrypt(key, packageName),
             "enc_label" to CryptoUtils.encrypt(key, appLabel),
@@ -61,8 +61,8 @@ class NotificationRepositoryImpl @Inject constructor() : NotificationRepository 
         Log.d(TAG, "🧹 Удалено ${excess.size} старых уведомлений для $serverId")
     }
 
-    override fun observe(serverId: String, code: String): Flow<List<AppNotification>> = callbackFlow {
-        val key = CryptoUtils.deriveKey(serverId, code)
+    override fun observe(serverId: String, pairingToken: String): Flow<List<AppNotification>> = callbackFlow {
+        val key = CryptoUtils.deriveKey(serverId, pairingToken)  // используем pairingToken вместо кода
 
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -98,7 +98,7 @@ class NotificationRepositoryImpl @Inject constructor() : NotificationRepository 
         awaitClose { nodeRef(serverId).removeEventListener(listener) }
     }
 
-    override suspend fun clear(serverId: String, code: String): Result<Unit> = runCatching {
+    override suspend fun clear(serverId: String, pairingToken: String): Result<Unit> = runCatching {  // используем pairingToken вместо кода
         nodeRef(serverId).removeValue().await()
     }
 }

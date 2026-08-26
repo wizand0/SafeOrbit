@@ -144,17 +144,17 @@ class ServerSettingsActivity : AppCompatActivity() {
 
     private fun showConnectionInfoDialog() {
         val serverId = encryptedPrefs.getServerId()
-        val code = encryptedPrefs.getCode()
+        val pairingToken = encryptedPrefs.getPairingToken()  // используем pairingToken вместо кода
 
-        if (serverId.isNullOrBlank() || code.isNullOrBlank()) {
+        if (serverId.isNullOrBlank() || pairingToken.isNullOrBlank()) {
             Toast.makeText(this, getString(R.string.server_not_registered), Toast.LENGTH_SHORT).show()
             return
         }
 
         val dialogBinding = ru.wizand.safeorbit.databinding.DialogConnectionInfoBinding.inflate(layoutInflater)
-        dialogBinding.tvConnectionCode.text = code
+        dialogBinding.tvConnectionCode.text = pairingToken  // отображаем pairingToken вместо кода
 
-        val data = "$serverId|$code"
+        val data = "$serverId|$pairingToken"  // используем pairingToken в QR-коде
         val matrix = com.google.zxing.MultiFormatWriter().encode(data, com.google.zxing.BarcodeFormat.QR_CODE, 400, 400)
         dialogBinding.ivConnectionQr.setImageBitmap(com.journeyapps.barcodescanner.BarcodeEncoder().createBitmap(matrix))
 

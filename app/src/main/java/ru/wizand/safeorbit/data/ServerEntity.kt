@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class ServerEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val serverId: String,
-    val code: String,
+    val pairingToken: String,  // используем pairingToken вместо кода
     val name: String = "Без названия",
     val serverIconUri: String? = null
 )

@@ -11,7 +11,7 @@ import ru.wizand.safeorbit.databinding.DialogAddServerBinding
 
 class AddServerDialogFragment(
     private val existingIds: Collection<String>,
-    private val onSave: (serverId: String, code: String, name: String) -> Unit
+    private val onSave: (serverId: String, pairingToken: String, name: String) -> Unit
 ) : DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -28,10 +28,10 @@ class AddServerDialogFragment(
             val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             button.setOnClickListener {
                 val serverId = binding.editServerId.text.toString().trim()
-                val code = binding.editCode.text.toString().trim()
+                val pairingToken = binding.editCode.text.toString().trim()  // используем то же поле, но для токена
                 val name = binding.editName.text.toString().trim()
 
-                if (serverId.isBlank() || code.isBlank()) {
+                if (serverId.isBlank() || pairingToken.isBlank()) {
                     Toast.makeText(requireContext(),
                         getString(R.string.id_code_are_required), Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
@@ -43,7 +43,7 @@ class AddServerDialogFragment(
                     return@setOnClickListener
                 }
 
-                onSave(serverId, code, name)
+                onSave(serverId, pairingToken, name)
                 dialog.dismiss()
             }
         }
