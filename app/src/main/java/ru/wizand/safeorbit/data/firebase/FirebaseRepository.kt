@@ -1,4 +1,4 @@
-﻿package ru.wizand.safeorbit.data.firebase
+package ru.wizand.safeorbit.data.firebase
 
 import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
@@ -32,12 +32,41 @@ class FirebaseRepository @Inject constructor(
     private val auth = FirebaseAuth.getInstance()
 
     init {
-        if (auth.currentUser == null) {
-            auth.signInAnonymously()
+        ensureAuthenticated()
+    }
+
+    private fun ensureAuthenticated() {
+        if (auth.currentUser != null) return
+        
+        auth.signInAnonymously().addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                android.util.Log.d("FirebaseRepository", "✅ Анонимная аутентификация успешна: ${'$'}{auth.currentUser?.uid}")
+            } else {
+                android.util.Log.e("FirebaseRepository", "❌ Ошибка анонимной аутентификации: ${'$'}{task.exception?.message}")
+            }
         }
     }
 
     fun registerServer(onComplete: (serverId: String, pairingToken: String) -> Unit) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            ensureAuthenticated()
+            // Ждем аутентификации перед регистрацией сервера
+            auth.signInAnonymously().addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    performRegistration(onComplete)
+                } else {
+                    android.util.Log.e("FirebaseRepository", "❌ Не удалось аутентифицироваться для регистрации сервера: ${'$'}{task.exception?.message}")
+                    // В любом случае пробуем зарегистрировать, т.к. может быть anon auth уже работает
+                    performRegistration(onComplete)
+                }
+            }
+        } else {
+            performRegistration(onComplete)
+        }
+    }
+
+    private fun performRegistration(onComplete: (serverId: String, pairingToken: String) -> Unit) {
         val serverId = generateReadableId(context)
         val tokenBytes = ByteArray(32).also { java.security.SecureRandom().nextBytes(it) }
         val pairingToken = android.util.Base64.encodeToString(tokenBytes, android.util.Base64.NO_WRAP or android.util.Base64.URL_SAFE)
@@ -54,9 +83,13 @@ class FirebaseRepository @Inject constructor(
         
         db.child("servers").child(serverId).setValue(serverData)
             .addOnSuccessListener { onComplete(serverId, pairingToken) }
+            .addOnFailureListener { exception ->
+                android.util.Log.e("FirebaseRepository", "❌ Ошибка регистрации сервера: ${'$'}{exception.message}", exception)
+            }
     }
 
     fun pairClientToServer(serverId: String, token: String, onResult: (Boolean) -> Unit) {
+        ensureAuthenticated()
         val serverRef = db.child("servers").child(serverId)
         serverRef.runTransaction(object : Transaction.Handler {
             override fun doTransaction(currentData: MutableData): Transaction.Result {
@@ -88,6 +121,7 @@ class FirebaseRepository @Inject constructor(
     }
 
     fun sendLocation(serverId: String, location: LocationData) {
+        ensureAuthenticated()
         val user = auth.currentUser
         if (user == null) {
             android.util.Log.e("FIREBASE", "❌ Невозможно отправить координаты: пользователь не авторизован")
@@ -96,7 +130,7 @@ class FirebaseRepository @Inject constructor(
 
         db.child("servers").child(serverId).child("location").setValue(location)
             .addOnFailureListener {
-                android.util.Log.e("FIREBASE", "❌ Ошибка при отправке координат: ${it.message}", it)
+                android.util.Log.e("FIREBASE", "❌ Ошибка при отправке координат: ${'$'}{it.message}", it)
             }
             .addOnSuccessListener {
                 android.util.Log.d("FIREBASE", "✅ Координаты успешно отправлены")
@@ -127,12 +161,12 @@ class FirebaseRepository @Inject constructor(
                     android.util.Log.d("CLIENT", "📍 Получена координата $serverId (данные скрыты)")
                     onUpdate(location)
                 } else {
-                    android.util.Log.w("CLIENT", "📭 Нет координат в БД для $serverId (value: ${snapshot.value})")
+                    android.util.Log.w("CLIENT", "📭 Нет координат в БД для $serverId (value: ${'$'}{snapshot.value})")
                 }
             }
 
             override fun onCancelled(error: DatabaseError) {
-                android.util.Log.e("CLIENT", "❌ Ошибка подписки на координаты $serverId: ${error.message}")
+                android.util.Log.e("CLIENT", "❌ Ошибка подписки на координаты $serverId: ${'$'}{error.message}")
             }
         }
         db.child("servers").child(serverId).child("location").addValueEventListener(listener)

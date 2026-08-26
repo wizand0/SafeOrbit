@@ -35,7 +35,11 @@ class ServerViewModel(application: Application) : AndroidViewModel(application) 
             _serverId.value = id
             _code.value = code
             _pairingToken.value = token
-        } else registerServer()
+            android.util.Log.d("ServerViewModel", "✅ Сервер уже зарегистрирован: $id")
+        } else {
+            android.util.Log.d("ServerViewModel", "🔄 Регистрация нового сервера...")
+            registerServer()
+        }
     }
 
     fun registerServer(forceNew: Boolean = false) {
