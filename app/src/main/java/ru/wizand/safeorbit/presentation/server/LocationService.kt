@@ -97,6 +97,24 @@ class LocationService : Service(), SensorEventListener {
     // --- 1.3: единый scope сервиса, отменяется целиком в onDestroy ---
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    // --- УведомлениеForeground-сервиса: id/канал + подсветка момента отправки ---
+    private companion object {
+        const val NOTIFICATION_ID = 1
+        const val NOTIFICATION_CHANNEL_ID = "location_service_channel"
+        const val NOTIFICATION_FLASH_MS = 8_000L
+    }
+
+    private var notificationFlashJob: Job? = null
+
+    // Реалная отправка координат в эко-режиме идёт из IdleLocationWorker (не через
+    // LocationService) — worker сигнализирует об этом локальным broadcast'ом,
+    // чтобы уведомление подсветило момент обновления.
+    private val idleSentReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            flashLocationSent()
+        }
+    }
+
     // --- 1.1: именованный листенер, чтобы register/unregister ссылались на один и тот же объект ---
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "inactivity_timeout") {
@@ -133,6 +151,9 @@ class LocationService : Service(), SensorEventListener {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+
+        LocalBroadcastManager.getInstance(this)
+            .registerReceiver(idleSentReceiver, IntentFilter("IDLE_LOCATION_SENT"))
 
         startForegroundService()
         setupStepSensor()
@@ -288,6 +309,7 @@ class LocationService : Service(), SensorEventListener {
             serverId,
             LocationData(location.latitude, location.longitude, System.currentTimeMillis())
         )
+        flashLocationSent()
     }
 
     private fun switchToActiveMode() {
@@ -300,6 +322,7 @@ class LocationService : Service(), SensorEventListener {
             Log.d("COMMANDS", "📆 switchToActiveMode activeInterval < 30_000")
             startLocationUpdates(activeInterval)
         }
+        updateNotificationState()
         broadcastMode()
     }
 
@@ -309,6 +332,7 @@ class LocationService : Service(), SensorEventListener {
         stopLocationUpdates()
         Log.d("COMMANDS", "📆 switchToIdleMode")
         scheduleOneTimeLocationFetch(inactivityTimeout)
+        updateNotificationState()
         broadcastMode()
     }
 
@@ -407,34 +431,69 @@ class LocationService : Service(), SensorEventListener {
     }
 
     private fun startForegroundService() {
-        val channelId = "location_service_channel"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                channelId,
-                "Location Tracking",
+                NOTIFICATION_CHANNEL_ID,
+                "Отслеживание местоположения",
                 NotificationManager.IMPORTANCE_MIN
             )
             channel.setShowBadge(false)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
         // 2.3 (аудит): текст уведомления обязан раскрывать мониторинг (политика Play
-        // User Trust / Spyware) — "Отслеживание местоположения включено" этому соответствует.
-        // setOngoing + setOnlyAlertOnce: одна постоянная тихая нотификация без повторных алертов.
-        val notification = NotificationCompat.Builder(this, channelId)
+        // User Trust / Spyware) — поэтому уведомление остаётся всегда, но отражает
+        // реальное состояние: «ожидание» в эко-режиме и факт отправки в момент обновления.
+        val notification = buildNotification(currentStateText())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+    }
+
+    private fun buildNotification(contentText: String): android.app.Notification {
+        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setContentTitle("SafeOrbit")
-            .setContentText("Отслеживание местоположения включено")
+            .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_location)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setVisibility(NotificationCompat.VISIBILITY_SECRET)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .build()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
-        } else {
-            startForeground(1, notification)
+    }
+
+    /** Текущий текст: эконом-режим или активное отслеживание. */
+    private fun currentStateText(): String =
+        if (isInActiveMode) "Активное отслеживание местоположения"
+        else "Отслеживание местоположения: режим ожидания"
+
+    private fun updateNotificationState() {
+        notificationFlashJob?.cancel()
+        notificationManager().notify(NOTIFICATION_ID, buildNotification(currentStateText()))
+    }
+
+    /**
+     * Показывает «Координаты обновлены · HH:MM:SS» на время сразу после реальной
+     * отправки, затем возвращает статусный текст режима.
+     */
+    private fun flashLocationSent() {
+        val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+        notificationFlashJob?.cancel()
+        notificationManager().notify(
+            NOTIFICATION_ID,
+            buildNotification("Координаты обновлены · $time")
+        )
+        notificationFlashJob = serviceScope.launch {
+            delay(NOTIFICATION_FLASH_MS)
+            if (isActive) {
+                notificationManager().notify(NOTIFICATION_ID, buildNotification(currentStateText()))
+            }
         }
     }
+
+    private fun notificationManager() =
+        getSystemService(NotificationManager::class.java)
 
     private fun hasLocationPermission(): Boolean {
         val fine = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -570,6 +629,10 @@ class LocationService : Service(), SensorEventListener {
     override fun onDestroy() {
         super.onDestroy()
         stopLocationUpdates()
+        try {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(idleSentReceiver)
+        } catch (_: Exception) {
+        }
         if (::sensorManager.isInitialized) {
             sensorManager.unregisterListener(this)
         }

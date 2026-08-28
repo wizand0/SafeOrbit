@@ -2,10 +2,12 @@ package ru.wizand.safeorbit.presentation.server.worker
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.*
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -57,6 +59,13 @@ class IdleLocationWorker(appContext: Context, workerParams: WorkerParameters)
             FirebaseRepository(applicationContext).sendLocation(
                 serverId,
                 LocationData(location.latitude, location.longitude, System.currentTimeMillis())
+            )
+            // Подсветка в уведомлении Foreground-сервиса: момент реальной отправки
+            // координат в эко-режиме (LocationService ловит этот broadcast).
+            LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(
+                Intent("IDLE_LOCATION_SENT").apply {
+                    putExtra("timestamp", System.currentTimeMillis())
+                }
             )
             return Result.success()
         }
