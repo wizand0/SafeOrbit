@@ -465,8 +465,8 @@ class LocationService : Service(), SensorEventListener {
 
     /** Текущий текст: эконом-режим или активное отслеживание. */
     private fun currentStateText(): String =
-        if (isInActiveMode) "Активное отслеживание местоположения"
-        else "Отслеживание местоположения: режим ожидания"
+        if (isInActiveMode) "Координаты обновлены"
+        else "Координаты: режим ожидания"
 
     private fun updateNotificationState() {
         notificationFlashJob?.cancel()
