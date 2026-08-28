@@ -102,6 +102,11 @@ class ServerMainFragment : Fragment() {
         viewModel.serverId.observe(viewLifecycleOwner) { serverId ->
             val text = getString(R.string.server_id) + serverId
             binding.tvServerId.text = text
+            if (serverId != null) {
+                // Подписка на Firebase: координаты из любого источника (сервис, воркер,
+                // команда клиента) обновляют экран без его переоткрытия.
+                viewModel.observeLocation()
+            }
             if (!serviceStarted && serverId != null) {
                 serviceStarted = true
                 startLocationService(serverId)
