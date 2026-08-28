@@ -35,6 +35,7 @@ class EncryptedPreferencesManager private constructor(private val context: Conte
         private const val KEY_SERVER_ID = "server_id"
         private const val KEY_USER_ROLE = "user_role"
         private const val KEY_PIN_VERIFIED = "pin_verified"
+        private const val KEY_ANONYMOUS_UID = "anonymous_uid"
 
         // Migration flag
         private const val KEY_MIGRATION_DONE = "migration_done_v1"
@@ -381,5 +382,30 @@ class EncryptedPreferencesManager private constructor(private val context: Conte
      */
     fun isServerRegistered(): Boolean {
         return getServerId() != null && getPairingToken() != null  // используем pairingToken вместо кода
+    }
+
+    // ========= Anonymous UID управление =========
+
+    /**
+     * Сохранить UID анонимного пользователя
+     */
+    fun saveAnonymousUid(uid: String) {
+        securePrefs.edit().putString(KEY_ANONYMOUS_UID, uid).apply()
+        Log.d(TAG, "UID анонимного пользователя сохранён")
+    }
+
+    /**
+     * Получить UID анонимного пользователя
+     */
+    fun getAnonymousUid(): String? {
+        return securePrefs.getString(KEY_ANONYMOUS_UID, null)
+    }
+
+    /**
+     * Очистить UID анонимного пользователя
+     */
+    fun clearAnonymousUid() {
+        securePrefs.edit().remove(KEY_ANONYMOUS_UID).apply()
+        Log.d(TAG, "UID анонимного пользователя удалён")
     }
 }
