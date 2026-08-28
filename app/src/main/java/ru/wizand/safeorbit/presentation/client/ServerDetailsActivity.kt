@@ -12,11 +12,13 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.firebase.database.ValueEventListener
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.databinding.ActivityServerDetailsBinding
 import ru.wizand.safeorbit.databinding.DialogChangeIntervalsBinding
 import ru.wizand.safeorbit.presentation.client.commands.CommandViewModel
@@ -25,11 +27,23 @@ import ru.wizand.safeorbit.presentation.server.InactivityTimeout
 import ru.wizand.safeorbit.utils.NavigationUtils
 import java.text.SimpleDateFormat
 import java.util.*
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ServerDetailsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityServerDetailsBinding
+
+    // FIX (нулевые координаты): живая подписка на servers/$serverId/location.
+    // Ранее экран читал lat/lon только из intent-extra, которые ServerListFragment
+    // не передавал → всегда 0.0, и запрос обновления координат на экране не виден.
+    @Inject
+    lateinit var firebaseRepository: FirebaseRepository
+
+    private var locationListener: ValueEventListener? = null
+    private var currentLat = 0.0
+    private var currentLon = 0.0
+    private var serverName: String = "Без имени"
 
     private val clientViewModel: ClientViewModel by viewModels()
     private val commandViewModel: CommandViewModel by viewModels()
@@ -52,16 +66,16 @@ class ServerDetailsActivity : AppCompatActivity() {
 
         // Получение данных
         serverId = intent.getStringExtra("serverId") ?: finishWithError("Нет serverId")
-        val name = intent.getStringExtra("name") ?: "Без имени"
-        val lat = intent.getDoubleExtra("lat", 0.0)
-        val lon = intent.getDoubleExtra("lon", 0.0)
+        serverName = intent.getStringExtra("name") ?: "Без имени"
+        currentLat = intent.getDoubleExtra("lat", 0.0)
+        currentLon = intent.getDoubleExtra("lon", 0.0)
         val timestamp = intent.getLongExtra("time", 0L)
 
         // Отображение информации
-        binding.textName.text = name
-        binding.textCoords.text = getString(R.string._5f_5f).format(lat, lon)
-        binding.textTime.text = getString(R.string.time_, formatTimestamp(timestamp))
-        binding.textAddress.text = getAddressFromCoords(lat, lon)
+        binding.textName.text = serverName
+        renderLocation(currentLat, currentLon, timestamp)
+
+        subscribeToServerLocation()
 
         // Наблюдение за иконкой
         clientViewModel.iconUriMap.observe(this) { map ->
@@ -91,12 +105,45 @@ class ServerDetailsActivity : AppCompatActivity() {
         }
 
         binding.buttonNavigate.setOnClickListener {
-            NavigationUtils.openNavigationChooser(this, lat, lon, name)
+            NavigationUtils.openNavigationChooser(this, currentLat, currentLon, serverName)
         }
 
         setupNotifications()
 
         clientViewModel.refreshIcon(serverId)
+    }
+
+    /**
+     * Подписка на координаты сервера: любые обновления (в т.ч. результат команды
+     * request_location_update) сразу отражаются на экране.
+     */
+    private fun subscribeToServerLocation() {
+        unsubscribeFromServerLocation()
+        locationListener = firebaseRepository.observeServerLocation(serverId) { location ->
+            runOnUiThread {
+                currentLat = location.latitude
+                currentLon = location.longitude
+                renderLocation(location.latitude, location.longitude, location.timestamp)
+            }
+        }
+    }
+
+    private fun unsubscribeFromServerLocation() {
+        locationListener?.let {
+            firebaseRepository.stopObservingServerLocation(serverId, it)
+            locationListener = null
+        }
+    }
+
+    private fun renderLocation(lat: Double, lon: Double, timestamp: Long) {
+        binding.textCoords.text = getString(R.string._5f_5f).format(lat, lon)
+        binding.textTime.text = getString(R.string.time_, formatTimestamp(timestamp))
+        binding.textAddress.text = getAddressFromCoords(lat, lon)
+    }
+
+    override fun onDestroy() {
+        unsubscribeFromServerLocation()
+        super.onDestroy()
     }
 
     private fun setupNotifications() {

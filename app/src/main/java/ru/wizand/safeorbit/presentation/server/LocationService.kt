@@ -80,6 +80,15 @@ class LocationService : Service(), SensorEventListener {
     // не будил GPS-трекинг из эконом-режима.
     private var consecutiveActiveFixes = 0
 
+    // --- FIX (петля команд): id уже обработанных команд этой подписки.
+    // Без него откат неудалившегося removeValue() переизлучает onChildAdded
+    // и сервер заново исполняет ту же команду (бесконечная отправка координат).
+    private val processedCommands = mutableSetOf<String>()
+
+    // Команды старше этого возраста считаются устаревшими: после переподписки
+    // / рестарта сервиса накопленный бэклог не должен исполняться как «свежий».
+    private val commandTtlMs = 2 * 60 * 1000L
+
     private var commandListener: ChildEventListener? = null
 
     private var activeInterval = 30_000L
@@ -145,15 +154,7 @@ class LocationService : Service(), SensorEventListener {
         // теперь postStart() вызывается РОВНО один раз, в зависимости от состояния auth.
         val auth = FirebaseAuth.getInstance()
         if (auth.currentUser == null) {
-            auth.signInAnonymously()
-                .addOnSuccessListener {
-                    Log.d("COMMANDS", "✅ Анонимная авторизация Firebase выполнена")
-                    postStart()
-                }
-                .addOnFailureListener {
-                    Log.e("COMMANDS", "❌ Ошибка Firebase Auth: ${it.message}")
-                    stopSelf()
-                }
+            authenticateWithStoredCredentials(auth)
         } else {
             postStart()
         }
@@ -161,32 +162,55 @@ class LocationService : Service(), SensorEventListener {
         return START_STICKY
     }
 
-    private fun postStart() {
-        Log.d("COMMANDS", "🚀 postStart вызван, активируем listener")
-        ensureOwnerField()
-        listenForClientCommands()
-        switchToIdleMode()
+    private fun authenticateWithStoredCredentials(auth: FirebaseAuth) {
+        val storedUid = encryptedPrefs.getAnonymousUid()
+        if (!storedUid.isNullOrBlank()) {
+            // Пытаемся использовать сохранённый UID для аутентификации
+            // Проверяем, является ли текущий анонимный пользователь тем же, что и сохранённый
+            auth.signInAnonymously()
+                .addOnSuccessListener { authResult ->
+                    val currentUid = authResult.user?.uid
+                    if (currentUid == storedUid) {
+                        Log.d("COMMANDS", "✅ Анонимная авторизация с совпадающим UID выполнена: $currentUid")
+                        postStart()
+                    } else {
+                        Log.d("COMMANDS", "⚠️ UID не совпадает, используем текущий: $currentUid (ожидался: $storedUid)")
+                        // Обновляем сохранённый UID, если новый пользователь анонимный
+                        if (authResult.user?.isAnonymous == true && currentUid != null) {
+                            encryptedPrefs.saveAnonymousUid(currentUid)
+                            Log.d("COMMANDS", "🔄 Обновлён сохранённый UID анонимного пользователя")
+                        }
+                        postStart()
+                    }
+                }
+                .addOnFailureListener {
+                    Log.e("COMMANDS", "❌ Ошибка Firebase Auth: ${it.message}")
+                    stopSelf()
+                }
+        } else {
+            // Первичная анонимная аутентификация
+            auth.signInAnonymously()
+                .addOnSuccessListener {
+                    Log.d("COMMANDS", "✅ Анонимная авторизация Firebase выполнена")
+                    // Сохраняем UID нового анонимного пользователя
+                    val currentUid = auth.currentUser?.uid
+                    if (!currentUid.isNullOrBlank()) {
+                        encryptedPrefs.saveAnonymousUid(currentUid)
+                        Log.d("COMMANDS", "💾 Сохранён новый UID анонимного пользователя: $currentUid")
+                    }
+                    postStart()
+                }
+                .addOnFailureListener {
+                    Log.e("COMMANDS", "❌ Ошибка Firebase Auth: ${it.message}")
+                    stopSelf()
+                }
+        }
     }
 
-    /**
-     * Миграция для новых правил Firebase (п.3 аудита): старые серверы зарегистрированы
-     * без поля owner. Дописываем owner = текущий uid, пока действуют старые правила,
-     * чтобы после публикации новых правил запись в узел сервера осталась только у владельца.
-     */
-    private fun ensureOwnerField() {
-        if (serverId.isBlank()) return
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val ownerRef = FirebaseDatabase.getInstance()
-            .getReference("servers").child(serverId).child("owner")
-        ownerRef.get().addOnSuccessListener { snap ->
-            if (!snap.exists()) {
-                ownerRef.setValue(uid)
-                    .addOnSuccessListener { Log.d("COMMANDS", "✅ owner записан в узел сервера") }
-                    .addOnFailureListener { Log.w("COMMANDS", "⚠️ Не удалось записать owner: ${it.message}") }
-            }
-        }.addOnFailureListener {
-            Log.w("COMMANDS", "⚠️ Не удалось прочитать owner: ${it.message}")
-        }
+    private fun postStart() {
+        Log.d("COMMANDS", "🚀 postStart вызван, активируем listener")
+        listenForClientCommands()
+        switchToIdleMode()
     }
 
     private fun setupStepSensor() {
@@ -426,8 +450,10 @@ class LocationService : Service(), SensorEventListener {
                 .getReference("server_commands")
                 .child(serverId)
                 .removeEventListener(it)
+            commandListener = null
             Log.w("COMMANDS", "🔁 Повторная подписка: старый listener удалён")
         }
+        processedCommands.clear()
 
         val commandRootRef = FirebaseDatabase.getInstance()
             .getReference("server_commands")
@@ -439,7 +465,20 @@ class LocationService : Service(), SensorEventListener {
             @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
                 val commandId = snapshot.key ?: return
+                if (!processedCommands.add(commandId)) {
+                    // FIX: повторный emit той же команды (rollback после отказа в удалении)
+                    Log.w("COMMANDS", "⏭ Команда $commandId уже обработана — пропуск (защита от петли)")
+                    return
+                }
                 Log.d("COMMANDS", "📥 Команда получена: $commandId")
+
+                val createdAt = snapshot.child("created_at").getValue(Long::class.java) ?: 0L
+                val age = System.currentTimeMillis() - createdAt
+                if (createdAt <= 0L || age > commandTtlMs) {
+                    Log.w("COMMANDS", "🗑 Команда $commandId устарела (age=${age}мс) — удаляю без исполнения")
+                    deleteCommand(snapshot.ref, commandId)
+                    return
+                }
 
                 val active = snapshot.child("update_settings/active_interval").getValue(Long::class.java)
                 val idle = snapshot.child("update_settings/inactivity_timeout").getValue(Long::class.java)
@@ -485,8 +524,7 @@ class LocationService : Service(), SensorEventListener {
                     }
                 }
 
-                snapshot.ref.removeValue()
-                Log.d("COMMANDS", "🧹 Команда $commandId удалена после обработки")
+                deleteCommand(snapshot.ref, commandId)
             }
 
             override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {}
@@ -507,6 +545,25 @@ class LocationService : Service(), SensorEventListener {
             Log.d("COMMANDS", "✅ Listener команд добавлен")
         } catch (e: Exception) {
             Log.e("COMMANDS", "🚨 Ошибка при добавлении listener: ${e.message}")
+        }
+    }
+
+    /**
+     * FIX: ack команды с явной обработкой ошибки.
+     * Ранее removeValue() без колбэка при PERMISSION_DENIED молча откатывался,
+     * откат переизлучал onChildAdded и сервер исполнял команду повторно.
+     * Требуется правило server_commands/$serverId/$commandId .write для ownerUid (rules v3).
+     * При отказе id остаётся в processedCommands — переизлучение команды игнорируется,
+     * повтор подписки (listenForClientCommands) очистит множество и команда будет
+     * обработана как новая только если не устарела по TTL.
+     */
+    private fun deleteCommand(ref: DatabaseReference, commandId: String) {
+        ref.removeValue { error, _ ->
+            if (error != null) {
+                Log.e("COMMANDS", "❌ Не удалось удалить команду $commandId: ${error.code} ${error.message}")
+            } else {
+                Log.d("COMMANDS", "🧹 Команда $commandId удалена после обработки")
+            }
         }
     }
 
