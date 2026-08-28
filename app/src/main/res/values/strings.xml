@@ -157,6 +157,11 @@
     <string name="connection_code_label">Connection code</string>
     <string name="connection_qr_desc">QR code for client connection</string>
     <string name="connection_qr_hint">The client can connect by scanning this QR code or by entering the code manually.</string>
+    <string name="button_rotate_qr">New code (10 min)</string>
+    <string name="qr_status_active">Code valid for %1$d min</string>
+    <string name="qr_status_consumed">Code already used — tap the button to get a new one</string>
+    <string name="qr_status_expired">Code expired — tap the button to get a new one</string>
+    <string name="qr_rotation_failed">Failed to generate a new code</string>
     <string name="security_section">Security</string>
     <string name="intervals_section">Update intervals</string>
     <string name="connection_section">Connection &amp; notifications</string>

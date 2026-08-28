@@ -94,7 +94,9 @@ class ServerMapViewModel @Inject constructor(
             history = history.toList(),
             shouldCenter = shouldCenter,
             color = color,
-            timestamp = System.currentTimeMillis()
+            // FIX: время реальной отправки координат сервером, а не момент получения
+            // клиентом — иначе на карте «свежее» время, чем в подробных сведениях.
+            timestamp = location.timestamp
         )
 
         val updatedMap = _mapStates.value.orEmpty().toMutableMap()

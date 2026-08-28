@@ -157,6 +157,11 @@
     <string name="connection_code_label">Код подключения</string>
     <string name="connection_qr_desc">QR-код для подключения клиента</string>
     <string name="connection_qr_hint">Клиент может подключиться, отсканировав этот QR-код, или введя код вручную.</string>
+    <string name="button_rotate_qr">Новый код (10 минут)</string>
+    <string name="qr_status_active">Код действует ещё %1$d мин</string>
+    <string name="qr_status_consumed">Код уже использован — нажмите кнопку, чтобы получить новый</string>
+    <string name="qr_status_expired">Срок действия кода истёк — нажмите кнопку, чтобы получить новый</string>
+    <string name="qr_rotation_failed">Не удалось создать новый код</string>
     <string name="security_section">Защита</string>
     <string name="intervals_section">Интервалы отправки</string>
     <string name="connection_section">Подключение и уведомления</string>

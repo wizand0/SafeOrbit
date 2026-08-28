@@ -6,9 +6,11 @@ import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import ru.wizand.safeorbit.R
+import ru.wizand.safeorbit.data.firebase.FirebaseRepository
 import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 import ru.wizand.safeorbit.databinding.ActivityServerSettingsBinding
 import ru.wizand.safeorbit.presentation.role.RoleSelectionActivity
@@ -18,6 +20,7 @@ class ServerSettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityServerSettingsBinding
     private lateinit var encryptedPrefs: EncryptedPreferencesManager
+    private lateinit var viewModel: ServerViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +28,7 @@ class ServerSettingsActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         encryptedPrefs = EncryptedPreferencesManager.getInstance(this)
+        viewModel = ViewModelProvider(this)[ServerViewModel::class.java]
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         setupActiveSpinner(prefs)
@@ -145,22 +149,100 @@ class ServerSettingsActivity : AppCompatActivity() {
         val pairingToken = encryptedPrefs.getPairingToken()  // используем pairingToken вместо кода
 
         if (serverId.isNullOrBlank() || pairingToken.isNullOrBlank()) {
-            Toast.makeText(this, getString(R.string.server_not_registered), Toast.LENGTH_SHORT).show()
+            // Если сервер не зарегистрирован, вызываем регистрацию
+            Toast.makeText(this, "Регистрация сервера...", Toast.LENGTH_SHORT).show()
+            viewModel.registerServer()
+            
+            // Подписываемся на изменения serverId и pairingToken
+            viewModel.serverId.observe(this) { newServerId ->
+                newServerId?.let { id ->
+                    viewModel.pairingToken.observe(this) { newPairingToken ->
+                        newPairingToken?.let { token ->
+                            showQRDialog(id, token)
+                        }
+                    }
+                }
+            }
             return
         }
-
+        
+        showQRDialog(serverId, pairingToken)
+    }
+    
+    private fun showQRDialog(serverId: String, pairingToken: String) {
         val dialogBinding = ru.wizand.safeorbit.databinding.DialogConnectionInfoBinding.inflate(layoutInflater)
         dialogBinding.tvConnectionCode.text = pairingToken  // отображаем pairingToken вместо кода
 
         val data = "$serverId|$pairingToken"  // используем pairingToken в QR-коде
-        val matrix = com.google.zxing.MultiFormatWriter().encode(data, com.google.zxing.BarcodeFormat.QR_CODE, 400, 400)
+        val matrix = com.google.zxing.MultiFormatWriter().encode(data, com.google.zxing.BarcodeFormat.QR_CODE, 600, 600) // увеличенный размер для лучшего качества
         dialogBinding.ivConnectionQr.setImageBitmap(com.journeyapps.barcodescanner.BarcodeEncoder().createBitmap(matrix))
 
-        MaterialAlertDialogBuilder(this)
+        val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.connection_info_title))
             .setView(dialogBinding.root)
             .setPositiveButton(getString(R.string.button_continue), null)
             .show()
+
+        renderPairingStatus(dialogBinding, null)
+        // FIX: при открытии прверяем состояние пары; просроченный/использованный
+        // код перевыпускается автоматически — раньше QR навсегда оставался нерабочим.
+        viewModel.fetchPairingState { state ->
+            runOnUiThread {
+                if (!dialog.isShowing) return@runOnUiThread
+                if (state == null) {
+                    renderPairingStatus(dialogBinding, null)
+                    return@runOnUiThread
+                }
+                val expired = state.expiresAt + 60_000L <= System.currentTimeMillis()
+                if (state.consumed || expired) {
+                    rotatePairing(dialogBinding)
+                } else {
+                    renderPairingStatus(dialogBinding, state)
+                }
+            }
+        }
+
+        dialogBinding.buttonRotateQr.setOnClickListener {
+            rotatePairing(dialogBinding)
+        }
+    }
+
+    private fun rotatePairing(dialogBinding: ru.wizand.safeorbit.databinding.DialogConnectionInfoBinding) {
+        dialogBinding.buttonRotateQr.isEnabled = false
+        viewModel.rotatePairing { success ->
+            runOnUiThread {
+                dialogBinding.buttonRotateQr.isEnabled = true
+                if (success) {
+                    viewModel.pairingToken.value?.let { token ->
+                        val serverId = encryptedPrefs.getServerId() ?: return@runOnUiThread
+                        dialogBinding.tvConnectionCode.text = token
+                        val matrix = com.google.zxing.MultiFormatWriter()
+                            .encode("$serverId|$token", com.google.zxing.BarcodeFormat.QR_CODE, 600, 600)
+                        dialogBinding.ivConnectionQr.setImageBitmap(
+                            com.journeyapps.barcodescanner.BarcodeEncoder().createBitmap(matrix)
+                        )
+                    }
+                    renderPairingStatus(dialogBinding, FirebaseRepository.PairingState(false, System.currentTimeMillis() + 10 * 60_000L))
+                } else {
+                    Toast.makeText(this, getString(R.string.qr_rotation_failed), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun renderPairingStatus(
+        dialogBinding: ru.wizand.safeorbit.databinding.DialogConnectionInfoBinding,
+        state: FirebaseRepository.PairingState?
+    ) {
+        dialogBinding.tvConnectionQrStatus.text = when {
+            state == null -> ""
+            state.consumed -> getString(R.string.qr_status_consumed)
+            state.expiresAt <= System.currentTimeMillis() -> getString(R.string.qr_status_expired)
+            else -> {
+                val remainMin = ((state.expiresAt - System.currentTimeMillis()) / 60_000L).toInt().coerceAtLeast(0)
+                getString(R.string.qr_status_active, remainMin)
+            }
+        }
     }
 
     private fun showChangePinDialog() {
