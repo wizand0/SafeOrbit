@@ -64,3 +64,5 @@ Thumbs.db
 
 # Kotlin compiler daemon
 .kotlin/
+
+PLANS/

@@ -1,0 +1,147 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    
+    "servers": {
+      "$serverId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || data.child('ownerUid').val() == auth.uid || ((data.child('pairing/consumed').val() == false || data.child('pairing/consumed').val() == null) && newData.child('pairing/consumed').val() == true && newData.child('ownerUid').val() == data.child('ownerUid').val()))",
+        
+        "ownerUid": {
+          ".read": "auth != null && (data.parent().child('ownerUid').val() === auth.uid || root.child('server_clients').child($serverId).child(auth.uid).val() === true || root.child('temp_access').child(auth.uid).child($serverId).val() === true)",
+          ".write": "(!data.exists() || data.val() == auth.uid) && newData.val() == auth.uid"
+        },
+        
+        "pairing": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
+          
+          "tokenHash": {
+            ".read": "auth != null",
+            ".write": "(!data.exists())"
+          },
+          
+          "expiresAt": {
+            ".read": "auth != null",
+            ".write": "(!data.exists())"
+          },
+          
+          "consumed": {
+            ".read": "auth != null",
+            ".write": "auth != null && (root.child('servers').child($serverId).child('ownerUid').val() === auth.uid || ((data.val() == false || data.val() == null) && newData.val() == true))"
+          },
+          
+          "access_tokens": {
+            "$tokenId": {
+              ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
+              ".write": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid"
+            }
+          }
+        },
+        
+        "location": {
+          ".read": "auth != null && (root.child('servers').child($serverId).child('ownerUid').val() === auth.uid || root.child('server_clients').child($serverId).child(auth.uid).val() === true || root.child('temp_access').child(auth.uid).child($serverId).val() === true)",
+          ".write": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid"
+        },
+        
+        "app_notifications": {
+          ".read": "auth != null && (root.child('servers').child($serverId).child('ownerUid').val() === auth.uid || root.child('server_clients').child($serverId).child(auth.uid).val() === true || root.child('temp_access').child(auth.uid).child($serverId).val() === true)",
+          ".write": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
+          
+          "$notificationId": {
+            ".validate": "newData.hasChildren(['enc_pkg', 'enc_label', 'enc_title', 'enc_text', 'post_time'])",
+            
+            "enc_pkg": {
+              ".validate": "newData.isString() && newData.val() != ''"
+            },
+            
+            "enc_label": {
+              ".validate": "newData.isString() && newData.val() != ''"
+            },
+            
+            "enc_title": {
+              ".validate": "newData.isString() && newData.val() != ''"
+            },
+            
+            "enc_text": {
+              ".validate": "newData.isString() && newData.val() != ''"
+            },
+            
+            "post_time": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            }
+          }
+        }
+      }
+    },
+    
+    "server_commands": {
+      "$serverId": {
+        ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
+        ".write": "auth != null && (root.child('server_clients').child($serverId).child(auth.uid).val() === true || root.child('temp_access').child(auth.uid).child($serverId).val() === true)",
+        
+        "$commandId": {
+          ".validate": "newData.hasChildren(['type', 'created_at']) && (newData.child('type').val() == 'request_location_update' || newData.child('type').val() == 'update_settings')",
+          
+          "type": {
+            ".validate": "newData.val() == 'request_location_update' || newData.val() == 'update_settings'"
+          },
+          
+          "created_at": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          
+          "request_location_update": {
+            ".validate": "newData.val() == true"
+          },
+          
+          "update_settings": {
+            ".validate": "newData.hasChildren(['active_interval', 'inactivity_timeout'])",
+            
+            "active_interval": {
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 3600000"
+            },
+            
+            "inactivity_timeout": {
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 86400000"
+            }
+          }
+        }
+      }
+    },
+    
+    "clients": {
+      "$clientId": {
+        ".read": "auth != null && auth.uid === $clientId",
+        ".write": "auth != null && auth.uid === $clientId",
+        
+        "linked_servers": {
+          "$serverId": {
+            ".validate": "newData.val() === true"
+          }
+        }
+      }
+    },
+    
+    "server_clients": {
+      "$serverId": {
+        ".read": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid",
+        "$clientId": {
+          ".read": "auth != null && (root.child('servers').child($serverId).child('ownerUid').val() === auth.uid || auth.uid === $clientId)",
+          ".write": "auth != null && (root.child('servers').child($serverId).child('ownerUid').val() === auth.uid || auth.uid === $clientId)",
+          ".validate": "newData.val() === true"
+        }
+      }
+    },
+    
+    "temp_access": {
+      "$clientId": {
+        "$serverId": {
+          ".read": "auth != null && auth.uid === $clientId",
+          ".write": "auth != null && root.child('servers').child($serverId).child('ownerUid').val() === auth.uid"
+        }
+      }
+    }
+  }
+}
