@@ -2,6 +2,7 @@
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.work.WorkManager
 import ru.wizand.safeorbit.data.model.UserRole
 import ru.wizand.safeorbit.data.security.EncryptedPreferencesManager
 
@@ -10,6 +11,11 @@ class RoleSelectionViewModel(application: Application) : AndroidViewModel(applic
 
     fun saveUserRole(role: UserRole) {
         encryptedPrefs.saveUserRole(role.name)
+        if (role != UserRole.SERVER) {
+            // Старый серверный воркер отменяется, чтобы он не запускался на устройстве-
+            // клиенте и не падал мгновенно с Result.failure() («не режим сервера»).
+            WorkManager.getInstance(getApplication()).cancelUniqueWork("idle_location_fetch")
+        }
     }
 
     fun getUserRole(): UserRole? {
