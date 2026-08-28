@@ -69,7 +69,6 @@
         ".write": "auth != null && (root.child('server_clients').child($serverId).child(auth.uid).val() === true || root.child('temp_access').child(auth.uid).child($serverId).val() === true)",
 
         "$commandId": {
-          "//write": "Клиенту запись разрешает родитель (parent-правило вниз не отнимается). Владелец сервера получает ЗДЕСЬ только право УДАЛЯТЬ исполненную команду (!newData.exists()) — это нужно, чтобы LocationService мог снять команду с ack и не попадать в петлю PERMISSION_DENIED -> rollback -> onChildAdded.",
           ".write": "auth != null && (root.child('servers').child($serverId).child('ownerUid').val() === auth.uid && !newData.exists())",
 
           ".validate": "newData.hasChildren(['type', 'created_at']) && (newData.child('type').val() == 'request_location_update' || newData.child('type').val() == 'update_settings')",
